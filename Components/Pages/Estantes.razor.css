@@ -1,0 +1,170 @@
+﻿/* ---------- Distribución en dos columnas ---------- */
+.disposicion {
+    display: grid;
+    gap: 28px;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+    .disposicion {
+        grid-template-columns: 1.35fr 1fr;
+    }
+}
+
+/* ---------- Pestañas ---------- */
+.pestanas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.pestana {
+    font-weight: 700;
+    padding: 6px 16px;
+    border-radius: 999px;
+    border: 1.5px solid var(--esmeralda);
+    background: transparent;
+    color: var(--esmeralda);
+    cursor: pointer;
+}
+
+    .pestana.activa {
+        background: var(--esmeralda);
+        color: var(--crema);
+    }
+
+    .pestana.pequena {
+        padding: 4px 12px;
+        font-size: 0.9rem;
+    }
+
+/* ---------- Repisa y lomos ---------- */
+.repisa {
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+    min-height: 214px;
+    padding: 18px 18px 0;
+    background: var(--tarjeta);
+    border: 1px solid #E4D3A8;
+    border-bottom: 14px solid var(--dorado);
+    border-radius: 14px 14px 0 0;
+    overflow-x: auto;
+}
+
+.lomo {
+    flex: none;
+    position: relative;
+    width: 46px;
+    height: 150px;
+    padding: 26px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--esmeralda);
+    color: var(--crema);
+    border: 1px solid #D9B24C;
+    border-bottom: 0;
+    border-radius: 4px 4px 0 0;
+    cursor: pointer;
+    transition: transform 0.18s;
+}
+
+    .lomo::before,
+    .lomo::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: #D9B24C;
+    }
+
+    .lomo::before {
+        top: 12px;
+    }
+
+    .lomo::after {
+        bottom: 12px;
+    }
+
+    .lomo span {
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-height: 94px;
+    }
+
+    .lomo.elegido {
+        transform: translateY(-12px);
+        border-color: #E6C566;
+    }
+
+.resumen {
+    margin-top: 12px;
+    font-size: 0.9rem;
+    color: #6B6A5E;
+}
+
+/* ---------- Panel de detalle ---------- */
+.ficha {
+    align-self: start;
+    padding: 18px;
+    background: var(--tarjeta);
+    border: 1px solid #E4D3A8;
+    border-radius: 14px;
+}
+
+    .ficha h3 {
+        margin: 18px 0 8px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #6B6A5E;
+    }
+
+.autor,
+.vacio,
+.nota {
+    color: #6B6A5E;
+}
+
+.nota {
+    margin-top: 6px;
+    font-size: 0.8rem;
+}
+
+.estrellas {
+    display: flex;
+    gap: 2px;
+}
+
+.estrella {
+    padding: 2px 4px;
+    font-size: 2rem;
+    line-height: 1;
+    background: none;
+    border: 0;
+    color: #E4D3A8;
+    cursor: pointer;
+}
+
+    .estrella.encendida {
+        color: var(--dorado);
+    }
+
+    .estrella:hover {
+        color: #D9B24C;
+    }
+
+textarea {
+    width: 100%;
+    padding: 9px 12px;
+    font: inherit;
+    color: var(--tinta);
+    background: var(--crema);
+    border: 1.5px solid #E4D3A8;
+    border-radius: 10px;
+}
