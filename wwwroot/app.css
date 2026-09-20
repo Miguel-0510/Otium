@@ -111,3 +111,118 @@ h1:focus {
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
 }
+
+/* ---------- Pantallas de cuenta: inicio de sesión y registro ---------- */
+.cuenta {
+    max-width: 440px;
+    margin: 24px auto 0;
+    padding: 28px 28px 24px;
+    background: var(--tarjeta);
+    border: 1px solid var(--linea);
+    border-radius: 14px;
+}
+
+.cuenta h1 {
+    margin-bottom: 4px;
+    font-size: 1.6rem;
+}
+
+.cuenta .subtitulo {
+    margin-bottom: 22px;
+    font-family: var(--serif);
+    font-style: italic;
+    color: var(--tinta-suave);
+}
+
+.cuenta .campo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.cuenta label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--tinta-suave);
+}
+
+.cuenta input:not([type=checkbox]) {
+    width: 100%;
+    padding: 10px 12px;
+    font: inherit;
+    color: var(--tinta);
+    background: var(--crema);
+    border: 1.5px solid var(--linea);
+    border-radius: 10px;
+}
+
+.cuenta input:not([type=checkbox]):focus {
+    border-color: var(--dorado);
+    outline: 2px solid var(--dorado);
+}
+
+.cuenta .pista {
+    font-size: 0.85rem;
+    color: var(--tinta-suave);
+}
+
+.cuenta .recordar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 18px;
+    font-weight: 600;
+    color: var(--tinta);
+}
+
+.cuenta .recordar input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--esmeralda);
+}
+
+.cuenta .boton-cuenta {
+    width: 100%;
+    padding: 11px 16px;
+    font: inherit;
+    font-weight: 700;
+    color: var(--crema);
+    background: var(--esmeralda);
+    border: 0;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.cuenta .boton-cuenta:hover {
+    background: var(--esmeralda-claro);
+}
+
+.cuenta .enlace-alterno {
+    margin-top: 20px;
+    font-size: 0.95rem;
+    text-align: center;
+}
+
+.cuenta .alert {
+    margin-bottom: 16px;
+    padding: 10px 12px;
+    font-weight: 600;
+    border-radius: 10px;
+}
+
+.cuenta .alert-danger {
+    color: var(--peligro);
+    background: #F8E4DF;
+    border: 1px solid #E8B9AE;
+}
+
+.cuenta .alert-success {
+    color: var(--esmeralda-profundo);
+    background: var(--tinte);
+    border: 1px solid #B9D6C9;
+}
+
+@media (max-width: 480px) {
+    .cuenta { margin-top: 8px; padding: 22px 18px; border-radius: 12px; }
+}

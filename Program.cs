@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Otium.Components;
@@ -30,6 +31,16 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString), ServiceLifetime.Scoped);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
+// En el servidor, las claves que protegen las sesiones se guardan en una carpeta
+// persistente, para que un reinicio no cierre la sesión de todos.
+var rutaClaves = builder.Configuration["DataProtection:KeysPath"];
+if (!string.IsNullOrWhiteSpace(rutaClaves))
+{
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(rutaClaves))
+        .SetApplicationName("Otium");
+}
+
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
         options.SignIn.RequireConfirmedAccount = false;
@@ -39,18 +50,26 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
-    .AddDefaultTokenProviders();
+    .AddDefaultTokenProviders()
+    .AddErrorDescriber<DescriptorErroresEs>();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
 builder.Services.AddHttpClient<BuscadorLibros>(cliente =>
 {
     cliente.BaseAddress = new Uri("https://openlibrary.org/");
-    cliente.DefaultRequestHeaders.UserAgent.ParseAdd("Otium/1.0 (miguelangelbuitrago0510@gmail.com)");
+    cliente.DefaultRequestHeaders.UserAgent.ParseAdd("Otium/1.0 (tu-correo@ejemplo.com)");
     cliente.Timeout = TimeSpan.FromSeconds(10);
 });
 
 var app = builder.Build();
+
+// Crea o actualiza la base de datos al arrancar (no hay terminal en el servidor).
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.Migrate();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
