@@ -1,47 +1,258 @@
-﻿@page "/Estantes"
+﻿@page "/estantes"
 @rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using Otium.Data
 @using Otium.Models
+@inject IDbContextFactory<OtiumContext> Fabrica
 
 <PageTitle>Mis estantes | Otium</PageTitle>
 
 <h1>Mis estantes</h1>
 
-<div class="pestanas">
-    @foreach (var e in Enum.GetValues<Estante>())
-    {
-        <button class="pestana @(e == estanteActual ? "activa" : "")"
-                @onclick="() => estanteActual = e">
-            @Nombre(e) @libros.Count(l => l.Estante == e)
-        </button>
-    }
+<div class="acciones">
+    <button class="boton" @onclick="() => mostrarFormulario = !mostrarFormulario">
+        @(mostrarFormulario ? "Cerrar" : "Añadir libro")
+    </button>
 </div>
 
-<div class="repisa">
-    @foreach (var libro in libros.Where(l => l.Estante == estanteActual))
-    {
-        <button class="lomo" title="@libro.Titulo" @onclick="() => seleccionado = libro">
-            <span>@libro.Titulo</span>
-        </button>
-    }
-</div>
-
-@if (seleccionado is not null)
+@if (mostrarFormulario)
 {
-    <p class="detalle">@seleccionado.Titulo, de @seleccionado.Autor</p>
+    <section class="ficha nuevo">
+        <h2>Nuevo libro</h2>
+
+        <div class="campos">
+            <label>
+                Título
+                <input @bind="nuevoTitulo" @bind:event="oninput" placeholder="La casa de los espíritus" />
+            </label>
+            <label>
+                Autor
+                <input @bind="nuevoAutor" @bind:event="oninput" placeholder="Isabel Allende" />
+            </label>
+            <label>
+                Estante
+                <select @bind="nuevoEstante">
+                    @foreach (var e in Enum.GetValues<Estante>())
+                    {
+                        <option value="@e">@Nombre(e)</option>
+                    }
+                </select>
+            </label>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorFormulario))
+        {
+            <p class="error">@errorFormulario</p>
+        }
+
+        <div class="acciones">
+            <button class="boton" @onclick="Agregar">Guardar libro</button>
+            <button class="boton secundario" @onclick="CerrarFormulario">Cancelar</button>
+        </div>
+    </section>
 }
 
+<div class="disposicion">
+
+    <section>
+        <div class="pestanas">
+            @foreach (var e in Enum.GetValues<Estante>())
+            {
+                <button class="pestana @(e == estanteActual ? "activa" : "")"
+                        @onclick="() => IrAEstante(e)">
+                    @Nombre(e) @libros.Count(l => l.Estante == e)
+                </button>
+            }
+        </div>
+
+        <div class="repisa">
+            @foreach (var libro in libros.Where(l => l.Estante == estanteActual))
+            {
+                <button class="lomo @(libro == seleccionado ? "elegido" : "")"
+                        title="@libro.Titulo"
+                        @onclick="() => Elegir(libro)">
+                    <span>@libro.Titulo</span>
+                </button>
+            }
+
+            @if (!libros.Any(l => l.Estante == estanteActual))
+            {
+                <p class="vacio">Este estante está vacío. Añade un libro para empezar.</p>
+            }
+        </div>
+
+        <p class="resumen">@Resumen()</p>
+    </section>
+
+    <section class="ficha">
+        @if (seleccionado is Libro actual)
+        {
+            <h2>@actual.Titulo</h2>
+            <p class="autor">@actual.Autor</p>
+
+            <h3>Estante</h3>
+            <div class="pestanas">
+                @foreach (var e in Enum.GetValues<Estante>())
+                {
+                    <button class="pestana pequena @(actual.Estante == e ? "activa" : "")"
+                            @onclick="() => Mover(actual, e)">
+                        @Nombre(e)
+                    </button>
+                }
+            </div>
+
+            <h3>Tu puntuación</h3>
+            <div class="estrellas">
+                @for (var i = 1; i <= 5; i++)
+                {
+                    var valor = i;
+                    <button class="estrella @(valor <= actual.Puntuacion ? "encendida" : "")"
+                            aria-label="Puntuar con @valor"
+                            @onclick="() => Puntuar(actual, valor)">
+                        ★
+                    </button>
+                }
+            </div>
+
+            <h3>Tu reseña</h3>
+            <textarea rows="4"
+                      placeholder="Qué te dejó este libro"
+                      @bind="actual.Resena"
+                      @bind:after="() => Guardar(actual)"></textarea>
+            <p class="nota">Tu reseña se guarda al salir del cuadro de texto.</p>
+
+            <h3>Quitar</h3>
+            @if (!confirmandoQuitar)
+            {
+                <button class="boton secundario" @onclick="() => confirmandoQuitar = true">Quitar del diario</button>
+            }
+            else
+            {
+                <p class="error">¿Seguro que quieres quitar este libro? No se puede deshacer.</p>
+                <div class="acciones">
+                    <button class="boton peligro" @onclick="() => Quitar(actual)">Sí, quitar</button>
+                    <button class="boton secundario" @onclick="() => confirmandoQuitar = false">Cancelar</button>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="vacio">Elige un libro de la repisa para puntuarlo o escribir tu reseña.</p>
+        }
+    </section>
+
+</div>
+
 @code {
+    private List<Libro> libros = new();
     private Estante estanteActual = Estante.Leido;
     private Libro? seleccionado;
+    private bool confirmandoQuitar;
 
-    private readonly List<Libro> libros = new()
+    private bool mostrarFormulario;
+    private string nuevoTitulo = "";
+    private string nuevoAutor = "";
+    private Estante nuevoEstante = Estante.QuieroLeer;
+    private string errorFormulario = "";
+
+    protected override async Task OnInitializedAsync()
     {
-        new() { Id = 1, Titulo = "Cien años de soledad", Autor = "Gabriel García Márquez", Estante = Estante.Leido, Puntuacion = 5 },
-        new() { Id = 2, Titulo = "Pedro Páramo", Autor = "Juan Rulfo", Estante = Estante.Leido, Puntuacion = 4 },
-        new() { Id = 3, Titulo = "El amor en los tiempos del cólera", Autor = "Gabriel García Márquez", Estante = Estante.Leyendo },
-        new() { Id = 4, Titulo = "La vorágine", Autor = "José Eustasio Rivera", Estante = Estante.QuieroLeer },
-        new() { Id = 5, Titulo = "Rayuela", Autor = "Julio Cortázar", Estante = Estante.QuieroLeer }
-    };
+        await using var db = await Fabrica.CreateDbContextAsync();
+        libros = await db.Libros.OrderBy(l => l.Id).ToListAsync();
+        seleccionado = libros.FirstOrDefault(l => l.Estante == estanteActual);
+    }
+
+    private void Elegir(Libro? libro)
+    {
+        seleccionado = libro;
+        confirmandoQuitar = false;
+    }
+
+    private void IrAEstante(Estante estante)
+    {
+        estanteActual = estante;
+        Elegir(libros.FirstOrDefault(l => l.Estante == estante));
+    }
+
+    private async Task Guardar(Libro libro)
+    {
+        await using var db = await Fabrica.CreateDbContextAsync();
+        db.Libros.Update(libro);
+        await db.SaveChangesAsync();
+    }
+
+    private async Task Puntuar(Libro libro, int valor)
+    {
+        libro.Puntuacion = valor;
+        await Guardar(libro);
+    }
+
+    private async Task Mover(Libro libro, Estante destino)
+    {
+        libro.Estante = destino;
+        estanteActual = destino;
+        await Guardar(libro);
+    }
+
+    private async Task Agregar()
+    {
+        if (string.IsNullOrWhiteSpace(nuevoTitulo))
+        {
+            errorFormulario = "Escribe el título del libro.";
+            return;
+        }
+
+        var nuevo = new Libro
+        {
+            Titulo = nuevoTitulo.Trim(),
+            Autor = nuevoAutor.Trim(),
+            Estante = nuevoEstante
+        };
+
+        await using (var db = await Fabrica.CreateDbContextAsync())
+        {
+            db.Libros.Add(nuevo);
+            await db.SaveChangesAsync();
+        }
+
+        libros.Add(nuevo);
+        estanteActual = nuevoEstante;
+        Elegir(nuevo);
+        CerrarFormulario();
+    }
+
+    private async Task Quitar(Libro libro)
+    {
+        await using (var db = await Fabrica.CreateDbContextAsync())
+        {
+            db.Libros.Remove(libro);
+            await db.SaveChangesAsync();
+        }
+
+        libros.Remove(libro);
+        Elegir(libros.FirstOrDefault(l => l.Estante == estanteActual));
+    }
+
+    private void CerrarFormulario()
+    {
+        mostrarFormulario = false;
+        nuevoTitulo = "";
+        nuevoAutor = "";
+        nuevoEstante = Estante.QuieroLeer;
+        errorFormulario = "";
+    }
+
+    private string Resumen()
+    {
+        var leidos = libros.Where(l => l.Estante == Estante.Leido).ToList();
+        var puntuados = leidos.Where(l => l.Puntuacion > 0).ToList();
+
+        if (puntuados.Count == 0)
+            return $"{leidos.Count} leídos";
+
+        var promedio = puntuados.Average(l => l.Puntuacion);
+        return $"{leidos.Count} leídos, promedio {promedio:0.0} de 5";
+    }
 
     private static string Nombre(Estante e) => e switch
     {

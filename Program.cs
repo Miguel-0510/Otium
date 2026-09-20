@@ -1,23 +1,27 @@
+﻿using Microsoft.EntityFrameworkCore;
 using Otium.Components;
+using Otium.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Servicios: lo que la app necesita para funcionar
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddDbContextFactory<OtiumContext>(opciones =>
+    opciones.UseSqlite("Data Source=otium.db"));
+
+// Construye la aplicación con lo anterior
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configuración del servidor
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
 
+app.UseHttpsRedirection();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
