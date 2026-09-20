@@ -1,9 +1,12 @@
-﻿@page "/estantes"
+﻿@page "/"
+@page "/estantes"
 @rendermode InteractiveServer
 @using Microsoft.EntityFrameworkCore
 @using Otium.Data
 @using Otium.Models
+@using Otium.Services
 @inject IDbContextFactory<OtiumContext> Fabrica
+@inject BuscadorLibros Buscador
 
 <PageTitle>Mis estantes | Otium</PageTitle>
 
@@ -19,6 +22,51 @@
 {
     <section class="ficha nuevo">
         <h2>Nuevo libro</h2>
+
+        <div class="busqueda">
+            <label>
+                Buscar por título o autor
+                <input @bind="textoBusqueda" @bind:event="oninput" @onkeydown="TeclaBusqueda" placeholder="Rayuela Cortázar" />
+            </label>
+            <button class="boton" disabled="@buscando" @onclick="Buscar">
+                @(buscando ? "Buscando..." : "Buscar")
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorBusqueda))
+        {
+            <p class="error">@errorBusqueda</p>
+        }
+
+        @if (resultados.Count > 0)
+        {
+            <ul class="resultados">
+                @foreach (var r in resultados)
+                {
+                    <li>
+                        <button class="resultado" @onclick="() => ElegirResultado(r)">
+                            @if (r.PortadaUrl != "")
+                            {
+                                <img src="@r.PortadaUrl" alt="" loading="lazy" />
+                            }
+                            else
+                            {
+                                <span class="sin-portada">Sin portada</span>
+                            }
+                            <span class="datos">
+                                <strong>@r.Titulo</strong>
+                                <span>@r.Detalle</span>
+                            </span>
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
+
+        <p class="nota">
+            Datos y portadas de <a href="https://openlibrary.org" target="_blank" rel="noopener">Open Library</a>.
+            Si no lo encuentras, escríbelo a mano.
+        </p>
 
         <div class="campos">
             <label>
@@ -39,6 +87,11 @@
                 </select>
             </label>
         </div>
+
+        @if (nuevaPortada != "")
+        {
+            <img class="miniatura" src="@nuevaPortada" alt="Portada elegida" />
+        }
 
         @if (!string.IsNullOrEmpty(errorFormulario))
         {
@@ -87,8 +140,16 @@
     <section class="ficha">
         @if (seleccionado is Libro actual)
         {
-            <h2>@actual.Titulo</h2>
-            <p class="autor">@actual.Autor</p>
+            <div class="cabecera">
+                @if (actual.PortadaUrl != "")
+                {
+                    <img class="portada" src="@actual.PortadaUrl" alt="Portada de @actual.Titulo" />
+                }
+                <div>
+                    <h2>@actual.Titulo</h2>
+                    <p class="autor">@actual.Autor</p>
+                </div>
+            </div>
 
             <h3>Estante</h3>
             <div class="pestanas">
@@ -153,7 +214,14 @@
     private string nuevoTitulo = "";
     private string nuevoAutor = "";
     private Estante nuevoEstante = Estante.QuieroLeer;
+    private string nuevaPortada = "";
+    private string nuevoIdExterno = "";
     private string errorFormulario = "";
+
+    private string textoBusqueda = "";
+    private List<ResultadoLibro> resultados = new();
+    private bool buscando;
+    private string errorBusqueda = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -194,6 +262,51 @@
         await Guardar(libro);
     }
 
+    private async Task TeclaBusqueda(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await Buscar();
+    }
+
+    private async Task Buscar()
+    {
+        errorBusqueda = "";
+        resultados = new();
+
+        if (string.IsNullOrWhiteSpace(textoBusqueda))
+        {
+            errorBusqueda = "Escribe un título o un autor para buscar.";
+            return;
+        }
+
+        buscando = true;
+        try
+        {
+            resultados = await Buscador.BuscarAsync(textoBusqueda);
+
+            if (resultados.Count == 0)
+                errorBusqueda = "No encontré resultados. Prueba con otras palabras o escríbelo a mano.";
+        }
+        catch (Exception)
+        {
+            errorBusqueda = "No pude consultar el buscador ahora. Puedes escribir el libro a mano.";
+        }
+        finally
+        {
+            buscando = false;
+        }
+    }
+
+    private void ElegirResultado(ResultadoLibro r)
+    {
+        nuevoTitulo = r.Titulo;
+        nuevoAutor = r.Autor;
+        nuevaPortada = r.PortadaUrl;
+        nuevoIdExterno = r.IdExterno;
+        resultados = new();
+        errorBusqueda = "";
+    }
+
     private async Task Agregar()
     {
         if (string.IsNullOrWhiteSpace(nuevoTitulo))
@@ -206,7 +319,9 @@
         {
             Titulo = nuevoTitulo.Trim(),
             Autor = nuevoAutor.Trim(),
-            Estante = nuevoEstante
+            Estante = nuevoEstante,
+            PortadaUrl = nuevaPortada,
+            IdExterno = nuevoIdExterno
         };
 
         await using (var db = await Fabrica.CreateDbContextAsync())
@@ -239,7 +354,12 @@
         nuevoTitulo = "";
         nuevoAutor = "";
         nuevoEstante = Estante.QuieroLeer;
+        nuevaPortada = "";
+        nuevoIdExterno = "";
         errorFormulario = "";
+        textoBusqueda = "";
+        resultados = new();
+        errorBusqueda = "";
     }
 
     private string Resumen()

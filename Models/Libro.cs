@@ -15,4 +15,6 @@ public class Libro
     public Estante Estante { get; set; }
     public int Puntuacion { get; set; }   // 0 = sin puntuar, de 1 a 5
     public string Resena { get; set; } = "";
+    public string PortadaUrl { get; set; } = "";
+    public string IdExterno { get; set; } = "";
 }
