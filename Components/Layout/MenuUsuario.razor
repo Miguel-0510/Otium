@@ -1,0 +1,40 @@
+﻿@implements IDisposable
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Routing
+@inject NavigationManager Navegacion
+
+<AuthorizeView>
+    <Authorized>
+        <a href="Account/Manage">@context.User.Identity?.Name</a>
+        <form action="Account/Logout" method="post">
+            <AntiforgeryToken />
+            <input type="hidden" name="ReturnUrl" value="@urlActual" />
+            <button type="submit">Salir</button>
+        </form>
+    </Authorized>
+    <NotAuthorized>
+        <a href="Account/Register">Crear cuenta</a>
+        <a href="Account/Login">Iniciar sesión</a>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private string? urlActual;
+
+    protected override void OnInitialized()
+    {
+        urlActual = Navegacion.ToBaseRelativePath(Navegacion.Uri);
+        Navegacion.LocationChanged += AlCambiarUrl;
+    }
+
+    private void AlCambiarUrl(object? sender, LocationChangedEventArgs e)
+    {
+        urlActual = Navegacion.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        Navegacion.LocationChanged -= AlCambiarUrl;
+    }
+}

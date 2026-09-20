@@ -64,3 +64,50 @@ h1:focus {
 .blazor-error-boundary::after {
     content: "Ocurrió un error.";
 }
+
+/* ---------- Pantallas de cuenta (usan Bootstrap) ---------- */
+.btn-primary {
+    --bs-btn-color: var(--crema);
+    --bs-btn-bg: var(--esmeralda);
+    --bs-btn-border-color: var(--esmeralda);
+    --bs-btn-hover-color: var(--crema);
+    --bs-btn-hover-bg: var(--esmeralda-claro);
+    --bs-btn-hover-border-color: var(--esmeralda-claro);
+    --bs-btn-active-color: var(--crema);
+    --bs-btn-active-bg: var(--esmeralda-profundo);
+    --bs-btn-active-border-color: var(--esmeralda-profundo);
+    --bs-btn-disabled-bg: var(--esmeralda);
+    --bs-btn-disabled-border-color: var(--esmeralda);
+    --bs-btn-focus-shadow-rgb: 184, 137, 43;
+}
+
+.form-control:focus,
+.form-check-input:focus {
+    border-color: var(--dorado);
+    box-shadow: 0 0 0 0.2rem rgba(184, 137, 43, 0.25);
+}
+
+.form-check-input:checked {
+    background-color: var(--esmeralda);
+    border-color: var(--esmeralda);
+}
+
+.text-danger {
+    color: var(--peligro) !important;
+}
+
+.validation-message {
+    color: var(--peligro);
+}
+
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid var(--esmeralda-claro);
+}
+
+.invalid {
+    outline: 1px solid var(--peligro);
+}
+
+.darker-border-checkbox.form-check-input {
+    border-color: #929292;
+}

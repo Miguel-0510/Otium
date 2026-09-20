@@ -33,15 +33,32 @@
     color: var(--dorado-claro);
 }
 
-.menu ::deep a {
+.menu {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.menu ::deep form {
+    margin: 0;
+}
+
+.menu ::deep a,
+.menu ::deep button {
     padding: 6px 16px;
+    font: inherit;
     font-weight: 700;
     color: var(--crema);
     text-decoration: none;
+    background: transparent;
+    border: 0;
     border-radius: 999px;
+    cursor: pointer;
 }
 
-.menu ::deep a:hover {
+.menu ::deep a:hover,
+.menu ::deep button:hover {
     background: var(--esmeralda-claro);
 }
 

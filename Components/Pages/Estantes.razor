@@ -1,12 +1,17 @@
 ﻿@page "/"
 @page "/estantes"
 @rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using Otium.Data
 @using Otium.Models
 @using Otium.Services
-@inject IDbContextFactory<OtiumContext> Fabrica
+@inject IDbContextFactory<ApplicationDbContext> Fabrica
 @inject BuscadorLibros Buscador
+@inject AuthenticationStateProvider ProveedorAuth
 
 <PageTitle>Mis estantes | Otium</PageTitle>
 
@@ -169,9 +174,7 @@
                     var valor = i;
                     <button class="estrella @(valor <= actual.Puntuacion ? "encendida" : "")"
                             aria-label="Puntuar con @valor"
-                            @onclick="() => Puntuar(actual, valor)">
-                        ★
-                    </button>
+                            @onclick="() => Puntuar(actual, valor)">★</button>
                 }
             </div>
 
@@ -205,6 +208,7 @@
 </div>
 
 @code {
+    private string usuarioId = "";
     private List<Libro> libros = new();
     private Estante estanteActual = Estante.Leido;
     private Libro? seleccionado;
@@ -225,8 +229,14 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var estado = await ProveedorAuth.GetAuthenticationStateAsync();
+        usuarioId = estado.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+
         await using var db = await Fabrica.CreateDbContextAsync();
-        libros = await db.Libros.OrderBy(l => l.Id).ToListAsync();
+        libros = await db.Libros
+            .Where(l => l.UsuarioId == usuarioId)
+            .OrderBy(l => l.Id)
+            .ToListAsync();
         seleccionado = libros.FirstOrDefault(l => l.Estante == estanteActual);
     }
 
@@ -244,6 +254,9 @@
 
     private async Task Guardar(Libro libro)
     {
+        if (libro.UsuarioId != usuarioId)
+            return;
+
         await using var db = await Fabrica.CreateDbContextAsync();
         db.Libros.Update(libro);
         await db.SaveChangesAsync();
@@ -287,9 +300,9 @@
             if (resultados.Count == 0)
                 errorBusqueda = "No encontré resultados. Prueba con otras palabras o escríbelo a mano.";
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            errorBusqueda = "No pude consultar el buscador ahora. Puedes escribir el libro a mano.";
+            errorBusqueda = "No pude consultar el buscador: " + ex.Message;
         }
         finally
         {
@@ -317,6 +330,7 @@
 
         var nuevo = new Libro
         {
+            UsuarioId = usuarioId,
             Titulo = nuevoTitulo.Trim(),
             Autor = nuevoAutor.Trim(),
             Estante = nuevoEstante,
@@ -338,6 +352,9 @@
 
     private async Task Quitar(Libro libro)
     {
+        if (libro.UsuarioId != usuarioId)
+            return;
+
         await using (var db = await Fabrica.CreateDbContextAsync())
         {
             db.Libros.Remove(libro);

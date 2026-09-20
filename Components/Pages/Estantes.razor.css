@@ -363,3 +363,28 @@ textarea {
     border: 2px solid var(--dorado);
     border-radius: 4px;
 }
+@media (max-width: 600px) {
+    h1 {
+        font-size: 1.6rem;
+    }
+
+    .repisa {
+        padding: 20px 14px 0;
+    }
+
+    .ficha {
+        padding: 16px;
+    }
+
+    .busqueda {
+        flex-wrap: wrap;
+    }
+
+        .busqueda label {
+            flex-basis: 100%;
+        }
+
+        .busqueda .boton {
+            width: 100%;
+        }
+}

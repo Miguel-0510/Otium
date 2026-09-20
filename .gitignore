@@ -480,3 +480,8 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Base de datos local (contiene cuentas de usuario)
+Data/app.db*
+*.db-shm
+*.db-wal
