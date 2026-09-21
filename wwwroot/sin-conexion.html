@@ -1,0 +1,25 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0F5C4A" />
+    <title>Sin conexión | Otium</title>
+    <style>
+        body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; background: #F6EFDF; color: #1E2B26; font-family: system-ui, sans-serif; text-align: center; }
+        main { max-width: 420px; }
+        h1 { margin: 0 0 8px; font-family: Georgia, 'Times New Roman', serif; font-size: 2rem; color: #0F5C4A; }
+        .filete { width: 64px; height: 4px; margin: 0 auto 20px; background: #B8892B; border-radius: 2px; }
+        p { margin: 0 0 20px; line-height: 1.5; }
+        button { padding: 10px 22px; font: inherit; font-weight: 700; color: #F6EFDF; background: #0F5C4A; border: 0; border-radius: 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Otium</h1>
+        <div class="filete"></div>
+        <p>No se pudo conectar con Otium. Revisa tu conexión a internet o vuelve a intentarlo en unos minutos.</p>
+        <button onclick="location.reload()">Reintentar</button>
+    </main>
+</body>
+</html>
