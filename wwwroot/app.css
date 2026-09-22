@@ -226,3 +226,16 @@ h1:focus {
 @media (max-width: 480px) {
     .cuenta { margin-top: 8px; padding: 22px 18px; border-radius: 12px; }
 }
+
+/* ---------- Pantallas de cuenta: perfil y contraseña ---------- */
+.cuenta-ancha {
+    max-width: 640px;
+}
+
+.cuenta-menu {
+    margin-bottom: 20px;
+}
+
+.cuenta-contenido h2 {
+    margin-bottom: 4px;
+}

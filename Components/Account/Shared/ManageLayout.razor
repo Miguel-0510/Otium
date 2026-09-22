@@ -1,17 +1,13 @@
 ﻿@inherits LayoutComponentBase
 @layout Otium.Components.Layout.MainLayout
 
-<h1>Manage your account</h1>
+<section class="cuenta cuenta-ancha">
+    <h1>Tu cuenta</h1>
+    <p class="subtitulo">Gestiona tu perfil y tu contraseña.</p>
 
-<div>
-    <h2>Change your account settings</h2>
-    <hr />
-    <div class="row">
-        <div class="col-lg-3">
-            <ManageNavMenu />
-        </div>
-        <div class="col-lg-9">
-            @Body
-        </div>
+    <ManageNavMenu />
+
+    <div class="cuenta-contenido">
+        @Body
     </div>
-</div>
+</section>

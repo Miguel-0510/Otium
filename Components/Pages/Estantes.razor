@@ -155,7 +155,7 @@
                         <span class="caratula">
                             @if (libro.PortadaUrl != "")
                             {
-                                <img src="@libro.PortadaUrl" alt="" loading="lazy" />
+                                <img src="@libro.PortadaUrl" alt="" loading="lazy" @onerror="() => libro.PortadaUrl = string.Empty" />
                             }
                             else
                             {
@@ -182,7 +182,7 @@
             <div class="cabecera">
                 @if (actual.PortadaUrl != "")
                 {
-                    <img class="portada" src="@actual.PortadaUrl" alt="Portada de @actual.Titulo" />
+                    <img class="portada" src="@actual.PortadaUrl" alt="Portada de @actual.Titulo" @onerror="() => actual.PortadaUrl = string.Empty" />
                 }
                 <div>
                     <h2>@actual.Titulo</h2>
@@ -443,3 +443,4 @@
         _ => "Quiero leer"
     };
 }
+
