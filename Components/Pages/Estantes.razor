@@ -123,21 +123,55 @@
             }
         </div>
 
-        <div class="repisa">
-            @foreach (var libro in libros.Where(l => l.Estante == estanteActual))
-            {
-                <button class="lomo @(libro == seleccionado ? "elegido" : "")"
-                        title="@libro.Titulo"
-                        @onclick="() => Elegir(libro)">
-                    <span>@libro.Titulo</span>
-                </button>
-            }
-
-            @if (!libros.Any(l => l.Estante == estanteActual))
-            {
-                <p class="vacio">Este estante está vacío. Añade un libro para empezar.</p>
-            }
+        <div class="cambio-vista">
+            <button class="@(vista == "lomos" ? "activo" : "")" @onclick="MostrarLomos">Lomos</button>
+            <button class="@(vista == "portadas" ? "activo" : "")" @onclick="MostrarPortadas">Portadas</button>
         </div>
+
+        @if (vista == "lomos")
+        {
+            <div class="repisa">
+                @foreach (var libro in libros.Where(l => l.Estante == estanteActual))
+                {
+                    <button class="lomo @(libro == seleccionado ? "elegido" : "")"
+                            title="@libro.Titulo"
+                            @onclick="() => Elegir(libro)">
+                        <span>@libro.Titulo</span>
+                    </button>
+                }
+
+                @if (!libros.Any(l => l.Estante == estanteActual))
+                {
+                    <p class="vacio">Este estante está vacío. Añade un libro para empezar.</p>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="portadas">
+                @foreach (var libro in libros.Where(l => l.Estante == estanteActual))
+                {
+                    <button class="tarjeta-libro @(libro == seleccionado ? "elegido" : "")" @onclick="() => Elegir(libro)">
+                        <span class="caratula">
+                            @if (libro.PortadaUrl != "")
+                            {
+                                <img src="@libro.PortadaUrl" alt="" loading="lazy" />
+                            }
+                            else
+                            {
+                                <span class="sin-portada-grande">@Iniciales(libro.Titulo)</span>
+                            }
+                        </span>
+                        <span class="titulo-tarjeta">@libro.Titulo</span>
+                    </button>
+                }
+
+                @if (!libros.Any(l => l.Estante == estanteActual))
+                {
+                    <p class="vacio">Este estante está vacío. Añade un libro para empezar.</p>
+                }
+            </div>
+        }
 
         <p class="resumen">@Resumen()</p>
     </section>
@@ -213,6 +247,7 @@
     private Estante estanteActual = Estante.Leido;
     private Libro? seleccionado;
     private bool confirmandoQuitar;
+    private string vista = "lomos";
 
     private bool mostrarFormulario;
     private string nuevoTitulo = "";
@@ -239,6 +274,9 @@
             .ToListAsync();
         seleccionado = libros.FirstOrDefault(l => l.Estante == estanteActual);
     }
+
+    private void MostrarLomos() => vista = "lomos";
+    private void MostrarPortadas() => vista = "portadas";
 
     private void Elegir(Libro? libro)
     {
@@ -389,6 +427,13 @@
 
         var promedio = puntuados.Average(l => l.Puntuacion);
         return $"{leidos.Count} leídos, promedio {promedio:0.0} de 5";
+    }
+
+    private static string Iniciales(string titulo)
+    {
+        var palabras = titulo.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var letras = palabras.Take(2).Select(p => char.ToUpper(p[0]));
+        return string.Concat(letras);
     }
 
     private static string Nombre(Estante e) => e switch
