@@ -156,3 +156,16 @@
 .modal-caja .boton.secundario {
     width: 100%;
 }
+
+/* ---------- Pie de pagina ---------- */
+.pie-app {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 24px 20px;
+    text-align: center;
+}
+
+.pie-app a {
+    font-size: 0.85rem;
+    color: var(--tinta-suave);
+}

@@ -52,6 +52,8 @@
         <button type="submit" class="boton-cuenta">Crear cuenta</button>
     </EditForm>
 
+    <p class="nota">Al crear tu cuenta aceptas cómo usamos tus datos. <a href="/privacidad" target="_blank">Ver política de privacidad</a>.</p>
+
     <p class="enlace-alterno">
         ¿Ya tienes cuenta?
         <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Iniciar sesión</a>
@@ -146,4 +148,5 @@
         public string Codigo { get; set; } = "";
     }
 }
+
 

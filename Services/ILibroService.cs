@@ -8,4 +8,5 @@ public interface ILibroService
     Task AgregarAsync(Libro libro);
     Task ActualizarAsync(Libro libro);
     Task EliminarAsync(Libro libro);
+    Task EliminarTodosDeUsuarioAsync(string usuarioId);
 }

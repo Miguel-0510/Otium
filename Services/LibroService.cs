@@ -42,4 +42,10 @@ public class LibroService : ILibroService
         db.Libros.Remove(libro);
         await db.SaveChangesAsync();
     }
+
+    public async Task EliminarTodosDeUsuarioAsync(string usuarioId)
+    {
+        await using var db = await _fabrica.CreateDbContextAsync();
+        await db.Libros.Where(l => l.UsuarioId == usuarioId).ExecuteDeleteAsync();
+    }
 }

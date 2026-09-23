@@ -1,0 +1,95 @@
+﻿@page "/Account/Manage/EliminarCuenta"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using Otium.Data
+@using Otium.Services
+
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject ILibroService Servicio
+@inject IdentityRedirectManager RedirectManager
+@inject ILogger<EliminarCuenta> Logger
+
+<PageTitle>Eliminar cuenta | Otium</PageTitle>
+
+<h2>Eliminar tu cuenta</h2>
+<StatusMessage Message="@message" />
+
+<p class="error">
+    Esta acción borra tu cuenta y todos tus libros, reseñas y puntuaciones de forma permanente. No se puede deshacer.
+</p>
+
+<EditForm Model="Input" FormName="eliminar-cuenta" OnValidSubmit="OnValidSubmitAsync" method="post">
+    <DataAnnotationsValidator />
+    <ValidationSummary class="text-danger" role="alert" />
+
+    <div class="campo">
+        <label for="Input.Password">Escribe tu contraseña para confirmar</label>
+        <InputText type="password" @bind-Value="Input.Password" id="Input.Password" autocomplete="current-password" aria-required="true" />
+        <ValidationMessage For="() => Input.Password" class="text-danger" />
+    </div>
+
+    <button type="submit" class="boton peligro">Eliminar mi cuenta para siempre</button>
+</EditForm>
+
+@code {
+    private string? message;
+    private ApplicationUser? user;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+
+        user = await UserManager.GetUserAsync(HttpContext.User);
+        if (user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+        }
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        if (user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+            return;
+        }
+
+        var contrasenaCorrecta = await UserManager.CheckPasswordAsync(user, Input.Password);
+        if (!contrasenaCorrecta)
+        {
+            message = "Error: la contraseña no es correcta.";
+            return;
+        }
+
+        var usuarioId = await UserManager.GetUserIdAsync(user);
+
+        await Servicio.EliminarTodosDeUsuarioAsync(usuarioId);
+
+        var resultado = await UserManager.DeleteAsync(user);
+        if (!resultado.Succeeded)
+        {
+            message = "Error: no se pudo eliminar la cuenta.";
+            return;
+        }
+
+        await SignInManager.SignOutAsync();
+        Logger.LogInformation("User deleted their own account.");
+
+        RedirectManager.RedirectTo("/");
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "Escribe tu contraseña.")]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+    }
+}
