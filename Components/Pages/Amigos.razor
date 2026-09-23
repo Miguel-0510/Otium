@@ -1,0 +1,127 @@
+﻿@page "/amigos"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Otium.Services
+@inject IAmistadService Servicio
+@inject AuthenticationStateProvider ProveedorAuth
+@inject IJSRuntime JS
+
+<PageTitle>Amigos | Otium</PageTitle>
+
+<h1>Amigos</h1>
+
+<section class="ficha">
+    <h2>Tu código</h2>
+    <p class="nota">Compártelo con tus amigos para que te agreguen.</p>
+    <div class="codigo-amigo">
+        <span>@codigo</span>
+        <button class="boton secundario sm" @onclick="CopiarCodigo">Copiar</button>
+    </div>
+    @if (copiado)
+    {
+        <p class="nota">Copiado.</p>
+    }
+</section>
+
+<section class="ficha">
+    <h2>Agregar un amigo</h2>
+    <div class="busqueda">
+        <label>
+            Código de tu amigo
+            <input @bind="codigoIngresado" @bind:event="oninput" placeholder="K7XQ2M" />
+        </label>
+        <button class="boton" @onclick="Enviar">Enviar solicitud</button>
+    </div>
+    @if (!string.IsNullOrEmpty(mensajeEnvio))
+    {
+        <p class="@(envioExitoso ? "nota" : "error")">@mensajeEnvio</p>
+    }
+</section>
+
+@if (pendientes.Count > 0)
+{
+    <section class="ficha">
+        <h2>Solicitudes pendientes</h2>
+        <ul class="lista-amigos">
+            @foreach (var s in pendientes)
+            {
+                <li>
+                    <span>@s.Correo</span>
+                    <span class="acciones-lista">
+                        <button class="boton sm" @onclick="() => Responder(s.Id, true)">Aceptar</button>
+                        <button class="boton secundario sm" @onclick="() => Responder(s.Id, false)">Rechazar</button>
+                    </span>
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+<section class="ficha">
+    <h2>Tus amigos</h2>
+    @if (amigos.Count == 0)
+    {
+        <p class="vacio">Todavía no tienes amigos agregados.</p>
+    }
+    else
+    {
+        <ul class="lista-amigos">
+            @foreach (var a in amigos)
+            {
+                <li><span>@a.Correo</span></li>
+            }
+        </ul>
+    }
+</section>
+
+@code {
+    private string usuarioId = "";
+    private string codigo = "";
+    private string codigoIngresado = "";
+    private string mensajeEnvio = "";
+    private bool envioExitoso;
+    private bool copiado;
+    private List<SolicitudPendiente> pendientes = new();
+    private List<AmigoInfo> amigos = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var estado = await ProveedorAuth.GetAuthenticationStateAsync();
+        usuarioId = estado.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+
+        codigo = await Servicio.ObtenerOCrearCodigoAsync(usuarioId);
+        await Recargar();
+    }
+
+    private async Task Recargar()
+    {
+        pendientes = await Servicio.ObtenerSolicitudesPendientesAsync(usuarioId);
+        amigos = await Servicio.ObtenerAmigosAsync(usuarioId);
+    }
+
+    private async Task CopiarCodigo()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", codigo);
+        copiado = true;
+    }
+
+    private async Task Enviar()
+    {
+        var (exito, mensaje) = await Servicio.EnviarSolicitudAsync(usuarioId, codigoIngresado);
+        envioExitoso = exito;
+        mensajeEnvio = mensaje;
+        if (exito)
+        {
+            codigoIngresado = "";
+        }
+    }
+
+    private async Task Responder(int solicitudId, bool aceptar)
+    {
+        await Servicio.ResponderSolicitudAsync(solicitudId, usuarioId, aceptar);
+        await Recargar();
+    }
+}

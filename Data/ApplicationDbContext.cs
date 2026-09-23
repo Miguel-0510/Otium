@@ -8,16 +8,32 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     : IdentityDbContext<ApplicationUser>(options)
 {
     public DbSet<Libro> Libros => Set<Libro>();
+    public DbSet<Amistad> Amistades => Set<Amistad>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
 
-        // Cada libro pertenece a un usuario; si se borra el usuario, se borran sus libros.
         builder.Entity<Libro>()
             .HasOne<ApplicationUser>()
             .WithMany()
             .HasForeignKey(l => l.UsuarioId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<Amistad>()
+            .HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(a => a.SolicitanteId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Amistad>()
+            .HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(a => a.ReceptorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<ApplicationUser>()
+            .HasIndex(u => u.CodigoAmigo)
+            .IsUnique();
     }
 }

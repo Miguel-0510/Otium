@@ -1,0 +1,43 @@
+﻿.codigo-amigo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 6px;
+}
+
+.codigo-amigo span {
+    font-family: var(--serif);
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--esmeralda);
+}
+
+.boton.sm {
+    padding: 5px 12px;
+    font-size: 0.85rem;
+}
+
+.lista-amigos {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+}
+
+.lista-amigos li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--linea);
+}
+
+.acciones-lista {
+    display: flex;
+    gap: 6px;
+}
+
+section.ficha + section.ficha {
+    margin-top: 20px;
+}

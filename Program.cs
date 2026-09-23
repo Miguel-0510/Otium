@@ -31,6 +31,7 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString), ServiceLifetime.Scoped);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddScoped<ILibroService, LibroService>();
+builder.Services.AddScoped<IAmistadService, AmistadService>();
 
 // En el servidor, las claves que protegen las sesiones se guardan en una carpeta
 // persistente, para que un reinicio no cierre la sesión de todos.
@@ -70,6 +71,26 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.Migrate();
+
+    // Asigna un codigo unico a usuarios que quedaron sin uno (por ejemplo, creados antes de esta funcion)
+    const string caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    var aleatorio = new Random();
+    var sinCodigo = db.Users.Where(u => u.CodigoAmigo == "" || u.CodigoAmigo == null).ToList();
+    foreach (var usuario in sinCodigo)
+    {
+        string codigo;
+        do
+        {
+            codigo = new string(Enumerable.Range(0, 6).Select(_ => caracteres[aleatorio.Next(caracteres.Length)]).ToArray());
+        }
+        while (db.Users.Any(u => u.CodigoAmigo == codigo));
+
+        usuario.CodigoAmigo = codigo;
+    }
+    if (sinCodigo.Count > 0)
+    {
+        db.SaveChanges();
+    }
 }
 
 // Configure the HTTP request pipeline.
@@ -112,5 +133,7 @@ app.MapRazorComponents<App>()
 app.MapAdditionalIdentityEndpoints();
 
 app.Run();
+
+
 
 
