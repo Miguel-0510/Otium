@@ -30,6 +30,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString), ServiceLifetime.Scoped);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+builder.Services.AddScoped<ILibroService, LibroService>();
 
 // En el servidor, las claves que protegen las sesiones se guardan en una carpeta
 // persistente, para que un reinicio no cierre la sesión de todos.
@@ -95,3 +96,4 @@ app.MapRazorComponents<App>()
 app.MapAdditionalIdentityEndpoints();
 
 app.Run();
+

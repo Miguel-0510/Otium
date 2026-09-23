@@ -5,11 +5,9 @@
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.EntityFrameworkCore
-@using Otium.Data
 @using Otium.Models
 @using Otium.Services
-@inject IDbContextFactory<ApplicationDbContext> Fabrica
+@inject ILibroService Servicio
 @inject BuscadorLibros Buscador
 @inject AuthenticationStateProvider ProveedorAuth
 
@@ -267,11 +265,7 @@
         var estado = await ProveedorAuth.GetAuthenticationStateAsync();
         usuarioId = estado.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
 
-        await using var db = await Fabrica.CreateDbContextAsync();
-        libros = await db.Libros
-            .Where(l => l.UsuarioId == usuarioId)
-            .OrderBy(l => l.Id)
-            .ToListAsync();
+        libros = await Servicio.ObtenerDeUsuarioAsync(usuarioId);
         seleccionado = libros.FirstOrDefault(l => l.Estante == estanteActual);
     }
 
@@ -295,9 +289,7 @@
         if (libro.UsuarioId != usuarioId)
             return;
 
-        await using var db = await Fabrica.CreateDbContextAsync();
-        db.Libros.Update(libro);
-        await db.SaveChangesAsync();
+        await Servicio.ActualizarAsync(libro);
     }
 
     private async Task Puntuar(Libro libro, int valor)
@@ -376,11 +368,7 @@
             IdExterno = nuevoIdExterno
         };
 
-        await using (var db = await Fabrica.CreateDbContextAsync())
-        {
-            db.Libros.Add(nuevo);
-            await db.SaveChangesAsync();
-        }
+        await Servicio.AgregarAsync(nuevo);
 
         libros.Add(nuevo);
         estanteActual = nuevoEstante;
@@ -393,11 +381,7 @@
         if (libro.UsuarioId != usuarioId)
             return;
 
-        await using (var db = await Fabrica.CreateDbContextAsync())
-        {
-            db.Libros.Remove(libro);
-            await db.SaveChangesAsync();
-        }
+        await Servicio.EliminarAsync(libro);
 
         libros.Remove(libro);
         Elegir(libros.FirstOrDefault(l => l.Estante == estanteActual));
@@ -443,4 +427,3 @@
         _ => "Quiero leer"
     };
 }
-
