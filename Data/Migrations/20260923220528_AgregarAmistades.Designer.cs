@@ -11,7 +11,7 @@ using Otium.Data;
 namespace Otium.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260923220125_AgregarAmistades")]
+    [Migration("20260923220528_AgregarAmistades")]
     partial class AgregarAmistades
     {
         /// <inheritdoc />
@@ -227,9 +227,6 @@ namespace Otium.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CodigoAmigo")
-                        .IsUnique();
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");

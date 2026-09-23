@@ -9,7 +9,6 @@ using Otium.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -30,11 +29,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString), ServiceLifetime.Scoped);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-builder.Services.AddScoped<ILibroService, LibroService>();
-builder.Services.AddScoped<IAmistadService, AmistadService>();
 
-// En el servidor, las claves que protegen las sesiones se guardan en una carpeta
-// persistente, para que un reinicio no cierre la sesión de todos.
 var rutaClaves = builder.Configuration["DataProtection:KeysPath"];
 if (!string.IsNullOrWhiteSpace(rutaClaves))
 {
@@ -64,36 +59,17 @@ builder.Services.AddHttpClient<BuscadorLibros>(cliente =>
     cliente.Timeout = TimeSpan.FromSeconds(10);
 });
 
+builder.Services.AddScoped<ILibroService, LibroService>();
+builder.Services.AddScoped<IAmistadService, AmistadService>();
+
 var app = builder.Build();
 
-// Crea o actualiza la base de datos al arrancar (no hay terminal en el servidor).
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.Migrate();
-
-    // Asigna un codigo unico a usuarios que quedaron sin uno (por ejemplo, creados antes de esta funcion)
-    const string caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    var aleatorio = new Random();
-    var sinCodigo = db.Users.Where(u => u.CodigoAmigo == "" || u.CodigoAmigo == null).ToList();
-    foreach (var usuario in sinCodigo)
-    {
-        string codigo;
-        do
-        {
-            codigo = new string(Enumerable.Range(0, 6).Select(_ => caracteres[aleatorio.Next(caracteres.Length)]).ToArray());
-        }
-        while (db.Users.Any(u => u.CodigoAmigo == codigo));
-
-        usuario.CodigoAmigo = codigo;
-    }
-    if (sinCodigo.Count > 0)
-    {
-        db.SaveChanges();
-    }
 }
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
@@ -101,11 +77,8 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
 
 app.Use(async (context, next) =>
 {
@@ -123,17 +96,14 @@ app.Use(async (context, next) =>
     await next();
 });
 
+app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+app.UseHttpsRedirection();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
 
 app.Run();
-
-
-
-

@@ -48,12 +48,6 @@ namespace Otium.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_AspNetUsers_CodigoAmigo",
-                table: "AspNetUsers",
-                column: "CodigoAmigo",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Amistades_ReceptorId",
                 table: "Amistades",
                 column: "ReceptorId");
@@ -69,10 +63,6 @@ namespace Otium.Migrations
         {
             migrationBuilder.DropTable(
                 name: "Amistades");
-
-            migrationBuilder.DropIndex(
-                name: "IX_AspNetUsers_CodigoAmigo",
-                table: "AspNetUsers");
 
             migrationBuilder.DropColumn(
                 name: "CodigoAmigo",
