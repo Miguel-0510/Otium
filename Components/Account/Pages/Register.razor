@@ -10,7 +10,6 @@
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
-@inject IConfiguration Configuracion
 
 <PageTitle>Crear cuenta | Otium</PageTitle>
 
@@ -20,7 +19,7 @@
 
     <StatusMessage Message="@Message" />
 
-    <EditForm Model="Input" method="post" OnValidSubmit="RegisterUser" FormName="register">
+    <EditForm Model="Input" FormName="register" OnValidSubmit="RegisterUser" method="post">
         <DataAnnotationsValidator />
 
         <div class="campo">
@@ -42,17 +41,8 @@
             <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
         </div>
 
-        <div class="campo">
-            <label for="Input.Codigo">Código de invitación</label>
-            <InputText @bind-Value="Input.Codigo" id="Input.Codigo" autocomplete="off" aria-required="true" />
-            <p class="pista">Te lo da quien te invitó a Otium.</p>
-            <ValidationMessage For="() => Input.Codigo" class="text-danger" />
-        </div>
-
         <button type="submit" class="boton-cuenta">Crear cuenta</button>
     </EditForm>
-
-    <p class="nota">Al crear tu cuenta aceptas cómo usamos tus datos. <a href="/privacidad" target="_blank">Ver política de privacidad</a>.</p>
 
     <p class="enlace-alterno">
         ¿Ya tienes cuenta?
@@ -80,13 +70,6 @@
 
     public async Task RegisterUser(EditContext editContext)
     {
-        var codigoEsperado = Configuracion["Invitacion:Codigo"];
-        if (string.IsNullOrEmpty(codigoEsperado) || !string.Equals(Input.Codigo?.Trim(), codigoEsperado, StringComparison.Ordinal))
-        {
-            identityErrors = new[] { new IdentityError { Description = "El código de invitación no es correcto." } };
-            return;
-        }
-
         var user = CreateUser();
 
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
@@ -102,7 +85,6 @@
 
         Logger.LogInformation("User created a new account with password.");
 
-        // Por ahora no pedimos confirmar el correo: entra directo.
         await SignInManager.SignInAsync(user, isPersistent: false);
         RedirectManager.RedirectTo(ReturnUrl);
     }
@@ -143,10 +125,5 @@
         [DataType(DataType.Password)]
         [Compare("Password", ErrorMessage = "Las contraseñas no coinciden.")]
         public string ConfirmPassword { get; set; } = "";
-
-        [Required(ErrorMessage = "Escribe el código de invitación.")]
-        public string Codigo { get; set; } = "";
     }
 }
-
-

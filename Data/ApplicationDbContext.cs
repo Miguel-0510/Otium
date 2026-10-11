@@ -9,6 +9,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 {
     public DbSet<Libro> Libros => Set<Libro>();
     public DbSet<Amistad> Amistades => Set<Amistad>();
+    public DbSet<EntradaLectura> EntradasLectura => Set<EntradaLectura>();
+    public DbSet<PalabraGlosario> PalabrasGlosario => Set<PalabraGlosario>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -35,5 +37,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<ApplicationUser>()
             .HasIndex(u => u.CodigoAmigo)
             .IsUnique();
+
+        builder.Entity<EntradaLectura>()
+            .HasOne<Libro>()
+            .WithMany()
+            .HasForeignKey(e => e.LibroId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

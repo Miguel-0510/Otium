@@ -61,6 +61,12 @@ builder.Services.AddHttpClient<BuscadorLibros>(cliente =>
 
 builder.Services.AddScoped<ILibroService, LibroService>();
 builder.Services.AddScoped<IAmistadService, AmistadService>();
+builder.Services.AddScoped<IEntradaLecturaService, EntradaLecturaService>();
+builder.Services.AddHttpClient<IGlosarioService, GlosarioService>(cliente =>
+{
+    cliente.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+    cliente.Timeout = TimeSpan.FromSeconds(15);
+});
 
 var app = builder.Build();
 
@@ -107,3 +113,5 @@ app.MapRazorComponents<App>()
 app.MapAdditionalIdentityEndpoints();
 
 app.Run();
+
+

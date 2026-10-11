@@ -8,8 +8,10 @@
 @using Otium.Models
 @using Otium.Services
 @inject ILibroService Servicio
+@inject IEntradaLecturaService ServicioEntradas
 @inject BuscadorLibros Buscador
 @inject AuthenticationStateProvider ProveedorAuth
+@inject NavigationManager Navegacion
 
 <PageTitle>Mis estantes | Otium</PageTitle>
 
@@ -210,12 +212,107 @@
                 }
             </div>
 
-            <h3>Tu reseña</h3>
-            <textarea rows="4"
-                      placeholder="Qué te dejó este libro"
-                      @bind="actual.Resena"
-                      @bind:after="() => Guardar(actual)"></textarea>
-            <p class="nota">Tu reseña se guarda al salir del cuadro de texto.</p>
+            <a class="boton-travesias enlace-glosario" href="@EnlaceGlosario(actual)">Buscar palabra desconocida</a>
+
+            <div class="seccion-travesias">
+                <button class="boton-travesias" @onclick="() => mostrarResena = !mostrarResena">
+                    @(mostrarResena ? "Ocultar reseña" : (string.IsNullOrWhiteSpace(actual.Resena) ? "Escribir reseña" : "Ver reseña"))
+                </button>
+
+                @if (mostrarResena)
+                {
+                    <div class="contenido-travesias">
+                        <textarea class="bloc-notas" rows="8"
+                                  placeholder="Qué te dejó este libro"
+                                  @bind="actual.Resena"
+                                  @bind:after="() => Guardar(actual)"></textarea>
+                        <p class="nota">Tu reseña se guarda al salir del cuadro de texto.</p>
+                    </div>
+                }
+            </div>
+
+            <div class="seccion-travesias">
+                <button class="boton-travesias" @onclick="() => mostrarEntradas = !mostrarEntradas">
+                    @(mostrarEntradas ? "Ocultar travesías" : $"Ver travesías ({entradasLectura.Count})")
+                </button>
+
+                @if (mostrarEntradas)
+                {
+                    <div class="contenido-travesias">
+                        @if (entradasLectura.Count == 0)
+                        {
+                            <p class="info-travesias">
+                                Las <strong>travesías</strong> son tus anotaciones de cada sesión de lectura:
+                                qué páginas leíste y un resumen de lo que pasó. Crea la primera cuando
+                                empieces a leer este libro, y así vas armando tu propio recorrido por él.
+                            </p>
+                        }
+                        else
+                        {
+                            <ul class="entradas-lectura">
+                                @foreach (var entrada in entradasLectura)
+                                {
+                                    var expandida = entradasExpandidas.Contains(entrada.Id);
+                                    <li>
+                                        <div class="travesia-cabecera">
+                                            <button class="travesia-toggle" @onclick="() => AlternarEntrada(entrada.Id)">
+                                                <span class="travesia-flecha">@(expandida ? "▾" : "▸")</span>
+                                                <strong>Travesía @entrada.Numero</strong>
+                                                @if (entrada.PaginaInicio is not null || entrada.PaginaFin is not null)
+                                                {
+                                                    <span class="entrada-paginas">páginas @entrada.PaginaInicio – @entrada.PaginaFin</span>
+                                                }
+                                            </button>
+                                            <button class="quitar-entrada" title="Quitar esta travesía" @onclick="() => QuitarEntrada(entrada)">✕</button>
+                                        </div>
+                                        @if (expandida)
+                                        {
+                                            <div class="travesia-cuerpo">
+                                                @if (!string.IsNullOrWhiteSpace(entrada.Resumen))
+                                                {
+                                                    <p class="entrada-resumen papel-rayado">@entrada.Resumen</p>
+                                                }
+                                                else
+                                                {
+                                                    <p class="entrada-resumen papel-rayado vacio-texto">Esta travesía no tiene resumen.</p>
+                                                }
+                                            </div>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        }
+
+                        @if (mostrarFormularioEntrada)
+                        {
+                            <div class="form-entrada">
+                                <div class="campos">
+                                    <label>
+                                        Desde la página
+                                        <input type="number" min="0" @bind="nuevaPaginaInicio" />
+                                    </label>
+                                    <label>
+                                        Hasta la página
+                                        <input type="number" min="0" @bind="nuevaPaginaFin" />
+                                    </label>
+                                </div>
+                                <label class="campo-resumen">
+                                    Resumen de esta travesía
+                                    <textarea class="bloc-notas" rows="8" placeholder="Qué pasó en estas páginas..." @bind="nuevoResumenEntrada"></textarea>
+                                </label>
+                                <div class="acciones">
+                                    <button class="boton" @onclick="GuardarEntrada">Guardar travesía</button>
+                                    <button class="boton secundario" @onclick="() => mostrarFormularioEntrada = false">Cancelar</button>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <button class="boton secundario" @onclick="() => mostrarFormularioEntrada = true">Añadir travesía</button>
+                        }
+                    </div>
+                }
+            </div>
 
             <h3>Quitar</h3>
             @if (!confirmandoQuitar)
@@ -247,6 +344,15 @@
     private bool confirmandoQuitar;
     private string vista = "lomos";
 
+    private bool mostrarResena;
+    private bool mostrarEntradas;
+    private List<EntradaLectura> entradasLectura = new();
+    private HashSet<int> entradasExpandidas = new();
+    private bool mostrarFormularioEntrada;
+    private int? nuevaPaginaInicio;
+    private int? nuevaPaginaFin;
+    private string nuevoResumenEntrada = "";
+
     private bool mostrarFormulario;
     private string nuevoTitulo = "";
     private string nuevoAutor = "";
@@ -266,22 +372,42 @@
         usuarioId = estado.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
 
         libros = await Servicio.ObtenerDeUsuarioAsync(usuarioId);
-        seleccionado = libros.FirstOrDefault(l => l.Estante == estanteActual);
+        await Elegir(libros.FirstOrDefault(l => l.Estante == estanteActual));
     }
 
     private void MostrarLomos() => vista = "lomos";
     private void MostrarPortadas() => vista = "portadas";
 
-    private void Elegir(Libro? libro)
+    private string EnlaceGlosario(Libro libro) =>
+        Navegacion.GetUriWithQueryParameters("glosario", new Dictionary<string, object?> { ["libro"] = libro.Titulo });
+
+    private async Task Elegir(Libro? libro)
     {
         seleccionado = libro;
         confirmandoQuitar = false;
+        mostrarResena = false;
+        mostrarEntradas = false;
+        mostrarFormularioEntrada = false;
+        nuevaPaginaInicio = null;
+        nuevaPaginaFin = null;
+        nuevoResumenEntrada = "";
+        entradasExpandidas = new();
+
+        entradasLectura = libro is not null
+            ? await ServicioEntradas.ObtenerDeLibroAsync(libro.Id)
+            : new();
     }
 
-    private void IrAEstante(Estante estante)
+    private void AlternarEntrada(int entradaId)
+    {
+        if (!entradasExpandidas.Add(entradaId))
+            entradasExpandidas.Remove(entradaId);
+    }
+
+    private async Task IrAEstante(Estante estante)
     {
         estanteActual = estante;
-        Elegir(libros.FirstOrDefault(l => l.Estante == estante));
+        await Elegir(libros.FirstOrDefault(l => l.Estante == estante));
     }
 
     private async Task Guardar(Libro libro)
@@ -303,6 +429,26 @@
         libro.Estante = destino;
         estanteActual = destino;
         await Guardar(libro);
+    }
+
+    private async Task GuardarEntrada()
+    {
+        if (seleccionado is null) return;
+
+        var entrada = await ServicioEntradas.AgregarAsync(seleccionado.Id, nuevaPaginaInicio, nuevaPaginaFin, nuevoResumenEntrada.Trim());
+        entradasLectura.Add(entrada);
+
+        nuevaPaginaInicio = null;
+        nuevaPaginaFin = null;
+        nuevoResumenEntrada = "";
+        mostrarFormularioEntrada = false;
+    }
+
+    private async Task QuitarEntrada(EntradaLectura entrada)
+    {
+        await ServicioEntradas.EliminarAsync(entrada);
+        entradasLectura.Remove(entrada);
+        entradasExpandidas.Remove(entrada.Id);
     }
 
     private async Task TeclaBusqueda(KeyboardEventArgs e)
@@ -372,7 +518,7 @@
 
         libros.Add(nuevo);
         estanteActual = nuevoEstante;
-        Elegir(nuevo);
+        await Elegir(nuevo);
         CerrarFormulario();
     }
 
@@ -384,7 +530,7 @@
         await Servicio.EliminarAsync(libro);
 
         libros.Remove(libro);
-        Elegir(libros.FirstOrDefault(l => l.Estante == estanteActual));
+        await Elegir(libros.FirstOrDefault(l => l.Estante == estanteActual));
     }
 
     private void CerrarFormulario()

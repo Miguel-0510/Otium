@@ -1,0 +1,145 @@
+﻿@page "/glosario"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Otium.Models
+@using Otium.Services
+@inject IGlosarioService Servicio
+@inject AuthenticationStateProvider ProveedorAuth
+
+<PageTitle>Glosario | Otium</PageTitle>
+
+<h1>Tu glosario</h1>
+
+<section class="ficha">
+    <h2>Buscar una palabra</h2>
+
+    @if (!string.IsNullOrEmpty(libroContexto))
+    {
+        <div class="contexto-libro">
+            <span>Buscando en el contexto de «@libroContexto»</span>
+            <button class="quitar-contexto" title="Quitar contexto" @onclick="() => libroContexto = string.Empty">✕</button>
+        </div>
+    }
+
+    <div class="busqueda">
+        <label>
+            Palabra
+            <input @bind="palabraNueva" @bind:event="oninput" @onkeydown="TeclaBuscar" placeholder="verosímil" />
+        </label>
+        <button class="boton" disabled="@buscando" @onclick="Buscar">
+            @(buscando ? "Buscando..." : "Buscar")
+        </button>
+    </div>
+    @if (!string.IsNullOrEmpty(mensaje))
+    {
+        <p class="@(exito ? "nota" : "error")">@mensaje</p>
+    }
+</section>
+
+<section class="ficha">
+    <h2>Palabras guardadas <span class="contador-badge">@palabras.Count</span></h2>
+
+    @if (palabras.Count == 0)
+    {
+        <p class="vacio">Aún no has guardado ninguna palabra. Búscala arriba.</p>
+    }
+    else
+    {
+        <ul class="lista-glosario">
+            @foreach (var p in palabras)
+            {
+                var expandida = expandidas.Contains(p.Id);
+                <li>
+                    <div class="glosario-cabecera">
+                        <button class="glosario-toggle" @onclick="() => Alternar(p.Id)">
+                            <span class="travesia-flecha">@(expandida ? "▾" : "▸")</span>
+                            <strong>@p.Palabra</strong>
+                            @if (!string.IsNullOrEmpty(p.LibroTitulo))
+                            {
+                                <span class="glosario-libro">de «@p.LibroTitulo»</span>
+                            }
+                        </button>
+                        <button class="quitar-entrada" title="Quitar palabra" @onclick="() => Quitar(p)">✕</button>
+                    </div>
+                    @if (expandida)
+                    {
+                        <p class="glosario-definicion">@p.Definicion</p>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+@code {
+    [SupplyParameterFromQuery(Name = "libro")]
+    public string? LibroDesdeUrl { get; set; }
+
+    private string usuarioId = "";
+    private List<PalabraGlosario> palabras = new();
+    private HashSet<int> expandidas = new();
+    private string palabraNueva = "";
+    private string libroContexto = "";
+    private bool buscando;
+    private string mensaje = "";
+    private bool exito;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var estado = await ProveedorAuth.GetAuthenticationStateAsync();
+        usuarioId = estado.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+
+        libroContexto = LibroDesdeUrl ?? "";
+        palabras = await Servicio.ObtenerDeUsuarioAsync(usuarioId);
+    }
+
+    private void Alternar(int id)
+    {
+        if (!expandidas.Add(id))
+            expandidas.Remove(id);
+    }
+
+    private async Task TeclaBuscar(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await Buscar();
+    }
+
+    private async Task Buscar()
+    {
+        if (string.IsNullOrWhiteSpace(palabraNueva))
+        {
+            mensaje = "Escribe una palabra primero.";
+            exito = false;
+            return;
+        }
+
+        buscando = true;
+        mensaje = "";
+
+        var (ok, msg, nueva) = await Servicio.BuscarYGuardarAsync(usuarioId, palabraNueva, libroContexto);
+
+        exito = ok;
+        mensaje = msg;
+
+        if (ok && nueva is not null)
+        {
+            palabras.Add(nueva);
+            palabras = palabras.OrderBy(p => p.Palabra).ToList();
+            expandidas.Add(nueva.Id);
+            palabraNueva = "";
+        }
+
+        buscando = false;
+    }
+
+    private async Task Quitar(PalabraGlosario p)
+    {
+        await Servicio.EliminarAsync(p);
+        palabras.Remove(p);
+        expandidas.Remove(p.Id);
+    }
+}

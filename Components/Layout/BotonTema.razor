@@ -1,0 +1,25 @@
+﻿@inject IJSRuntime JS
+
+<button class="boton-tema" @onclick="Alternar" title="Cambiar tema" aria-label="Cambiar tema claro u oscuro">
+    @(esOscuro ? "☀️" : "🌙")
+</button>
+
+@code {
+    private bool esOscuro;
+
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (primeraVez)
+        {
+            var tema = await JS.InvokeAsync<string>("otiumTema.obtener");
+            esOscuro = tema == "dark";
+            StateHasChanged();
+        }
+    }
+
+    private async Task Alternar()
+    {
+        var nuevo = await JS.InvokeAsync<string>("otiumTema.alternar");
+        esOscuro = nuevo == "dark";
+    }
+}

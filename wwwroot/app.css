@@ -239,3 +239,29 @@ h1:focus {
 .cuenta-contenido h2 {
     margin-bottom: 4px;
 }
+
+/* ---------- Modo oscuro ---------- */
+:root[data-theme="dark"] {
+    --crema: #0E1F1A;
+    --tarjeta: #16302A;
+    --esmeralda: #1F7A61;
+    --esmeralda-claro: #2E8B6E;
+    --esmeralda-profundo: #0A2A22;
+    --dorado: #D9B24C;
+    --dorado-claro: #E6C566;
+    --tinta: #F3EBDA;
+    --tinta-suave: #B9B7A6;
+    --linea: #2C4A41;
+    --tinte: #1F4A3E;
+    --peligro: #F0A092;
+}
+
+:root[data-theme="dark"] .lomo {
+    color: var(--crema);
+}
+
+:root[data-theme="dark"] .boton,
+:root[data-theme="dark"] .boton-cuenta,
+:root[data-theme="dark"] .pestana.activa {
+    color: #0A2A22;
+}

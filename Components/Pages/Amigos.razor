@@ -17,13 +17,9 @@
     <h2>Tu código</h2>
     <p class="nota">Compártelo con tus amigos para que te agreguen.</p>
     <div class="codigo-amigo">
-        <span>@codigo</span>
-        <button class="boton secundario sm" @onclick="CopiarCodigo">Copiar</button>
+        <span class="codigo-amigo-texto">@codigo</span>
+        <button class="boton secundario sm" @onclick="CopiarCodigo">@(copiado ? "Copiado ✓" : "Copiar")</button>
     </div>
-    @if (copiado)
-    {
-        <p class="nota">Copiado.</p>
-    }
 </section>
 
 <section class="ficha">
@@ -44,12 +40,16 @@
 @if (pendientes.Count > 0)
 {
     <section class="ficha">
-        <h2>Solicitudes pendientes</h2>
+        <h2>Solicitudes pendientes <span class="contador-badge">@pendientes.Count</span></h2>
         <ul class="lista-amigos">
             @foreach (var s in pendientes)
             {
                 <li>
-                    <span>@s.Correo</span>
+                    <span class="avatar-amigo">@Iniciales(s.Correo)</span>
+                    <span class="amigo-info">
+                        <strong>@s.Correo</strong>
+                        <span class="estado-pendiente">Quiere ser tu amigo</span>
+                    </span>
                     <span class="acciones-lista">
                         <button class="boton sm" @onclick="() => Responder(s.Id, true)">Aceptar</button>
                         <button class="boton secundario sm" @onclick="() => Responder(s.Id, false)">Rechazar</button>
@@ -61,17 +61,22 @@
 }
 
 <section class="ficha">
-    <h2>Tus amigos</h2>
+    <h2>Tus amigos <span class="contador-badge">@amigos.Count</span></h2>
     @if (amigos.Count == 0)
     {
-        <p class="vacio">Todavía no tienes amigos agregados.</p>
+        <p class="vacio">Todavía no tienes amigos agregados. Comparte tu código para empezar.</p>
     }
     else
     {
         <ul class="lista-amigos">
             @foreach (var a in amigos)
             {
-                <li><span>@a.Correo</span></li>
+                <li>
+                    <span class="avatar-amigo">@Iniciales(a.Correo)</span>
+                    <span class="amigo-info">
+                        <strong>@a.Correo</strong>
+                    </span>
+                </li>
             }
         </ul>
     }
@@ -123,5 +128,11 @@
     {
         await Servicio.ResponderSolicitudAsync(solicitudId, usuarioId, aceptar);
         await Recargar();
+    }
+
+    private static string Iniciales(string correo)
+    {
+        if (string.IsNullOrWhiteSpace(correo)) return "?";
+        return correo[0].ToString().ToUpper();
     }
 }

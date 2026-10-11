@@ -1,4 +1,5 @@
 ﻿@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
 
 <header class="cabecera-app">
     <a class="marca" href="">
@@ -7,8 +8,14 @@
     </a>
 
     <nav class="menu">
-        <NavLink href="estantes">Mis estantes</NavLink>
-        <NavLink href="amigos">Amigos</NavLink>
+        <AuthorizeView>
+            <Authorized>
+                <NavLink href="estantes">Mis estantes</NavLink>
+                <NavLink href="amigos">Amigos</NavLink>
+                <NavLink href="glosario">Glosario</NavLink>
+            </Authorized>
+        </AuthorizeView>
+        <BotonTema />
         <BotonInstalar />
         <MenuUsuario />
     </nav>
@@ -27,5 +34,3 @@
     <a href="." class="reload">Recargar</a>
     <span class="dismiss">✕</span>
 </div>
-
-

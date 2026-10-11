@@ -7,7 +7,7 @@ namespace Otium.Services;
 
 public class AmistadService : IAmistadService
 {
-    private const string Caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    private const string Caracteres = "0123456789";
 
     private readonly IDbContextFactory<ApplicationDbContext> _fabrica;
     private readonly UserManager<ApplicationUser> _userManager;
@@ -33,7 +33,7 @@ public class AmistadService : IAmistadService
 
         do
         {
-            codigo = new string(Enumerable.Range(0, 6).Select(_ => Caracteres[aleatorio.Next(Caracteres.Length)]).ToArray());
+            codigo = new string(Enumerable.Range(0, 4).Select(_ => Caracteres[aleatorio.Next(Caracteres.Length)]).ToArray());
             intentos++;
         }
         while (await db.Users.AnyAsync(u => u.CodigoAmigo == codigo) && intentos < 20);
@@ -125,3 +125,4 @@ public class AmistadService : IAmistadService
             .ExecuteDeleteAsync();
     }
 }
+

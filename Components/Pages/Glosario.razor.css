@@ -1,0 +1,94 @@
+﻿section.ficha + section.ficha {
+    margin-top: 20px;
+}
+
+h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.contador-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--esmeralda);
+    background: var(--tinte);
+    padding: 1px 8px;
+    border-radius: 999px;
+}
+
+.contexto-libro {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    font-style: italic;
+    color: var(--esmeralda-profundo);
+    background: var(--tinte);
+    border-left: 3px solid var(--esmeralda);
+    border-radius: 0 8px 8px 0;
+}
+
+.quitar-contexto {
+    margin-left: auto;
+    padding: 0 6px;
+    font-style: normal;
+    color: var(--tinta-suave);
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.lista-glosario {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+}
+
+.lista-glosario li {
+    padding: 10px 0;
+    border-top: 1px solid var(--linea);
+}
+
+.glosario-cabecera {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.glosario-toggle {
+    flex: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    padding: 2px 0;
+    font: inherit;
+    text-align: left;
+    color: var(--tinta);
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.glosario-toggle strong {
+    font-family: var(--serif);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--esmeralda-profundo);
+    text-transform: capitalize;
+}
+
+.glosario-libro {
+    font-size: 0.8rem;
+    font-style: italic;
+    color: var(--tinta-suave);
+}
+
+.glosario-definicion {
+    margin: 6px 0 0 22px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}

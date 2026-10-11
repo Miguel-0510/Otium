@@ -270,6 +270,38 @@ namespace Otium.Migrations
                     b.ToTable("Amistades");
                 });
 
+            modelBuilder.Entity("Otium.Models.EntradaLectura", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LibroId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Numero")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("PaginaFin")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("PaginaInicio")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Resumen")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LibroId");
+
+                    b.ToTable("EntradasLectura");
+                });
+
             modelBuilder.Entity("Otium.Models.Libro", b =>
                 {
                     b.Property<int>("Id")
@@ -311,6 +343,36 @@ namespace Otium.Migrations
                     b.HasIndex("UsuarioId");
 
                     b.ToTable("Libros");
+                });
+
+            modelBuilder.Entity("Otium.Models.PalabraGlosario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Definicion")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LibroTitulo")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Palabra")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UsuarioId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PalabrasGlosario");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -427,6 +489,15 @@ namespace Otium.Migrations
                         .WithMany()
                         .HasForeignKey("SolicitanteId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Otium.Models.EntradaLectura", b =>
+                {
+                    b.HasOne("Otium.Models.Libro", null)
+                        .WithMany()
+                        .HasForeignKey("LibroId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
