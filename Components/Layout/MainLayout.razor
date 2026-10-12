@@ -8,6 +8,7 @@
     </a>
 
     <nav class="menu">
+        <BotonTema @rendermode="InteractiveServer" />
         <AuthorizeView>
             <Authorized>
                 <NavLink href="estantes">Mis estantes</NavLink>
@@ -15,7 +16,6 @@
                 <NavLink href="glosario">Glosario</NavLink>
             </Authorized>
         </AuthorizeView>
-        <BotonTema />
         <BotonInstalar />
         <MenuUsuario />
     </nav>
@@ -34,3 +34,6 @@
     <a href="." class="reload">Recargar</a>
     <span class="dismiss">✕</span>
 </div>
+
+
+

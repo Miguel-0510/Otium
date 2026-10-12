@@ -5,9 +5,12 @@
     function aplicar(tema) {
         document.documentElement.setAttribute('data-theme', tema);
     }
-    var guardado = temaGuardado();
-    var preferido = guardado || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    aplicar(preferido);
+    function aplicarGuardadoOPreferido() {
+        var guardado = temaGuardado();
+        var preferido = guardado || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        aplicar(preferido);
+    }
+    aplicarGuardadoOPreferido();
 
     window.otiumTema = {
         obtener: function () {
@@ -21,4 +24,10 @@
             return nuevo;
         }
     };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.Blazor && window.Blazor.addEventListener) {
+            window.Blazor.addEventListener('enhancedload', aplicarGuardadoOPreferido);
+        }
+    });
 })();

@@ -50,7 +50,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddDefaultTokenProviders()
     .AddErrorDescriber<DescriptorErroresEs>();
 
-builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.AddSingleton<IEmailSender<ApplicationUser>, EmailSender>();
 
 builder.Services.AddHttpClient<BuscadorLibros>(cliente =>
 {
@@ -113,5 +113,6 @@ app.MapRazorComponents<App>()
 app.MapAdditionalIdentityEndpoints();
 
 app.Run();
+
 
 

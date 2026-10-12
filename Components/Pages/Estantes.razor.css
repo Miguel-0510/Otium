@@ -567,12 +567,12 @@ textarea {
     width: 100%;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     padding: 10px 14px;
     font: inherit;
     font-weight: 700;
     color: var(--esmeralda);
-    text-align: left;
+    text-align: center;
     background: var(--tinte);
     border: 1px solid var(--linea);
     border-radius: 10px;
@@ -759,3 +759,4 @@ textarea {
     text-align: center;
     text-decoration: none;
 }
+

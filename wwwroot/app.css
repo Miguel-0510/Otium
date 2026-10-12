@@ -242,17 +242,17 @@ h1:focus {
 
 /* ---------- Modo oscuro ---------- */
 :root[data-theme="dark"] {
-    --crema: #0E1F1A;
-    --tarjeta: #16302A;
-    --esmeralda: #1F7A61;
-    --esmeralda-claro: #2E8B6E;
-    --esmeralda-profundo: #0A2A22;
-    --dorado: #D9B24C;
-    --dorado-claro: #E6C566;
-    --tinta: #F3EBDA;
-    --tinta-suave: #B9B7A6;
-    --linea: #2C4A41;
-    --tinte: #1F4A3E;
+    --crema: #0E1B17;
+    --tarjeta: #17271F;
+    --esmeralda: #2E9E7C;
+    --esmeralda-claro: #3FB890;
+    --esmeralda-profundo: #1B6B51;
+    --dorado: #E0B64A;
+    --dorado-claro: #EDCB70;
+    --tinta: #F3EFE6;
+    --tinta-suave: #A8B3AC;
+    --linea: #263B32;
+    --tinte: #17352B;
     --peligro: #F0A092;
 }
 
@@ -264,4 +264,295 @@ h1:focus {
 :root[data-theme="dark"] .boton-cuenta,
 :root[data-theme="dark"] .pestana.activa {
     color: #0A2A22;
+}
+
+/* ============================================================
+   Componentes compartidos (botones, tarjetas, formularios)
+   Viven aqui porque Blazor aisla el CSS por pagina, y estas
+   clases se usan en Estantes, Glosario y Amigos.
+   ============================================================ */
+
+.boton {
+    padding: 8px 16px;
+    font-weight: 700;
+    color: var(--crema);
+    background: var(--esmeralda);
+    border: 1.5px solid var(--esmeralda);
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.boton:hover {
+    background: var(--esmeralda-claro);
+    border-color: var(--esmeralda-claro);
+}
+
+.boton.secundario {
+    color: var(--esmeralda);
+    background: transparent;
+}
+
+.boton.secundario:hover {
+    background: var(--tinte);
+}
+
+.boton.peligro {
+    background: var(--peligro);
+    border-color: var(--peligro);
+}
+
+.boton.peligro:hover {
+    background: #8A2F21;
+    border-color: #8A2F21;
+}
+
+.boton:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.boton.sm {
+    padding: 5px 12px;
+    font-size: 0.85rem;
+}
+
+.acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 16px;
+}
+
+.ficha {
+    align-self: start;
+    padding: 20px;
+    background: var(--tarjeta);
+    border: 1px solid var(--linea);
+    border-radius: 14px;
+}
+
+section.ficha + section.ficha {
+    margin-top: 20px;
+}
+
+.ficha h3 {
+    margin: 20px 0 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--tinta-suave);
+}
+
+.busqueda {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    margin-top: 12px;
+}
+
+.busqueda label {
+    flex: 1;
+}
+
+.campos {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    margin: 12px 0;
+}
+
+.campos label,
+.busqueda label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--tinta-suave);
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    padding: 9px 12px;
+    font: inherit;
+    color: var(--tinta);
+    background: var(--crema);
+    border: 1.5px solid var(--linea);
+    border-radius: 10px;
+}
+
+.error {
+    margin-top: 8px;
+    font-weight: 600;
+    color: var(--peligro);
+}
+
+.nota {
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: var(--tinta-suave);
+}
+
+.nota a {
+    color: var(--esmeralda);
+}
+
+.vacio {
+    color: var(--tinta-suave);
+}
+
+.resultados {
+    display: grid;
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.resultado {
+    width: 100%;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 8px;
+    font: inherit;
+    text-align: left;
+    color: var(--tinta);
+    background: var(--crema);
+    border: 1.5px solid var(--linea);
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.resultado:hover {
+    border-color: var(--dorado);
+}
+
+.resultado img,
+.sin-portada {
+    flex: none;
+    width: 44px;
+    height: 64px;
+    border-radius: 3px;
+}
+
+.resultado img {
+    object-fit: cover;
+}
+
+.sin-portada {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    text-align: center;
+    color: var(--esmeralda);
+    background: var(--tinte);
+}
+
+.datos {
+    display: flex;
+    flex-direction: column;
+}
+
+.datos span {
+    font-size: 0.85rem;
+    color: var(--tinta-suave);
+}
+
+.miniatura {
+    width: 56px;
+    margin-bottom: 8px;
+    border: 2px solid var(--dorado);
+    border-radius: 4px;
+}
+
+.pestanas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.pestana {
+    padding: 6px 16px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--esmeralda);
+    background: transparent;
+    border: 1.5px solid var(--esmeralda);
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.pestana:hover {
+    background: var(--tinte);
+}
+
+.pestana.activa {
+    color: var(--crema);
+    background: var(--esmeralda);
+}
+
+.pestana.pequena {
+    padding: 4px 12px;
+    font-size: 0.9rem;
+}
+
+.contador-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--esmeralda);
+    background: var(--tinte);
+    padding: 1px 8px;
+    border-radius: 999px;
+}
+
+
+
+/* ---------- Boton de modo oscuro ---------- */
+.boton-tema {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    color: var(--dorado-claro);
+    background: transparent;
+    border: 1.5px solid transparent;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.boton-tema svg {
+    width: 30px;
+    height: 30px;
+}
+
+.boton-tema:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--dorado-claro);
+}
+
+
+/* ---------- Boton de salir, dentro de la pestaña de cuenta ---------- */
+.form-salir {
+    display: contents;
+}
+
+.pestana.salir {
+    color: var(--peligro);
+    border-color: var(--peligro);
+}
+
+.pestana.salir:hover {
+    background: #F8E4DF;
+}
+
+
+/* ---------- Boton de quitar palabra, solo visible al desplegar ---------- */
+.quitar-palabra {
+    margin: 8px 0 0 22px;
 }

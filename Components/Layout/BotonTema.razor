@@ -1,25 +1,78 @@
 ﻿@inject IJSRuntime JS
+@inject NavigationManager Nav
+@implements IDisposable
 
 <button class="boton-tema" @onclick="Alternar" title="Cambiar tema" aria-label="Cambiar tema claro u oscuro">
-    @(esOscuro ? "☀️" : "🌙")
+    @if (esOscuro)
+    {
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4.2" />
+            <line x1="12" y1="2.5" x2="12" y2="5" />
+            <line x1="12" y1="19" x2="12" y2="21.5" />
+            <line x1="2.5" y1="12" x2="5" y2="12" />
+            <line x1="19" y1="12" x2="21.5" y2="12" />
+            <line x1="5.3" y1="5.3" x2="7" y2="7" />
+            <line x1="17" y1="17" x2="18.7" y2="18.7" />
+            <line x1="5.3" y1="18.7" x2="7" y2="17" />
+            <line x1="17" y1="7" x2="18.7" y2="5.3" />
+        </svg>
+    }
+    else
+    {
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z" />
+        </svg>
+    }
 </button>
 
 @code {
     private bool esOscuro;
 
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += AlCambiarDePagina;
+    }
+
     protected override async Task OnAfterRenderAsync(bool primeraVez)
     {
         if (primeraVez)
+        {
+            await SincronizarAsync();
+        }
+    }
+
+    private async void AlCambiarDePagina(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        await SincronizarAsync();
+    }
+
+    private async Task SincronizarAsync()
+    {
+        try
         {
             var tema = await JS.InvokeAsync<string>("otiumTema.obtener");
             esOscuro = tema == "dark";
             StateHasChanged();
         }
+        catch
+        {
+        }
     }
 
     private async Task Alternar()
     {
-        var nuevo = await JS.InvokeAsync<string>("otiumTema.alternar");
-        esOscuro = nuevo == "dark";
+        try
+        {
+            var nuevo = await JS.InvokeAsync<string>("otiumTema.alternar");
+            esOscuro = nuevo == "dark";
+        }
+        catch
+        {
+        }
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= AlCambiarDePagina;
     }
 }

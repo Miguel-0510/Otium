@@ -1,8 +1,14 @@
 ﻿@using Microsoft.AspNetCore.Identity
 @using Otium.Data
+@inject NavigationManager Navegacion
 
 <div class="pestanas cuenta-menu">
     <NavLink class="pestana" href="Account/Manage" Match="NavLinkMatch.All" ActiveClass="activa">Perfil</NavLink>
     <NavLink class="pestana" href="Account/Manage/ChangePassword" ActiveClass="activa">Contraseña</NavLink>
     <NavLink class="pestana" href="Account/Manage/EliminarCuenta" ActiveClass="activa">Eliminar cuenta</NavLink>
+    <form action="Account/Logout" method="post" class="form-salir">
+        <AntiforgeryToken />
+        <input type="hidden" name="ReturnUrl" value="@Navegacion.ToBaseRelativePath(Navegacion.Uri)" />
+        <button type="submit" class="pestana salir">Salir</button>
+    </form>
 </div>

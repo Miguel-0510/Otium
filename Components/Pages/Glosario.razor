@@ -62,11 +62,11 @@
                                 <span class="glosario-libro">de «@p.LibroTitulo»</span>
                             }
                         </button>
-                        <button class="quitar-entrada" title="Quitar palabra" @onclick="() => Quitar(p)">✕</button>
                     </div>
                     @if (expandida)
                     {
                         <p class="glosario-definicion">@p.Definicion</p>
+                        <button class="boton peligro sm quitar-palabra" @onclick="() => Quitar(p)">Quitar palabra</button>
                     }
                 </li>
             }
