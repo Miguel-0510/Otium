@@ -509,9 +509,11 @@
             if (resultados.Count == 0)
                 errorBusqueda = "No encontré resultados. Prueba con otras palabras o escríbelo a mano.";
         }
+#pragma warning disable CS0168
         catch (Exception ex)
+#pragma warning restore CS0168
         {
-            errorBusqueda = "No pude consultar el buscador: " + ex.Message;
+            errorBusqueda = "No pude consultar el buscador. Inténtalo más tarde.";
         }
         finally
         {
