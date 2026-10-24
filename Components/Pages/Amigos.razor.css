@@ -12,7 +12,7 @@ h2 {
     font-family: var(--sans);
     font-size: 0.75rem;
     font-weight: 700;
-    color: var(--esmeralda);
+    color: var(--enlace);
     background: var(--tinte);
     padding: 1px 8px;
     border-radius: 999px;
@@ -39,13 +39,13 @@ h2 {
 }
 
 .codigo-amigo .boton.secundario {
-    color: var(--crema);
-    border-color: var(--crema);
+    color: var(--texto-boton);
+    border-color: var(--linea-elevada);
     flex: none;
 }
 
 .codigo-amigo .boton.secundario:hover {
-    background: rgba(246, 239, 223, 0.15);
+    background: rgba(234, 234, 234, 0.12);
 }
 
 .boton.sm {

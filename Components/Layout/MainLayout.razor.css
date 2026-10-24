@@ -5,9 +5,9 @@
     justify-content: space-between;
     gap: 12px 24px;
     padding: 14px 24px;
-    color: var(--crema);
-    background: var(--esmeralda);
-    border-bottom: 4px solid var(--dorado);
+    color: var(--texto-cabecera);
+    background: var(--cabecera);
+    border-bottom: 3px solid var(--borde-cabecera);
 }
 
 .marca {
@@ -15,7 +15,7 @@
     flex-wrap: wrap;
     align-items: baseline;
     gap: 4px 14px;
-    color: var(--crema);
+    color: var(--texto-cabecera);
     text-decoration: none;
 }
 
@@ -49,7 +49,7 @@
     padding: 6px 16px;
     font: inherit;
     font-weight: 700;
-    color: var(--crema);
+    color: var(--texto-cabecera);
     text-decoration: none;
     background: transparent;
     border: 0;
@@ -63,7 +63,7 @@
 }
 
 .menu ::deep a.active {
-    color: var(--esmeralda-profundo);
+    color: var(--texto-sobre-dorado);
     background: var(--dorado-claro);
 }
 
@@ -113,7 +113,7 @@
     padding: 6px 16px;
     font: inherit;
     font-weight: 700;
-    color: var(--esmeralda-profundo);
+    color: var(--texto-sobre-dorado);
     background: var(--dorado-claro);
     border: 0;
     border-radius: 999px;

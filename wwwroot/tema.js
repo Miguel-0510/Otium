@@ -4,6 +4,10 @@
     }
     function aplicar(tema) {
         document.documentElement.setAttribute('data-theme', tema);
+        var meta = document.getElementById('meta-color-tema');
+        if (meta) {
+            meta.setAttribute('content', tema === 'dark' ? '#0F1A17' : '#0F5C4A');
+        }
     }
     function aplicarGuardadoOPreferido() {
         var guardado = temaGuardado();

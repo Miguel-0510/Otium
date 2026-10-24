@@ -14,8 +14,22 @@
     --tinte: #DDEBE4;
     --peligro: #A23B2A;
 
+    --superficie-elevada: #DDEBE4;
+    --linea-elevada: #C9B98E;
+    --cabecera: #0F5C4A;
+    --borde-cabecera: #B8892B;
+    --texto-cabecera: #F6EFDF;
+    --texto-boton: #F6EFDF;
+    --texto-sobre-dorado: #1E2B26;
+    --enlace: #0F5C4A;
+    --borde-control: #E4D3A8;
+
     --serif: 'Lora', Georgia, 'Times New Roman', serif;
     --sans: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+html {
+    color-scheme: light;
 }
 
 html, body {
@@ -25,6 +39,23 @@ html, body {
     font-family: var(--sans);
     font-size: 16px;
     line-height: 1.55;
+}
+
+body,
+.cabecera-app,
+.cuenta,
+.ficha,
+.repisa,
+.libro-compartido,
+.modal-caja,
+input,
+select,
+textarea,
+.boton,
+.boton-cuenta,
+.pestana,
+.resultado {
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 h1, h2, h3, p {
@@ -40,7 +71,7 @@ h1, h2 {
 h1 { font-size: 1.9rem; }
 h2 { font-size: 1.25rem; }
 
-a { color: var(--esmeralda); }
+a { color: var(--enlace); }
 
 button, input, select, textarea {
     font-family: inherit;
@@ -67,18 +98,19 @@ h1:focus {
 
 /* ---------- Pantallas de cuenta (usan Bootstrap) ---------- */
 .btn-primary {
-    --bs-btn-color: var(--crema);
+    --bs-btn-color: var(--texto-boton);
     --bs-btn-bg: var(--esmeralda);
     --bs-btn-border-color: var(--esmeralda);
-    --bs-btn-hover-color: var(--crema);
+    --bs-btn-hover-color: var(--texto-boton);
     --bs-btn-hover-bg: var(--esmeralda-claro);
     --bs-btn-hover-border-color: var(--esmeralda-claro);
-    --bs-btn-active-color: var(--crema);
+    --bs-btn-active-color: var(--texto-boton);
     --bs-btn-active-bg: var(--esmeralda-profundo);
     --bs-btn-active-border-color: var(--esmeralda-profundo);
+    --bs-btn-disabled-color: var(--texto-boton);
     --bs-btn-disabled-bg: var(--esmeralda);
     --bs-btn-disabled-border-color: var(--esmeralda);
-    --bs-btn-focus-shadow-rgb: 184, 137, 43;
+    --bs-btn-focus-shadow-rgb: 212, 175, 55;
 }
 
 .form-control:focus,
@@ -153,8 +185,15 @@ h1:focus {
     font: inherit;
     color: var(--tinta);
     background: var(--crema);
-    border: 1.5px solid var(--linea);
+    border: 1.5px solid var(--borde-control);
     border-radius: 10px;
+}
+
+.cuenta input::placeholder,
+input::placeholder,
+textarea::placeholder {
+    color: var(--tinta-suave);
+    opacity: 0.8;
 }
 
 .cuenta input:not([type=checkbox]):focus {
@@ -187,9 +226,9 @@ h1:focus {
     padding: 11px 16px;
     font: inherit;
     font-weight: 700;
-    color: var(--crema);
+    color: var(--texto-boton);
     background: var(--esmeralda);
-    border: 0;
+    border: 1px solid var(--esmeralda);
     border-radius: 10px;
     cursor: pointer;
 }
@@ -246,30 +285,314 @@ h1:focus {
     margin-bottom: 4px;
 }
 
-/* ---------- Modo oscuro ---------- */
+/* ---------- Modo oscuro: Biblioteca de Medianoche ---------- */
 :root[data-theme="dark"] {
-    --crema: #0E1B17;
-    --tarjeta: #17271F;
-    --esmeralda: #2E9E7C;
-    --esmeralda-claro: #3FB890;
-    --esmeralda-profundo: #1B6B51;
-    --dorado: #E0B64A;
-    --dorado-claro: #EDCB70;
-    --tinta: #F3EFE6;
-    --tinta-suave: #A8B3AC;
-    --linea: #263B32;
-    --tinte: #17352B;
-    --peligro: #F0A092;
+    color-scheme: dark;
+
+    /* Superficies */
+    --crema: #121616;
+    --tarjeta: #1B2222;
+    --superficie-elevada: #242D2D;
+    --linea: #293434;
+    --linea-elevada: #3A4747;
+    --borde-control: #3A4747;
+
+    /* Acentos */
+    --esmeralda: #1C6B58;
+    --esmeralda-claro: #23856D;
+    --esmeralda-profundo: #145243;
+    --dorado: #D4AF37;
+    --dorado-claro: #CBA135;
+
+    /* Texto */
+    --tinta: #EAEAEA;
+    --tinta-suave: #A0ACAC;
+    --tinte: #242D2D;
+    --peligro: #E08A7A;
+
+    /* Cabecera y enlaces */
+    --cabecera: #0F1A17;
+    --borde-cabecera: #CBA135;
+    --texto-cabecera: #EAEAEA;
+    --texto-boton: #EAEAEA;
+    --texto-sobre-dorado: #121616;
+    --enlace: #7DD3B8;
+
+    /* Bootstrap */
+    --bs-body-bg: #121616;
+    --bs-body-color: #EAEAEA;
+    --bs-border-color: #293434;
+    --bs-secondary-color: #A0ACAC;
+    --bs-emphasis-color: #EAEAEA;
+    --bs-heading-color: #EAEAEA;
+    --bs-link-color: #7DD3B8;
+    --bs-link-hover-color: #A5E3D0;
 }
 
-:root[data-theme="dark"] .lomo {
-    color: var(--crema);
+:root[data-theme="dark"] body {
+    background-color: var(--crema);
+    color: var(--tinta);
+}
+
+:root[data-theme="dark"] .cuenta,
+:root[data-theme="dark"] .ficha,
+:root[data-theme="dark"] .libro-compartido,
+:root[data-theme="dark"] .modal-caja,
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .shelf-container {
+    color: var(--tinta);
+    background: var(--tarjeta);
+    border: 1px solid var(--linea);
+}
+
+:root[data-theme="dark"] .cuenta {
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(212, 175, 55, 0.18);
+}
+
+:root[data-theme="dark"] .cuenta input:not([type=checkbox]):not([type=radio]),
+:root[data-theme="dark"] input:not([type=checkbox]):not([type=radio]),
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] .form-control,
+:root[data-theme="dark"] .form-select {
+    color: var(--tinta);
+    background-color: var(--crema);
+    border-color: var(--borde-control);
+}
+
+:root[data-theme="dark"] .form-control:focus,
+:root[data-theme="dark"] .form-select:focus,
+:root[data-theme="dark"] input:not([type=checkbox]):not([type=radio]):focus,
+:root[data-theme="dark"] select:focus,
+:root[data-theme="dark"] textarea:focus {
+    color: var(--tinta);
+    background-color: var(--crema);
+    border-color: var(--dorado);
+    box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.18);
 }
 
 :root[data-theme="dark"] .boton,
 :root[data-theme="dark"] .boton-cuenta,
-:root[data-theme="dark"] .pestana.activa {
-    color: #0A2A22;
+:root[data-theme="dark"] .pestana.activa,
+:root[data-theme="dark"] .cambio-vista button.activo {
+    color: var(--texto-boton);
+    background-color: var(--esmeralda);
+    border-color: var(--esmeralda);
+}
+
+:root[data-theme="dark"] .boton:hover,
+:root[data-theme="dark"] .boton-cuenta:hover {
+    background-color: var(--esmeralda-claro);
+    border-color: var(--esmeralda-claro);
+}
+
+:root[data-theme="dark"] .boton.secundario {
+    color: var(--tinta);
+    background: var(--superficie-elevada);
+    border-color: var(--linea-elevada);
+}
+
+:root[data-theme="dark"] .boton.secundario:hover {
+    background: #2E3A3A;
+    border-color: #4A5A5A;
+}
+
+:root[data-theme="dark"] .codigo-amigo .boton.secundario {
+    color: var(--texto-boton);
+    background: transparent;
+    border-color: var(--linea-elevada);
+}
+
+:root[data-theme="dark"] .codigo-amigo .boton.secundario:hover {
+    background: rgba(234, 234, 234, 0.12);
+}
+
+:root[data-theme="dark"] .pestana,
+:root[data-theme="dark"] .cambio-vista button,
+:root[data-theme="dark"] .boton-travesias {
+    color: var(--tinta);
+    background: var(--superficie-elevada);
+    border-color: var(--linea-elevada);
+}
+
+:root[data-theme="dark"] .pestana:hover,
+:root[data-theme="dark"] .cambio-vista button:hover,
+:root[data-theme="dark"] .boton-travesias:hover {
+    background: #2E3A3A;
+}
+
+:root[data-theme="dark"] .pestana.salir:hover {
+    background: #3A1F1B;
+}
+
+:root[data-theme="dark"] .boton.peligro {
+    color: var(--texto-boton);
+    background: #8F3B30;
+    border-color: #8F3B30;
+}
+
+:root[data-theme="dark"] .boton.peligro:hover {
+    background: #A34A3A;
+    border-color: #A34A3A;
+}
+
+:root[data-theme="dark"] .resultado {
+    color: var(--tinta);
+    background: var(--superficie-elevada);
+    border-color: var(--linea-elevada);
+}
+
+:root[data-theme="dark"] .repisa {
+    background: var(--tarjeta);
+    border-color: var(--linea);
+    border-bottom-color: var(--dorado);
+}
+
+:root[data-theme="dark"] .lomo {
+    color: var(--tinta);
+    background: #1C4A3D;
+    border-color: var(--linea-elevada);
+}
+
+:root[data-theme="dark"] .lomo:nth-child(4n+2) { background: #173A31; }
+:root[data-theme="dark"] .lomo:nth-child(4n+3) { background: #245447; }
+:root[data-theme="dark"] .lomo:nth-child(4n)   { background: #4A2430; }
+
+:root[data-theme="dark"] .lomo::before,
+:root[data-theme="dark"] .lomo::after {
+    background: var(--dorado-claro);
+}
+
+:root[data-theme="dark"] .lomo.elegido {
+    border-color: var(--dorado);
+}
+
+:root[data-theme="dark"] .estrella {
+    color: #4A5A5A;
+}
+
+:root[data-theme="dark"] .codigo-amigo-texto {
+    color: var(--dorado);
+}
+
+:root[data-theme="dark"] .avatar-amigo {
+    color: var(--tinta);
+}
+
+:root[data-theme="dark"] .glosario-toggle strong,
+:root[data-theme="dark"] .contexto-libro,
+:root[data-theme="dark"] .contador-badge,
+:root[data-theme="dark"] .sin-portada,
+:root[data-theme="dark"] .volver {
+    color: var(--enlace);
+}
+
+:root[data-theme="dark"] .alert-danger,
+:root[data-theme="dark"] .cuenta .alert-danger {
+    color: #F2C0B8;
+    background: #2A1A17;
+    border-color: #5A312B;
+}
+
+:root[data-theme="dark"] .alert-success,
+:root[data-theme="dark"] .cuenta .alert-success {
+    color: #B7E4CE;
+    background: #162B23;
+    border-color: #2E5A48;
+}
+
+:root[data-theme="dark"] .alert-warning,
+:root[data-theme="dark"] .cuenta .alert-warning {
+    color: #F0D9A6;
+    background: #2A2416;
+    border-color: #5A4A24;
+}
+
+:root[data-theme="dark"] .alert-info,
+:root[data-theme="dark"] .cuenta .alert-info {
+    color: #B8DDE8;
+    background: #16262B;
+    border-color: #2E4E5A;
+}
+
+:root[data-theme="dark"] .table {
+    --bs-table-color: var(--tinta);
+    --bs-table-bg: transparent;
+    --bs-table-border-color: var(--linea);
+    --bs-table-striped-color: var(--tinta);
+    --bs-table-striped-bg: rgba(255, 255, 255, 0.03);
+    --bs-table-hover-color: var(--tinta);
+    --bs-table-hover-bg: rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme="dark"] .btn-danger {
+    --bs-btn-color: var(--texto-boton);
+    --bs-btn-bg: #8F3B30;
+    --bs-btn-border-color: #8F3B30;
+    --bs-btn-hover-color: var(--texto-boton);
+    --bs-btn-hover-bg: #A34A3A;
+    --bs-btn-hover-border-color: #A34A3A;
+    --bs-btn-active-color: var(--texto-boton);
+    --bs-btn-active-bg: #7A3027;
+    --bs-btn-active-border-color: #7A3027;
+}
+
+:root[data-theme="dark"] .form-floating > label,
+:root[data-theme="dark"] .form-label {
+    color: var(--tinta-suave);
+}
+
+:root[data-theme="dark"] .form-floating > .form-control:disabled ~ label::after,
+:root[data-theme="dark"] .form-floating > :disabled ~ label::after {
+    background-color: var(--crema);
+}
+
+:root[data-theme="dark"] .form-check-label,
+:root[data-theme="dark"] .col-form-label {
+    color: var(--tinta);
+}
+
+:root[data-theme="dark"] .input-group-text {
+    color: var(--tinta);
+    background: var(--superficie-elevada);
+    border-color: var(--borde-control);
+}
+
+:root[data-theme="dark"] .form-check-input {
+    background-color: var(--crema);
+    border-color: var(--linea-elevada);
+}
+
+:root[data-theme="dark"] .form-check-input:checked {
+    background-color: var(--esmeralda);
+    border-color: var(--esmeralda);
+}
+
+:root[data-theme="dark"] .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+:root[data-theme="dark"] .text-muted {
+    color: var(--tinta-suave) !important;
+}
+
+:root[data-theme="dark"] .modal-fondo {
+    background: rgba(0, 0, 0, 0.65);
+}
+
+:root[data-theme="dark"] #components-reconnect-modal {
+    color: var(--tinta);
+    background: var(--tarjeta);
+    border: 1px solid var(--linea);
+}
+
+:root[data-theme="dark"] #components-reconnect-modal button {
+    color: var(--texto-boton);
+    background: var(--esmeralda);
+}
+
+:root[data-theme="dark"] #components-reconnect-modal button:hover {
+    background: var(--esmeralda-claro);
 }
 
 /* ============================================================
@@ -281,7 +604,7 @@ h1:focus {
 .boton {
     padding: 8px 16px;
     font-weight: 700;
-    color: var(--crema);
+    color: var(--texto-boton);
     background: var(--esmeralda);
     border: 1.5px solid var(--esmeralda);
     border-radius: 10px;
@@ -294,7 +617,7 @@ h1:focus {
 }
 
 .boton.secundario {
-    color: var(--esmeralda);
+    color: var(--enlace);
     background: transparent;
 }
 
@@ -384,7 +707,7 @@ textarea {
     font: inherit;
     color: var(--tinta);
     background: var(--crema);
-    border: 1.5px solid var(--linea);
+    border: 1.5px solid var(--borde-control);
     border-radius: 10px;
 }
 
@@ -401,7 +724,7 @@ textarea {
 }
 
 .nota a {
-    color: var(--esmeralda);
+    color: var(--enlace);
 }
 
 .vacio {
@@ -453,7 +776,7 @@ textarea {
     justify-content: center;
     font-size: 0.7rem;
     text-align: center;
-    color: var(--esmeralda);
+    color: var(--enlace);
     background: var(--tinte);
 }
 
@@ -485,9 +808,9 @@ textarea {
     padding: 6px 16px;
     font-size: 0.95rem;
     font-weight: 700;
-    color: var(--esmeralda);
+    color: var(--enlace);
     background: transparent;
-    border: 1.5px solid var(--esmeralda);
+    border: 1.5px solid var(--enlace);
     border-radius: 999px;
     cursor: pointer;
 }
@@ -497,7 +820,7 @@ textarea {
 }
 
 .pestana.activa {
-    color: var(--crema);
+    color: var(--texto-boton);
     background: var(--esmeralda);
 }
 
@@ -509,7 +832,7 @@ textarea {
 .contador-badge {
     font-size: 0.75rem;
     font-weight: 700;
-    color: var(--esmeralda);
+    color: var(--enlace);
     background: var(--tinte);
     padding: 1px 8px;
     border-radius: 999px;

@@ -11,7 +11,7 @@ h2 {
 .contador-badge {
     font-size: 0.75rem;
     font-weight: 700;
-    color: var(--esmeralda);
+    color: var(--enlace);
     background: var(--tinte);
     padding: 1px 8px;
     border-radius: 999px;
@@ -25,7 +25,7 @@ h2 {
     padding: 8px 12px;
     font-size: 0.85rem;
     font-style: italic;
-    color: var(--esmeralda-profundo);
+    color: var(--enlace);
     background: var(--tinte);
     border-left: 3px solid var(--esmeralda);
     border-radius: 0 8px 8px 0;
@@ -77,7 +77,7 @@ h2 {
     font-family: var(--serif);
     font-size: 1.1rem;
     font-weight: 600;
-    color: var(--esmeralda-profundo);
+    color: var(--enlace);
     text-transform: capitalize;
 }
 

@@ -27,9 +27,9 @@
     padding: 6px 16px;
     font-size: 0.95rem;
     font-weight: 700;
-    color: var(--esmeralda);
+    color: var(--enlace);
     background: transparent;
-    border: 1.5px solid var(--esmeralda);
+    border: 1.5px solid var(--enlace);
     border-radius: 999px;
     cursor: pointer;
 }
@@ -39,7 +39,7 @@
 }
 
 .pestana.activa {
-    color: var(--crema);
+    color: var(--texto-boton);
     background: var(--esmeralda);
 }
 
@@ -75,7 +75,7 @@
     width: 46px;
     height: 152px;
     padding: 26px 0;
-    color: var(--crema);
+    color: var(--texto-boton);
     background: var(--esmeralda);
     border: 1px solid var(--dorado-claro);
     border-bottom: 0;
@@ -161,7 +161,7 @@
 }
 
 .nota a {
-    color: var(--esmeralda);
+    color: var(--enlace);
 }
 
 .cabecera {
@@ -211,7 +211,7 @@
 .boton {
     padding: 8px 16px;
     font-weight: 700;
-    color: var(--crema);
+    color: var(--texto-boton);
     background: var(--esmeralda);
     border: 1.5px solid var(--esmeralda);
     border-radius: 10px;
@@ -224,7 +224,7 @@
 }
 
 .boton.secundario {
-    color: var(--esmeralda);
+    color: var(--enlace);
     background: transparent;
 }
 
@@ -276,7 +276,7 @@ textarea {
     font: inherit;
     color: var(--tinta);
     background: var(--crema);
-    border: 1.5px solid var(--linea);
+    border: 1.5px solid var(--borde-control);
     border-radius: 10px;
 }
 
@@ -343,7 +343,7 @@ textarea {
     justify-content: center;
     font-size: 0.7rem;
     text-align: center;
-    color: var(--esmeralda);
+    color: var(--enlace);
     background: var(--tinte);
 }
 
@@ -417,7 +417,7 @@ textarea {
     padding: 5px 12px;
     font-size: 0.85rem;
     font-weight: 700;
-    color: var(--esmeralda);
+    color: var(--enlace);
     background: transparent;
     border: 1.5px solid var(--linea);
     border-radius: 8px;
@@ -425,7 +425,7 @@ textarea {
 }
 
 .cambio-vista button.activo {
-    color: var(--crema);
+    color: var(--texto-boton);
     background: var(--esmeralda);
     border-color: var(--esmeralda);
 }
@@ -571,7 +571,7 @@ textarea {
     padding: 10px 14px;
     font: inherit;
     font-weight: 700;
-    color: var(--esmeralda);
+    color: var(--enlace);
     text-align: center;
     background: var(--tinte);
     border: 1px solid var(--linea);
