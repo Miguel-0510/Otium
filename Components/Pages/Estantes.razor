@@ -17,6 +17,11 @@
 
 <h1>Mis estantes</h1>
 
+@if (!string.IsNullOrEmpty(errorGeneral))
+{
+    <p class="error">@errorGeneral</p>
+}
+
 <div class="acciones">
     <button class="boton" @onclick="() => mostrarFormulario = !mostrarFormulario">
         @(mostrarFormulario ? "Cerrar" : "Añadir libro")
@@ -357,6 +362,7 @@
     private int? nuevaPaginaFin;
     private string nuevoResumenEntrada = "";
     private string errorEntrada = "";
+    private string errorGeneral = "";
 
     private bool mostrarFormulario;
     private string nuevoTitulo = "";
@@ -420,7 +426,8 @@
         if (libro.UsuarioId != usuarioId)
             return;
 
-        await Servicio.ActualizarAsync(usuarioId, libro);
+        var (exito, mensaje) = await Servicio.ActualizarAsync(usuarioId, libro);
+        errorGeneral = exito ? "" : mensaje;
     }
 
     private async Task Puntuar(Libro libro, int valor)
@@ -442,16 +449,16 @@
 
         errorEntrada = "";
 
-        var entrada = await ServicioEntradas.AgregarAsync(
+        var (exito, mensaje, entrada) = await ServicioEntradas.AgregarAsync(
             usuarioId,
             seleccionado.Id,
             nuevaPaginaInicio,
             nuevaPaginaFin,
             nuevoResumenEntrada.Trim());
 
-        if (entrada is null)
+        if (!exito || entrada is null)
         {
-            errorEntrada = "No se pudo guardar la travesía.";
+            errorEntrada = mensaje;
             return;
         }
 
@@ -540,11 +547,17 @@
             IdExterno = nuevoIdExterno
         };
 
-        await Servicio.AgregarAsync(usuarioId, nuevo);
+        var (exito, mensaje, creado) = await Servicio.AgregarAsync(usuarioId, nuevo);
 
-        libros.Add(nuevo);
+        if (!exito || creado is null)
+        {
+            errorFormulario = mensaje;
+            return;
+        }
+
+        libros.Add(creado);
         estanteActual = nuevoEstante;
-        await Elegir(nuevo);
+        await Elegir(creado);
         CerrarFormulario();
     }
 

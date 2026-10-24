@@ -27,11 +27,13 @@ public sealed class TravesiasTests
         Assert.True(usuario.Exito);
 
         var libro = new Libro { Titulo = "Libro con travesías", Autor = "Autora", Estante = Estante.Leyendo };
-        await libros.AgregarAsync(usuario.Usuario!.Id, libro);
+        Assert.True((await libros.AgregarAsync(usuario.Usuario!.Id, libro)).Exito);
 
-        var primera = await entradas.AgregarAsync(usuario.Usuario.Id, libro.Id, 1, 20, "Primera travesía");
-        var segunda = await entradas.AgregarAsync(usuario.Usuario.Id, libro.Id, 21, 40, "Segunda travesía");
+        var (exitoPrimera, _, primera) = await entradas.AgregarAsync(usuario.Usuario.Id, libro.Id, 1, 20, "Primera travesía");
+        var (exitoSegunda, _, segunda) = await entradas.AgregarAsync(usuario.Usuario.Id, libro.Id, 21, 40, "Segunda travesía");
 
+        Assert.True(exitoPrimera);
+        Assert.True(exitoSegunda);
         Assert.NotNull(primera);
         Assert.NotNull(segunda);
         Assert.Equal(1, primera!.Numero);
@@ -55,6 +57,9 @@ public sealed class TravesiasTests
         var usuario = await registro.RegistrarAsync($"travesias-sin-libro-{Guid.NewGuid():N}@example.com", "Password1");
         Assert.True(usuario.Exito);
 
-        Assert.Null(await entradas.AgregarAsync(usuario.Usuario!.Id, 999_999, 1, 10, "No debe guardarse"));
+        var resultado = await entradas.AgregarAsync(usuario.Usuario!.Id, 999_999, 1, 10, "No debe guardarse");
+
+        Assert.False(resultado.Exito);
+        Assert.Null(resultado.Entrada);
     }
 }

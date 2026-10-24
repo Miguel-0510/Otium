@@ -36,13 +36,14 @@ public sealed class AutorizacionPropietarioTests
             Autor = "Autora",
             Estante = Estante.Leyendo
         };
-        await libros.AgregarAsync(usuarioA.Usuario!.Id, libro);
+        var (creado, _, _) = await libros.AgregarAsync(usuarioA.Usuario!.Id, libro);
+        Assert.True(creado);
 
         Assert.Single(await libros.ObtenerDeUsuarioAsync(usuarioA.Usuario.Id));
         Assert.Empty(await libros.ObtenerDeUsuarioAsync(usuarioB.Usuario!.Id));
 
         libro.Titulo = "Intento de B";
-        Assert.False(await libros.ActualizarAsync(usuarioB.Usuario.Id, libro));
+        Assert.False((await libros.ActualizarAsync(usuarioB.Usuario.Id, libro)).Exito);
         Assert.False(await libros.EliminarAsync(usuarioB.Usuario.Id, libro.Id));
 
         var enBase = await db.Libros.AsNoTracking().FirstAsync(l => l.Id == libro.Id);
@@ -50,7 +51,7 @@ public sealed class AutorizacionPropietarioTests
         Assert.Equal(usuarioA.Usuario.Id, enBase.UsuarioId);
 
         libro.Titulo = "Titulo actualizado por A";
-        Assert.True(await libros.ActualizarAsync(usuarioA.Usuario.Id, libro));
+        Assert.True((await libros.ActualizarAsync(usuarioA.Usuario.Id, libro)).Exito);
     }
 
     [Fact]
@@ -68,13 +69,18 @@ public sealed class AutorizacionPropietarioTests
         Assert.True(usuarioB.Exito);
 
         var libro = new Libro { Titulo = "Libro de A", Autor = "Autora", Estante = Estante.Leyendo };
-        await libros.AgregarAsync(usuarioA.Usuario!.Id, libro);
+        Assert.True((await libros.AgregarAsync(usuarioA.Usuario!.Id, libro)).Exito);
 
-        var entrada = await entradas.AgregarAsync(usuarioA.Usuario.Id, libro.Id, 1, 10, "Travesía de A");
+        var (exitoEntrada, _, entrada) = await entradas.AgregarAsync(usuarioA.Usuario.Id, libro.Id, 1, 10, "Travesía de A");
+        Assert.True(exitoEntrada);
         Assert.NotNull(entrada);
 
         Assert.Empty(await entradas.ObtenerDeLibroAsync(usuarioB.Usuario!.Id, libro.Id));
-        Assert.Null(await entradas.AgregarAsync(usuarioB.Usuario.Id, libro.Id, 11, 20, "Intento de B"));
+
+        var intento = await entradas.AgregarAsync(usuarioB.Usuario.Id, libro.Id, 11, 20, "Intento de B");
+        Assert.False(intento.Exito);
+        Assert.Null(intento.Entrada);
+
         Assert.False(await entradas.EliminarAsync(usuarioB.Usuario.Id, entrada!.Id));
 
         Assert.Single(await entradas.ObtenerDeLibroAsync(usuarioA.Usuario.Id, libro.Id));

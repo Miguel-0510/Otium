@@ -356,7 +356,7 @@ La separación actual es **aceptable para beta privada**, no para un diseño por
 | Área | Estado | Nota |
 |---|---|---|
 | Compilación | Sí | 0 errores, 0 advertencias |
-| Pruebas automatizadas | Sí | `tests/Otium.Tests`; 32 pruebas y cobertura mínima del 70% de líneas |
+| Pruebas automatizadas | Sí | `tests/Otium.Tests`; 36 pruebas y cobertura mínima del 70% de líneas |
 | CI/CD | Sí | `.github/workflows/ci.yml`: restore, build, test con cobertura y auditoría de paquetes |
 | README / LICENSE / CHANGELOG | No | No existen |
 | `.editorconfig` / `global.json` | No | Sin convenciones ni SDK fijado |
@@ -578,7 +578,7 @@ Acciones:
 
 #### P2-10. Sin pruebas, CI, documentación ni licencia
 
-**Estado: parcialmente corregido (2026-10-23).** Existe `tests/Otium.Tests` con 32 pruebas, cobertura mínima del 70% de líneas (`coverlet.runsettings`) y CI en `.github/workflows/ci.yml`. Siguen faltando README, LICENSE, CHANGELOG, `.editorconfig` y `global.json`.
+**Estado: parcialmente corregido (2026-10-23).** Existe `tests/Otium.Tests` con 36 pruebas, cobertura mínima del 70% de líneas (`coverlet.runsettings`) y CI en `.github/workflows/ci.yml`. Siguen faltando README, LICENSE, CHANGELOG, `.editorconfig` y `global.json`.
 
 - ~~No hay proyecto de tests, workflows...~~ Corregido el proyecto y el workflow.
 - Añadir como mínimo pruebas de:
@@ -591,27 +591,28 @@ Acciones:
 
 #### P2-11. Validación de entrada insuficiente
 
-- `Libro`, `EntradaLectura` y `PalabraGlosario` no tienen DataAnnotations ni validación de longitud.
-- `Puntuacion` no se valida en el servicio (solo la UI limita a 1-5).
-- `PaginaInicio`/`PaginaFin` no validan negativos ni orden.
-- `Resena` y `Resumen` no tienen longitud máxima.
-- `GlosarioService` no limita el tamaño de la palabra ni del título.
-- `EntradaLecturaService.AgregarAsync` no valida que `libroId` exista o pertenezca al usuario.
+**Estado: corregido (2026-10-23).** `Libro`, `EntradaLectura` y `PalabraGlosario` tienen DataAnnotations; los servicios validan títulos, autores, reseñas, puntuación 0-5, páginas no negativas y ordenadas, y longitud de palabra/título. Pruebas en `ValidacionEntradaTests`.
+
+- ~~`Libro`, `EntradaLectura` y `PalabraGlosario` no tienen DataAnnotations ni validación de longitud.~~
+- ~~`Puntuacion` no se valida en el servicio (solo la UI limita a 1-5).~~
+- ~~`PaginaInicio`/`PaginaFin` no validan negativos ni orden.~~
+- ~~`Resena` y `Resumen` no tienen longitud máxima.~~
+- ~~`GlosarioService` no limita el tamaño de la palabra ni del título.~~
+- ~~`EntradaLecturaService.AgregarAsync` no valida que `libroId` exista o pertenezca al usuario.~~
 
 #### P2-12. Numeración de travesías con carreras y reutilización
 
-- `EntradaLecturaService.cs:29-31` usa `CountAsync() + 1`.
+- `EntradaLecturaService.cs` usa `Max(Numero) + 1`.
 - Dos altas simultáneas pueden generar el mismo `Numero`.
-- Al borrar una entrada intermedia, el siguiente `Count + 1` puede repetir un número existente.
+- Al borrar la última entrada, el siguiente `Max + 1` puede reutilizar un número ya usado.
 - No hay índice único `(LibroId, Numero)`.
-- Usar un contador persistido o calcular `Max(Numero) + 1` con transacción, y añadir restricción.
+- Usar un contador persistido o una transacción con bloqueo, y añadir restricción.
 
 #### P2-13. Fugas de información en mensajes de error
 
-- `Estantes.razor:479-482` muestra `ex.Message` de Open Library.
-- `GlosarioService.cs:92-95` muestra `ex.Message` de Gemini.
+- `Estantes.razor` concatena `ex.Message` al mostrar errores de búsqueda.
 - `IdentityComponentsEndpointRouteBuilderExtensions.cs:64` y `:122` devuelven IDs internos en errores.
-- `EmailSender.cs:56-60` registra la excepción con destinatario (correcto), pero el flujo de UI debe mostrar mensajes genéricos.
+- `EmailSender.cs` registra la excepción con destinatario (correcto), pero el flujo de UI debe mostrar mensajes genéricos.
 
 #### P2-14. Cabeceras y CSP mejorables
 

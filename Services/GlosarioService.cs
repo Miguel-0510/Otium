@@ -52,6 +52,17 @@ public class GlosarioService : IGlosarioService
             return (false, "Escribe una palabra.", null);
         }
 
+        if (texto.Length > 100)
+        {
+            return (false, "La palabra no puede superar 100 caracteres.", null);
+        }
+
+        var titulo = (libroTitulo ?? "").Trim();
+        if (titulo.Length > 300)
+        {
+            return (false, "El título del libro no puede superar 300 caracteres.", null);
+        }
+
         if (!_gemini.EstaConfigurado)
         {
             return (false, "Falta configurar la llave de Gemini en el servidor.", null);
@@ -64,10 +75,15 @@ public class GlosarioService : IGlosarioService
 
         try
         {
-            var definicion = await _gemini.DefinirAsync(texto, libroTitulo, cancellationToken);
+            var definicion = await _gemini.DefinirAsync(texto, titulo, cancellationToken);
             if (string.IsNullOrWhiteSpace(definicion))
             {
                 return (false, "No encontré una definición para esa palabra.", null);
+            }
+
+            if (definicion.Length > 1000)
+            {
+                return (false, "La definición recibida es demasiado larga.", null);
             }
 
             var nueva = new PalabraGlosario
@@ -75,7 +91,7 @@ public class GlosarioService : IGlosarioService
                 UsuarioId = usuarioId,
                 Palabra = texto,
                 Definicion = definicion,
-                LibroTitulo = libroTitulo ?? ""
+                LibroTitulo = titulo
             };
 
             await using var db = await _fabrica.CreateDbContextAsync(cancellationToken);
