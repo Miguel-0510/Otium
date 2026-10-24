@@ -305,7 +305,7 @@ La suite vive en `tests/Otium.Tests` y usa `WebApplicationFactory` con SQLite te
 | **O** - Abierto/cerrado | Parcial | Añadir un estante obliga a tocar el enum, `Nombre()` y varias vistas. Añadir un proveedor de búsqueda obliga a tocar la página. | Centralizar nombres/estantes y abstraer proveedores con interfaces. |
 | **L** - Sustitución de Liskov | Cumple | Las implementaciones respetan sus interfaces; no hay jerarquías problemáticas. | Mantener contratos pequeños y explícitos. |
 | **I** - Segregación de interfaces | Cumple | `ILibroService`, `IAmistadService`, `IEntradaLecturaService` son acotadas. | No engordar interfaces existentes; crear contratos específicos. |
-| **D** - Inversión de dependencias | Parcial | Servicios dependen de `IDbContextFactory` e interfaces, pero las páginas dependen de `BuscadorLibros` concreto, `GlosarioService` lee `IConfiguration` directamente y las entidades EF se filtran a la UI. | Introducir `IBuscadorLibros`, `IOptions<T>` y DTOs/view models. |
+| **D** - Inversión de dependencias | Parcial | Servicios dependen de `IDbContextFactory`, interfaces y `IOptions<T>`; las páginas siguen dependiendo de `BuscadorLibros` concreto y las entidades EF se filtran a la UI. | Introducir `IBuscadorLibros` y DTOs/view models. |
 
 Conclusión SOLID: **parcial**. La base es razonable para una app pequeña, pero la UI y algunos servicios concentran demasiadas responsabilidades y dependen de detalles de infraestructura.
 

@@ -553,6 +553,8 @@ No iniciar P2 antes de cerrar P0/P1 o de aceptar formalmente el riesgo.
 
 ### P2.2 - Options pattern y validación de configuración
 
+**Estado:** [x] Completado (2026-10-23). `CorreoOptions`, `GeminiOptions` y `ProteccionDatosOptions`; `EmailSender` y `GlosarioService` consumen `IOptions<T>`; `CorreoOptions` y `GeminiOptions` validan al arrancar.
+
 **Esfuerzo:** M
 
 - Crear `CorreoOptions`, `GeminiOptions` y `DataProtectionOptions`.

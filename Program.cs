@@ -75,12 +75,18 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString), ServiceLifetime.Scoped);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-var rutaClaves = builder.Configuration["DataProtection:KeysPath"];
-if (!string.IsNullOrWhiteSpace(rutaClaves))
+builder.Services.AddOptions<ProteccionDatosOptions>()
+    .Bind(builder.Configuration.GetSection(ProteccionDatosOptions.Seccion));
+
+var dataProtection = builder.Configuration
+    .GetSection(ProteccionDatosOptions.Seccion)
+    .Get<ProteccionDatosOptions>() ?? new ProteccionDatosOptions();
+
+if (!string.IsNullOrWhiteSpace(dataProtection.KeysPath))
 {
     builder.Services.AddDataProtection()
-        .PersistKeysToFileSystem(new DirectoryInfo(rutaClaves))
-        .SetApplicationName("Otium");
+        .PersistKeysToFileSystem(new DirectoryInfo(dataProtection.KeysPath))
+        .SetApplicationName(dataProtection.ApplicationName);
 }
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
@@ -101,7 +107,10 @@ builder.Services.AddOptions<CorreoOptions>()
     .ValidateOnStart();
 
 builder.Services.AddOptions<GeminiOptions>()
-    .Bind(builder.Configuration.GetSection(GeminiOptions.Seccion));
+    .Bind(builder.Configuration.GetSection(GeminiOptions.Seccion))
+    .Validate(opciones => !string.IsNullOrWhiteSpace(opciones.Modelo),
+        "Gemini:Modelo no puede estar vacío.")
+    .ValidateOnStart();
 
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ILimiteIntentosService, LimiteIntentosService>();
@@ -250,7 +259,3 @@ app.MapAdditionalIdentityEndpoints();
 app.Run();
 
 public partial class Program { }
-
-
-
-
