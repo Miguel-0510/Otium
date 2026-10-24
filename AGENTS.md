@@ -352,8 +352,8 @@ La separación actual es **aceptable para beta privada**, no para un diseño por
 | Área | Estado | Nota |
 |---|---|---|
 | Compilación | Sí | 0 errores, 0 advertencias |
-| Pruebas automatizadas | Sí | `tests/Otium.Tests`; 20 pruebas en verde (P0, P1.1, P1.2, P1.5 y P1.6) |
-| CI/CD | No | No hay workflows |
+| Pruebas automatizadas | Sí | `tests/Otium.Tests`; 23 pruebas y cobertura mínima del 70% de líneas |
+| CI/CD | Sí | `.github/workflows/ci.yml`: restore, build, test con cobertura y auditoría de paquetes |
 | README / LICENSE / CHANGELOG | No | No existen |
 | `.editorconfig` / `global.json` | No | Sin convenciones ni SDK fijado |
 | Secretos fuera del repo | Sí | Credenciales locales movidas a User Secrets; `appsettings.Development.json` saneado. Rotación pendiente por el propietario |
@@ -574,14 +574,16 @@ Acciones:
 
 #### P2-10. Sin pruebas, CI, documentación ni licencia
 
-- No hay proyecto de tests, workflows, README, LICENSE, CHANGELOG, `.editorconfig` ni `global.json`.
-- La compilación es la única verificación automática.
+**Estado: parcialmente corregido (2026-10-23).** Existe `tests/Otium.Tests` con 23 pruebas, cobertura mínima del 70% de líneas (`coverlet.runsettings`) y CI en `.github/workflows/ci.yml`. Siguen faltando README, LICENSE, CHANGELOG, `.editorconfig` y `global.json`.
+
+- ~~No hay proyecto de tests, workflows...~~ Corregido el proyecto y el workflow.
 - Añadir como mínimo pruebas de:
   - Registro de dos usuarios.
   - Recuperación de contraseña.
   - Eliminación de cuenta con datos relacionados.
   - Autorización entre usuarios.
   - Generación/colisión de códigos de amigo.
+  - Travesías y glosario.
 
 #### P2-11. Validación de entrada insuficiente
 
