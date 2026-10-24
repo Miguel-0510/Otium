@@ -538,7 +538,7 @@ No iniciar P2 antes de cerrar P0/P1 o de aceptar formalmente el riesgo.
 
 ### P2.1 - Infraestructura de pruebas y CI
 
-**Estado:** [x] Completado (2026-10-23). `tests/Otium.Tests` con 29 pruebas, `coverlet.runsettings` con umbral del 70% de líneas y `.github/workflows/ci.yml` con restore, build, test, cobertura y auditoría de paquetes.
+**Estado:** [x] Completado (2026-10-23). `tests/Otium.Tests` con 32 pruebas, `coverlet.runsettings` con umbral del 70% de líneas y `.github/workflows/ci.yml` con restore, build, test, cobertura y auditoría de paquetes.
 
 **Esfuerzo:** L
 

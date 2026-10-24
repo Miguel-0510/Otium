@@ -34,7 +34,9 @@ var exigirHttps = builder.Environment.IsProduction()
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+        | ForwardedHeaders.XForwardedProto
+        | ForwardedHeaders.XForwardedHost;
 
     var proxies = builder.Configuration.GetSection("Proxy:KnownProxies").Get<string[]>() ?? [];
     if (proxies.Length == 0)
@@ -111,6 +113,16 @@ builder.Services.AddOptions<GeminiOptions>()
     .Validate(opciones => !string.IsNullOrWhiteSpace(opciones.Modelo),
         "Gemini:Modelo no puede estar vacío.")
     .ValidateOnStart();
+
+builder.Services.AddOptions<SitioOptions>()
+    .Bind(builder.Configuration.GetSection(SitioOptions.Seccion))
+    .Validate(opciones => string.IsNullOrWhiteSpace(opciones.UrlPublica)
+        || (Uri.TryCreate(opciones.UrlPublica, UriKind.Absolute, out var url)
+            && (url.Scheme == Uri.UriSchemeHttp || url.Scheme == Uri.UriSchemeHttps)),
+        "Sitio:UrlPublica debe ser una URL absoluta http o https.")
+    .ValidateOnStart();
+
+builder.Services.AddSingleton<IEnlacePublicoService, EnlacePublicoService>();
 
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ILimiteIntentosService, LimiteIntentosService>();

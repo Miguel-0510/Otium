@@ -149,6 +149,7 @@ Claves usadas:
 | `Correo:Remitente` | Remitente | Configuración local/entorno |
 | `Gemini:ApiKey` | API key de Gemini | Configuración local/entorno |
 | `Gemini:Modelo` | Modelo Gemini | Opcional |
+| `Sitio:UrlPublica` | URL externa para enlaces de correo | Configuración local/entorno |
 | `Invitacion:Codigo` | Legado; ya no se usa en el fuente actual | `appsettings.Development.json` |
 
 Reglas:
@@ -250,7 +251,8 @@ La app soporta dos modos sin cambiar el código:
 
 Reglas de compatibilidad:
 
-- `ForwardedHeaders` acepta `X-Forwarded-For` y `X-Forwarded-Proto`. Por defecto solo confía en proxies loopback; si el proxy está en Docker u otra IP, añadirla en `Proxy:KnownProxies`.
+- `ForwardedHeaders` acepta `X-Forwarded-For`, `X-Forwarded-Proto` y `X-Forwarded-Host`. Por defecto solo confía en proxies loopback; si el proxy está en Docker u otra IP, añadirla en `Proxy:KnownProxies`.
+- `Sitio:UrlPublica` debe ser la URL externa real (por ejemplo, `https://pc.tail29325a.ts.net` con Tailscale Funnel o el dominio del VPS). Se usa para construir los enlaces de recuperación de contraseña; si está vacío, se usa la URL de la petición.
 - `UseHttpsRedirection`, `UseHsts` y cookies `Secure` solo se activan cuando `exigirHttps` es verdadero: `Production` y `Seguridad:PermitirHttp=false`.
 - En local sobre Tailscale se puede ejecutar en `Development` (recomendado) o en `Production` con `Seguridad__PermitirHttp=true`; en este último caso las cookies usan `SameAsRequest`.
 - En el VPS, Kestrel no debe escuchar en `0.0.0.0`; el proxy inverso termina TLS y reenvía a loopback.
@@ -266,6 +268,7 @@ ConnectionStrings__DefaultConnection="Data Source=/var/lib/otium/app.db"
 DataProtection__KeysPath=/var/lib/otium/keys
 Seguridad__PermitirHttp=false
 Proxy__KnownProxies__0=127.0.0.1
+Sitio__UrlPublica=https://otium.example.com
 ```
 
 ---
@@ -353,7 +356,7 @@ La separación actual es **aceptable para beta privada**, no para un diseño por
 | Área | Estado | Nota |
 |---|---|---|
 | Compilación | Sí | 0 errores, 0 advertencias |
-| Pruebas automatizadas | Sí | `tests/Otium.Tests`; 29 pruebas y cobertura mínima del 70% de líneas |
+| Pruebas automatizadas | Sí | `tests/Otium.Tests`; 32 pruebas y cobertura mínima del 70% de líneas |
 | CI/CD | Sí | `.github/workflows/ci.yml`: restore, build, test con cobertura y auditoría de paquetes |
 | README / LICENSE / CHANGELOG | No | No existen |
 | `.editorconfig` / `global.json` | No | Sin convenciones ni SDK fijado |
@@ -361,7 +364,7 @@ La separación actual es **aceptable para beta privada**, no para un diseño por
 | HTTPS/TLS de entrada | Sí (código) | Proxy TLS + `ForwardedHeaders`; pendiente verificar en VPS Oracle |
 | Rate limiting | Sí | HTTP en login/registro/recuperación y cuotas por usuario en amistades/Gemini |
 | Confirmación de correo | Parcial | Opción B: confirmación opcional; el correo solo se envía al recuperar contraseña |
-| Recuperación de contraseña | Sí | Funciona sin exigir `EmailConfirmed`; probado con `IEmailSender` falso |
+| Recuperación de contraseña | Sí | Funciona sin exigir `EmailConfirmed`; enlaces construidos con `Sitio:UrlPublica`; probado con `IEmailSender` falso |
 | Eliminación de cuenta | Sí | Flujo único transaccional con libros, travesías, glosario y amistades |
 | Exportación de datos | Sí | JSON con cuenta, libros, travesías, glosario y amistades |
 | Respaldos | No | No hay implementación en el código actual |
@@ -575,7 +578,7 @@ Acciones:
 
 #### P2-10. Sin pruebas, CI, documentación ni licencia
 
-**Estado: parcialmente corregido (2026-10-23).** Existe `tests/Otium.Tests` con 23 pruebas, cobertura mínima del 70% de líneas (`coverlet.runsettings`) y CI en `.github/workflows/ci.yml`. Siguen faltando README, LICENSE, CHANGELOG, `.editorconfig` y `global.json`.
+**Estado: parcialmente corregido (2026-10-23).** Existe `tests/Otium.Tests` con 32 pruebas, cobertura mínima del 70% de líneas (`coverlet.runsettings`) y CI en `.github/workflows/ci.yml`. Siguen faltando README, LICENSE, CHANGELOG, `.editorconfig` y `global.json`.
 
 - ~~No hay proyecto de tests, workflows...~~ Corregido el proyecto y el workflow.
 - Añadir como mínimo pruebas de:
