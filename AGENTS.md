@@ -353,7 +353,7 @@ La separación actual es **aceptable para beta privada**, no para un diseño por
 | Área | Estado | Nota |
 |---|---|---|
 | Compilación | Sí | 0 errores, 0 advertencias |
-| Pruebas automatizadas | Sí | `tests/Otium.Tests`; 27 pruebas y cobertura mínima del 70% de líneas |
+| Pruebas automatizadas | Sí | `tests/Otium.Tests`; 29 pruebas y cobertura mínima del 70% de líneas |
 | CI/CD | Sí | `.github/workflows/ci.yml`: restore, build, test con cobertura y auditoría de paquetes |
 | README / LICENSE / CHANGELOG | No | No existen |
 | `.editorconfig` / `global.json` | No | Sin convenciones ni SDK fijado |
