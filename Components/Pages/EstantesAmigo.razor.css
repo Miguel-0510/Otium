@@ -1,0 +1,76 @@
+.volver {
+    display: inline-block;
+    margin-bottom: 12px;
+    color: var(--esmeralda);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.volver:hover {
+    text-decoration: underline;
+}
+
+.rejilla-libros {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+    margin-top: 14px;
+}
+
+.libro-compartido {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px;
+    background: var(--tarjeta);
+    border: 1px solid var(--linea);
+    border-radius: 12px;
+}
+
+.caratula {
+    aspect-ratio: 2 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: var(--esmeralda);
+    border-radius: 8px;
+}
+
+.caratula img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sin-portada-grande {
+    padding: 8px;
+    font-family: var(--serif);
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--dorado-claro);
+    text-align: center;
+}
+
+.titulo-libro {
+    font-size: 0.92rem;
+    line-height: 1.3;
+}
+
+.autor-libro {
+    font-size: 0.8rem;
+    color: var(--tinta-suave);
+}
+
+.estrellas {
+    color: var(--dorado);
+    letter-spacing: 0.08em;
+}
+
+.resena-libro {
+    margin: 4px 0 0;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--tinta-suave);
+    white-space: pre-wrap;
+}

@@ -12,7 +12,7 @@ public interface IGlosarioService
 {
     Task<List<PalabraGlosario>> ObtenerDeUsuarioAsync(string usuarioId);
     Task<(bool Exito, string Mensaje, PalabraGlosario? Palabra)> BuscarYGuardarAsync(string usuarioId, string palabra, string libroTitulo);
-    Task EliminarAsync(PalabraGlosario palabra);
+    Task<bool> EliminarAsync(string usuarioId, int palabraId);
     Task EliminarTodosDeUsuarioAsync(string usuarioId);
 }
 
@@ -21,6 +21,7 @@ public class GlosarioService : IGlosarioService
     private readonly IDbContextFactory<ApplicationDbContext> _fabrica;
     private readonly HttpClient _http;
     private readonly ILogger<GlosarioService> _logger;
+    private readonly ILimiteIntentosService _limites;
     private readonly string _apiKey;
     private readonly string _modelo;
 
@@ -28,11 +29,13 @@ public class GlosarioService : IGlosarioService
         IDbContextFactory<ApplicationDbContext> fabrica,
         HttpClient http,
         IOptions<GeminiOptions> opciones,
+        ILimiteIntentosService limites,
         ILogger<GlosarioService> logger)
     {
         _fabrica = fabrica;
         _http = http;
         _logger = logger;
+        _limites = limites;
         _apiKey = opciones.Value.ApiKey;
         _modelo = opciones.Value.Modelo;
     }
@@ -54,6 +57,9 @@ public class GlosarioService : IGlosarioService
 
         if (string.IsNullOrEmpty(_apiKey))
             return (false, "Falta configurar la llave de Gemini en el servidor.", null);
+
+        if (!_limites.IntentarCuotaDiaria($"glosario:{usuarioId}", 50))
+            return (false, "Alcanzaste el límite diario de definiciones. Inténtalo mañana.", null);
 
         var contexto = string.IsNullOrWhiteSpace(libroTitulo) ? "" : $" en el contexto del libro \"{libroTitulo}\"";
         var prompt = $"Da una definicion breve (maximo dos frases) y clara en espanol de la palabra \"{texto}\"{contexto}. " +
@@ -115,11 +121,15 @@ public class GlosarioService : IGlosarioService
         }
     }
 
-    public async Task EliminarAsync(PalabraGlosario palabra)
+    public async Task<bool> EliminarAsync(string usuarioId, int palabraId)
     {
         await using var db = await _fabrica.CreateDbContextAsync();
-        db.PalabrasGlosario.Remove(palabra);
-        await db.SaveChangesAsync();
+
+        var filas = await db.PalabrasGlosario
+            .Where(p => p.Id == palabraId && p.UsuarioId == usuarioId)
+            .ExecuteDeleteAsync();
+
+        return filas > 0;
     }
 
     public async Task EliminarTodosDeUsuarioAsync(string usuarioId)

@@ -138,8 +138,10 @@
 
     private async Task Quitar(PalabraGlosario p)
     {
-        await Servicio.EliminarAsync(p);
-        palabras.Remove(p);
-        expandidas.Remove(p.Id);
+        if (await Servicio.EliminarAsync(usuarioId, p.Id))
+        {
+            palabras.Remove(p);
+            expandidas.Remove(p.Id);
+        }
     }
 }

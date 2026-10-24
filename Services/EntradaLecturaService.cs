@@ -13,27 +13,40 @@ public class EntradaLecturaService : IEntradaLecturaService
         _fabrica = fabrica;
     }
 
-    public async Task<List<EntradaLectura>> ObtenerDeLibroAsync(int libroId)
+    public async Task<List<EntradaLectura>> ObtenerDeLibroAsync(string usuarioId, int libroId)
     {
         await using var db = await _fabrica.CreateDbContextAsync();
+
+        var pertenece = await db.Libros.AnyAsync(l => l.Id == libroId && l.UsuarioId == usuarioId);
+        if (!pertenece)
+        {
+            return new List<EntradaLectura>();
+        }
+
         return await db.EntradasLectura
             .Where(e => e.LibroId == libroId)
             .OrderBy(e => e.Numero)
             .ToListAsync();
     }
 
-    public async Task<EntradaLectura> AgregarAsync(int libroId, int? paginaInicio, int? paginaFin, string resumen)
+    public async Task<EntradaLectura?> AgregarAsync(string usuarioId, int libroId, int? paginaInicio, int? paginaFin, string resumen)
     {
         await using var db = await _fabrica.CreateDbContextAsync();
 
-        var siguienteNumero = await db.EntradasLectura
+        var pertenece = await db.Libros.AnyAsync(l => l.Id == libroId && l.UsuarioId == usuarioId);
+        if (!pertenece)
+        {
+            return null;
+        }
+
+        var ultimoNumero = await db.EntradasLectura
             .Where(e => e.LibroId == libroId)
-            .CountAsync() + 1;
+            .MaxAsync(e => (int?)e.Numero) ?? 0;
 
         var entrada = new EntradaLectura
         {
             LibroId = libroId,
-            Numero = siguienteNumero,
+            Numero = ultimoNumero + 1,
             PaginaInicio = paginaInicio,
             PaginaFin = paginaFin,
             Resumen = resumen
@@ -44,10 +57,14 @@ public class EntradaLecturaService : IEntradaLecturaService
         return entrada;
     }
 
-    public async Task EliminarAsync(EntradaLectura entrada)
+    public async Task<bool> EliminarAsync(string usuarioId, int entradaId)
     {
         await using var db = await _fabrica.CreateDbContextAsync();
-        db.EntradasLectura.Remove(entrada);
-        await db.SaveChangesAsync();
+
+        var filas = await db.EntradasLectura
+            .Where(e => e.Id == entradaId && db.Libros.Any(l => l.Id == e.LibroId && l.UsuarioId == usuarioId))
+            .ExecuteDeleteAsync();
+
+        return filas > 0;
     }
 }

@@ -301,6 +301,10 @@
                                     <textarea class="bloc-notas" rows="8" placeholder="Qué pasó en estas páginas..." @bind="nuevoResumenEntrada"></textarea>
                                 </label>
                                 <div class="acciones">
+                                    @if (!string.IsNullOrEmpty(errorEntrada))
+                                    {
+                                        <p class="error">@errorEntrada</p>
+                                    }
                                     <button class="boton" @onclick="GuardarEntrada">Guardar travesía</button>
                                     <button class="boton secundario" @onclick="() => mostrarFormularioEntrada = false">Cancelar</button>
                                 </div>
@@ -352,6 +356,7 @@
     private int? nuevaPaginaInicio;
     private int? nuevaPaginaFin;
     private string nuevoResumenEntrada = "";
+    private string errorEntrada = "";
 
     private bool mostrarFormulario;
     private string nuevoTitulo = "";
@@ -394,7 +399,7 @@
         entradasExpandidas = new();
 
         entradasLectura = libro is not null
-            ? await ServicioEntradas.ObtenerDeLibroAsync(libro.Id)
+            ? await ServicioEntradas.ObtenerDeLibroAsync(usuarioId, libro.Id)
             : new();
     }
 
@@ -415,7 +420,7 @@
         if (libro.UsuarioId != usuarioId)
             return;
 
-        await Servicio.ActualizarAsync(libro);
+        await Servicio.ActualizarAsync(usuarioId, libro);
     }
 
     private async Task Puntuar(Libro libro, int valor)
@@ -435,7 +440,21 @@
     {
         if (seleccionado is null) return;
 
-        var entrada = await ServicioEntradas.AgregarAsync(seleccionado.Id, nuevaPaginaInicio, nuevaPaginaFin, nuevoResumenEntrada.Trim());
+        errorEntrada = "";
+
+        var entrada = await ServicioEntradas.AgregarAsync(
+            usuarioId,
+            seleccionado.Id,
+            nuevaPaginaInicio,
+            nuevaPaginaFin,
+            nuevoResumenEntrada.Trim());
+
+        if (entrada is null)
+        {
+            errorEntrada = "No se pudo guardar la travesía.";
+            return;
+        }
+
         entradasLectura.Add(entrada);
 
         nuevaPaginaInicio = null;
@@ -446,7 +465,14 @@
 
     private async Task QuitarEntrada(EntradaLectura entrada)
     {
-        await ServicioEntradas.EliminarAsync(entrada);
+        errorEntrada = "";
+
+        if (!await ServicioEntradas.EliminarAsync(usuarioId, entrada.Id))
+        {
+            errorEntrada = "No se pudo quitar la travesía.";
+            return;
+        }
+
         entradasLectura.Remove(entrada);
         entradasExpandidas.Remove(entrada.Id);
     }
@@ -514,7 +540,7 @@
             IdExterno = nuevoIdExterno
         };
 
-        await Servicio.AgregarAsync(nuevo);
+        await Servicio.AgregarAsync(usuarioId, nuevo);
 
         libros.Add(nuevo);
         estanteActual = nuevoEstante;
@@ -527,7 +553,7 @@
         if (libro.UsuarioId != usuarioId)
             return;
 
-        await Servicio.EliminarAsync(libro);
+        await Servicio.EliminarAsync(usuarioId, libro.Id);
 
         libros.Remove(libro);
         await Elegir(libros.FirstOrDefault(l => l.Estante == estanteActual));

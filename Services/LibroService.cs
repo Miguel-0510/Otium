@@ -22,25 +22,48 @@ public class LibroService : ILibroService
             .ToListAsync();
     }
 
-    public async Task AgregarAsync(Libro libro)
+    public async Task AgregarAsync(string usuarioId, Libro libro)
     {
+        libro.UsuarioId = usuarioId;
+
         await using var db = await _fabrica.CreateDbContextAsync();
         db.Libros.Add(libro);
         await db.SaveChangesAsync();
     }
 
-    public async Task ActualizarAsync(Libro libro)
+    public async Task<bool> ActualizarAsync(string usuarioId, Libro libro)
     {
         await using var db = await _fabrica.CreateDbContextAsync();
-        db.Libros.Update(libro);
+
+        var existente = await db.Libros
+            .FirstOrDefaultAsync(l => l.Id == libro.Id && l.UsuarioId == usuarioId);
+
+        if (existente is null)
+        {
+            return false;
+        }
+
+        existente.Titulo = libro.Titulo;
+        existente.Autor = libro.Autor;
+        existente.Estante = libro.Estante;
+        existente.Puntuacion = libro.Puntuacion;
+        existente.Resena = libro.Resena;
+        existente.PortadaUrl = libro.PortadaUrl;
+        existente.IdExterno = libro.IdExterno;
+
         await db.SaveChangesAsync();
+        return true;
     }
 
-    public async Task EliminarAsync(Libro libro)
+    public async Task<bool> EliminarAsync(string usuarioId, int libroId)
     {
         await using var db = await _fabrica.CreateDbContextAsync();
-        db.Libros.Remove(libro);
-        await db.SaveChangesAsync();
+
+        var filas = await db.Libros
+            .Where(l => l.Id == libroId && l.UsuarioId == usuarioId)
+            .ExecuteDeleteAsync();
+
+        return filas > 0;
     }
 
     public async Task EliminarTodosDeUsuarioAsync(string usuarioId)

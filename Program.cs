@@ -1,12 +1,17 @@
-﻿using Microsoft.AspNetCore.Components.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Otium.Components;
 using Otium.Components.Account;
 using Otium.Data;
 using Otium.Services;
 using Otium.Services.Options;
+using System.Net;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +28,45 @@ builder.Services.AddAuthentication(options =>
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
     })
     .AddIdentityCookies();
+
+var exigirHttps = builder.Environment.IsProduction()
+    && !builder.Configuration.GetValue("Seguridad:PermitirHttp", false);
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+    var proxies = builder.Configuration.GetSection("Proxy:KnownProxies").Get<string[]>() ?? [];
+    if (proxies.Length == 0)
+    {
+        return;
+    }
+
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+
+    foreach (var proxy in proxies)
+    {
+        if (IPAddress.TryParse(proxy, out var direccion))
+        {
+            options.KnownProxies.Add(direccion);
+        }
+    }
+});
+
+void ConfigurarCookie(CookieAuthenticationOptions options)
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = exigirHttps
+        ? CookieSecurePolicy.Always
+        : CookieSecurePolicy.SameAsRequest;
+}
+
+builder.Services.ConfigureApplicationCookie(ConfigurarCookie);
+builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.ExternalScheme, ConfigurarCookie);
+builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.TwoFactorUserIdScheme, ConfigurarCookie);
+builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.TwoFactorRememberMeScheme, ConfigurarCookie);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -59,10 +103,77 @@ builder.Services.AddOptions<CorreoOptions>()
 builder.Services.AddOptions<GeminiOptions>()
     .Bind(builder.Configuration.GetSection(GeminiOptions.Seccion));
 
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ILimiteIntentosService, LimiteIntentosService>();
+
+builder.Services.AddRateLimiter(opciones =>
+{
+    opciones.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    opciones.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(contexto =>
+    {
+        var ruta = contexto.Request.Path.Value?.ToLowerInvariant() ?? "";
+        var ip = contexto.Connection.RemoteIpAddress?.ToString() ?? "desconocida";
+
+        return ruta switch
+        {
+            "/account/login" => RateLimitPartition.GetFixedWindowLimiter(
+                $"login:{ip}",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 10,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0
+                }),
+            "/account/register" => RateLimitPartition.GetFixedWindowLimiter(
+                $"registro:{ip}",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 5,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0
+                }),
+            "/account/forgotpassword" => RateLimitPartition.GetFixedWindowLimiter(
+                $"recuperacion:{ip}",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 5,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0
+                }),
+            "/account/resetpassword" => RateLimitPartition.GetFixedWindowLimiter(
+                $"reset:{ip}",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 10,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0
+                }),
+            _ => RateLimitPartition.GetNoLimiter("libre")
+        };
+    });
+
+    opciones.OnRejected = (contexto, _) =>
+    {
+        var logger = contexto.HttpContext.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("RateLimiting");
+
+        logger.LogWarning(
+            "Solicitud limitada por tasa en {Ruta} desde {Ip}.",
+            contexto.HttpContext.Request.Path,
+            contexto.HttpContext.Connection.RemoteIpAddress);
+
+        return ValueTask.CompletedTask;
+    };
+});
+
 builder.Services.AddSingleton<ICodigoAmigoGenerator, CodigoAmigoGenerator>();
 builder.Services.AddScoped<ICodigoAmigoService, CodigoAmigoService>();
 builder.Services.AddScoped<IRegistroService, RegistroService>();
 builder.Services.AddScoped<IRecuperacionContrasenaService, RecuperacionContrasenaService>();
+builder.Services.AddScoped<IEliminacionCuentaService, EliminacionCuentaService>();
+builder.Services.AddScoped<IExportacionDatosService, ExportacionDatosService>();
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, EmailSender>();
 
 builder.Services.AddHttpClient<BuscadorLibros>(cliente =>
@@ -83,6 +194,8 @@ builder.Services.AddHttpClient<IGlosarioService, GlosarioService>(cliente =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -96,6 +209,10 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
+}
+
+if (exigirHttps)
+{
     app.UseHsts();
 }
 
@@ -115,8 +232,13 @@ app.Use(async (context, next) =>
     await next();
 });
 
+if (exigirHttps)
+{
+    app.UseHttpsRedirection();
+}
+
+app.UseRateLimiter();
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
 app.UseAntiforgery();
 
 app.MapStaticAssets();

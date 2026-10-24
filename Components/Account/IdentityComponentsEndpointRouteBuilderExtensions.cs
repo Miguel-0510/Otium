@@ -10,6 +10,7 @@ using Microsoft.Extensions.Primitives;
 using Otium.Components.Account.Pages;
 using Otium.Components.Account.Pages.Manage;
 using Otium.Data;
+using Otium.Services;
 
 namespace Microsoft.AspNetCore.Routing;
 
@@ -114,37 +115,27 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
         manageGroup.MapPost("/DownloadPersonalData", async (
             HttpContext context,
             [FromServices] UserManager<ApplicationUser> userManager,
-            [FromServices] AuthenticationStateProvider authenticationStateProvider) =>
+            [FromServices] IExportacionDatosService exportacion) =>
         {
             var user = await userManager.GetUserAsync(context.User);
             if (user is null)
             {
-                return Results.NotFound($"Unable to load user with ID '{userManager.GetUserId(context.User)}'.");
+                return Results.NotFound();
             }
 
             var userId = await userManager.GetUserIdAsync(user);
             downloadLogger.LogInformation("User with ID '{UserId}' asked for their personal data.", userId);
 
-            // Only include personal data for download
-            var personalData = new Dictionary<string, string>();
-            var personalDataProps = typeof(ApplicationUser).GetProperties().Where(
-                prop => Attribute.IsDefined(prop, typeof(PersonalDataAttribute)));
-            foreach (var p in personalDataProps)
+            var datos = await exportacion.ObtenerAsync(user, context.RequestAborted);
+            var fileBytes = JsonSerializer.SerializeToUtf8Bytes(datos, new JsonSerializerOptions
             {
-                personalData.Add(p.Name, p.GetValue(user)?.ToString() ?? "null");
-            }
+                WriteIndented = true
+            });
 
-            var logins = await userManager.GetLoginsAsync(user);
-            foreach (var l in logins)
-            {
-                personalData.Add($"{l.LoginProvider} external login provider key", l.ProviderKey);
-            }
-
-            personalData.Add("Authenticator Key", (await userManager.GetAuthenticatorKeyAsync(user))!);
-            var fileBytes = JsonSerializer.SerializeToUtf8Bytes(personalData);
-
-            context.Response.Headers.TryAdd("Content-Disposition", "attachment; filename=PersonalData.json");
-            return TypedResults.File(fileBytes, contentType: "application/json", fileDownloadName: "PersonalData.json");
+            return TypedResults.File(
+                fileBytes,
+                contentType: "application/json",
+                fileDownloadName: $"Otium-Datos-{DateTime.UtcNow:yyyyMMdd}.json");
         });
 
         return accountGroup;

@@ -89,7 +89,7 @@ Base de datos local de desarrollo:
 
 - `Data/app.db` está ignorada por Git.
 - **No usar datos reales en desarrollo.**
-- El `.csproj` copia `Data/app.db` a la salida (`Otium.csproj:11-13`), lo que puede publicar datos de desarrollo. Ver hallazgo P1-8.
+- `Otium.csproj` ya no copia `Data/app.db` a la salida; `dotnet publish` no incluye la base de desarrollo. Ver hallazgo P1-8.
 
 ---
 
@@ -205,10 +205,11 @@ Componente Razor
 
 ### 6.3 Modelo de datos
 
-- `ApplicationUser` extiende `IdentityUser` y añade `CodigoAmigo`.
+- `ApplicationUser` extiende `IdentityUser` y añade `CodigoAmigo` y `CompartirEstantes`.
 - `Libro` pertenece a un usuario. `Estante` se guarda como entero.
 - `EntradaLectura` pertenece a `Libro` y se elimina en cascada.
-- `Amistad` relaciona solicitante y receptor; ambas FK son `Restrict`.
+- `Amistad` relaciona solicitante y receptor; ambas FK son `Restrict`; `ClavePar` es único.
+- `Bloqueo` relaciona `UsuarioId` con `BloqueadoId`; índice único por par y cascada al borrar usuarios.
 - `PalabraGlosario` guarda `UsuarioId` como texto, **sin FK ni cascada**.
 
 Relaciones relevantes en `Data/ApplicationDbContext.cs`:
@@ -216,6 +217,7 @@ Relaciones relevantes en `Data/ApplicationDbContext.cs`:
 - `Libros -> AspNetUsers`: cascada.
 - `Amistades -> AspNetUsers`: restrict.
 - `EntradasLectura -> Libros`: cascada.
+- `Bloqueos -> AspNetUsers`: cascada por ambos lados.
 - `PalabrasGlosario`: sin relación configurada.
 
 ### 6.4 Autenticación
@@ -226,6 +228,7 @@ Relaciones relevantes en `Data/ApplicationDbContext.cs`:
 - Lockout por intentos fallidos activado en el login.
 - Sesión persistente opcional.
 - Recuperación de contraseña funcional sin exigir confirmación de correo (Opción B). Ver P0-2.
+- Compartir estantes desactivado por defecto; el usuario lo activa desde Amigos. Los amigos solo ven libros, puntuaciones y reseñas; travesías y glosario quedan privados.
 - 2FA, passkeys, correo y datos personales heredados de la plantilla de Identity.
 
 ### 6.5 Integraciones externas
@@ -234,6 +237,35 @@ Relaciones relevantes en `Data/ApplicationDbContext.cs`:
 - **Gemini:** definiciones breves; modelo por defecto `gemini-flash-lite-latest`.
 - **SMTP:** envío de enlaces de confirmación y recuperación.
 - **PWA:** el service worker solo guarda la página de aviso sin conexión. La app requiere conexión, por diseño.
+
+### 6.6 Despliegue dual: Tailscale local y VPS Oracle
+
+La app soporta dos modos sin cambiar el código:
+
+| Modo | Entorno | Kestrel | TLS | Configuración clave |
+|---|---|---|---|---|
+| Local/Tailscale | `Development` o `Production` | HTTP en la interfaz Tailscale | Tailscale cifra el transporte | `Seguridad__PermitirHttp=true` si se usa `Production` |
+| VPS Oracle (Ubuntu ARM64) | `Production` | `http://127.0.0.1:5000` | Caddy/Nginx con certificado automático | `Seguridad__PermitirHttp=false`, `Proxy__KnownProxies__0=127.0.0.1` |
+
+Reglas de compatibilidad:
+
+- `ForwardedHeaders` acepta `X-Forwarded-For` y `X-Forwarded-Proto`. Por defecto solo confía en proxies loopback; si el proxy está en Docker u otra IP, añadirla en `Proxy:KnownProxies`.
+- `UseHttpsRedirection`, `UseHsts` y cookies `Secure` solo se activan cuando `exigirHttps` es verdadero: `Production` y `Seguridad:PermitirHttp=false`.
+- En local sobre Tailscale se puede ejecutar en `Development` (recomendado) o en `Production` con `Seguridad__PermitirHttp=true`; en este último caso las cookies usan `SameAsRequest`.
+- En el VPS, Kestrel no debe escuchar en `0.0.0.0`; el proxy inverso termina TLS y reenvía a loopback.
+- Las claves de Data Protection y la base de datos deben vivir fuera de la carpeta de publicación (`DataProtection__KeysPath` y `ConnectionStrings__DefaultConnection`).
+- El CSP ya declara `wss:`; el proxy debe permitir WebSocket para Blazor Server.
+
+Ejemplo de variables en el VPS:
+
+```bash
+ASPNETCORE_ENVIRONMENT=Production
+ASPNETCORE_URLS=http://127.0.0.1:5000
+ConnectionStrings__DefaultConnection="Data Source=/var/lib/otium/app.db"
+DataProtection__KeysPath=/var/lib/otium/keys
+Seguridad__PermitirHttp=false
+Proxy__KnownProxies__0=127.0.0.1
+```
 
 ---
 
@@ -320,17 +352,17 @@ La separación actual es **aceptable para beta privada**, no para un diseño por
 | Área | Estado | Nota |
 |---|---|---|
 | Compilación | Sí | 0 errores, 0 advertencias |
-| Pruebas automatizadas | Sí | `tests/Otium.Tests`; 7 pruebas de P0 en verde |
+| Pruebas automatizadas | Sí | `tests/Otium.Tests`; 20 pruebas en verde (P0, P1.1, P1.2, P1.5 y P1.6) |
 | CI/CD | No | No hay workflows |
 | README / LICENSE / CHANGELOG | No | No existen |
 | `.editorconfig` / `global.json` | No | Sin convenciones ni SDK fijado |
 | Secretos fuera del repo | Sí | Credenciales locales movidas a User Secrets; `appsettings.Development.json` saneado. Rotación pendiente por el propietario |
-| HTTPS/TLS de entrada | No | Publicación y Docker en HTTP |
-| Rate limiting | No | Login, registro, códigos de amigo y Gemini sin límite |
+| HTTPS/TLS de entrada | Sí (código) | Proxy TLS + `ForwardedHeaders`; pendiente verificar en VPS Oracle |
+| Rate limiting | Sí | HTTP en login/registro/recuperación y cuotas por usuario en amistades/Gemini |
 | Confirmación de correo | Parcial | Opción B: confirmación opcional; el correo solo se envía al recuperar contraseña |
 | Recuperación de contraseña | Sí | Funciona sin exigir `EmailConfirmed`; probado con `IEmailSender` falso |
-| Eliminación de cuenta | Parcial | Inconsistente entre dos flujos |
-| Exportación de datos | Parcial | Solo datos de Identity, no libros/glosario/amistades |
+| Eliminación de cuenta | Sí | Flujo único transaccional con libros, travesías, glosario y amistades |
+| Exportación de datos | Sí | JSON con cuenta, libros, travesías, glosario y amistades |
 | Respaldos | No | No hay implementación en el código actual |
 | Health checks | No | No hay endpoint |
 | Observabilidad | Parcial | Logging básico de framework/Identity |
@@ -339,7 +371,8 @@ La separación actual es **aceptable para beta privada**, no para un diseño por
 | Cabeceras de seguridad | Sí | CSP, nosniff, referrer, frame-options; CSP mejorable |
 | CSRF | Sí | Antiforgery en formularios y endpoints sensibles |
 | Autorización de páginas | Sí | `[Authorize]` en estantes, amigos y glosario |
-| Autorización a nivel de dato | No | Servicios no verifican propiedad del recurso |
+| Autorización a nivel de dato | Sí | Servicios filtran por `usuarioId`; pruebas con dos usuarios |
+| Función social | Sí | Compartir estantes opcional, eliminar amigo y bloquear; travesías/glosario privados |
 | Accesibilidad | Parcial | Buenas bases; falta auditoría formal |
 | Internacionalización | Parcial | Español mezclado con scaffold en inglés |
 | PWA | Sí | Manifiesto, iconos, service worker, instalación |
@@ -348,7 +381,7 @@ La separación actual es **aceptable para beta privada**, no para un diseño por
 | Docker | Parcial | Sin usuario no root, healthcheck ni volumen declarado |
 | Dependencias vulnerables | Sí | Sin vulnerabilidades conocidas al momento de la auditoría |
 
-**Veredicto:** no lanzar públicamente todavía. Es viable como beta privada después de corregir los P0 y, como mínimo, los P1 de seguridad y datos.
+**Veredicto:** P0 y P1 cerrados en código; pendiente verificar el despliegue TLS en el VPS Oracle. Antes de abrir al público, completar P2 (CI, respaldos, validación y endurecimiento operativo).
 
 ---
 
@@ -427,6 +460,8 @@ Acciones:
 
 #### P1-4. Eliminación de cuenta y exportación de datos inconsistentes
 
+**Estado: corregido (2026-10-23).** `IEliminacionCuentaService` borra en una transacción libros, travesías, glosario, amistades y usuario; `IExportacionDatosService` exporta todas las entidades; `DeletePersonalData` redirige al flujo nuevo. Pruebas en `EliminacionCuentaTests` y `ExportacionDatosTests`.
+
 Evidencia:
 
 - `Components/Account/Pages/Manage/EliminarCuenta.razor:73-83` elimina amistades y libros, pero no el glosario.
@@ -446,6 +481,8 @@ Corrección recomendada:
 
 #### P1-5. Falta de verificación de propiedad en servicios
 
+**Estado: corregido (2026-10-23).** `ILibroService`, `IEntradaLecturaService` y `IGlosarioService.EliminarAsync` reciben `usuarioId` y filtran por propietario; las travesías validan el libro mediante join. Pruebas en `AutorizacionPropietarioTests`.
+
 Evidencia:
 
 - `Services/EntradaLecturaService.cs:16-52`: recibe `libroId` o `EntradaLectura` sin comprobar que pertenezcan al usuario actual.
@@ -461,6 +498,8 @@ Corrección recomendada:
 - Añadir pruebas de autorización con dos usuarios.
 
 #### P1-6. Sin rate limiting y códigos de amigo débiles/enumerables
+
+**Estado: corregido (2026-10-23).** Rate limiting HTTP en login/registro/recuperación, cuota por usuario en amistades y glosario, códigos de 8 caracteres con `RandomNumberGenerator`, mensajes uniformes e índice único `ClavePar`. Pruebas en `RateLimitingTests`, `AmistadAntiabusoTests` y `CodigoAmigoGeneratorTests`.
 
 Evidencia:
 
@@ -480,6 +519,8 @@ Corrección recomendada:
 
 #### P1-7. Producción sin HTTPS real
 
+**Estado: corregido en código (2026-10-23); pendiente verificar en VPS Oracle.** `ForwardedHeaders`, HTTPS/HSTS y cookies `Secure` se activan solo con `Production` y `Seguridad:PermitirHttp=false`; el modo Tailscale puede usar HTTP con `Seguridad__PermitirHttp=true`. Ver sección 6.6.
+
 Evidencia:
 
 - `Properties/launchSettings.json` usa HTTP/HTTPS en desarrollo.
@@ -498,6 +539,8 @@ Corrección recomendada:
 
 #### P1-8. La base de datos de desarrollo puede publicarse
 
+**Estado: corregido (2026-10-23).** Se eliminó la copia de `Data/app.db` de `Otium.csproj`; `dotnet publish` verificado sin `Data/app.db`.
+
 Evidencia:
 
 - `Otium.csproj:11-13` copia `Data/app.db` a la salida.
@@ -512,7 +555,9 @@ Acciones:
 
 #### P1-9. La función social está incompleta respecto a lo que promete la privacidad
 
-Evidencia:
+**Estado: corregido (2026-10-23).** `ApplicationUser.CompartirEstantes` (desactivado por defecto), vista `/amigos/{id}` con autorización por amistad y preferencia, eliminar amigo, bloquear/desbloquear y textos de privacidad/registro alineados. Travesías y glosario no se comparten. Pruebas en `CompartirEstantesTests`.
+
+Evidencia histórica:
 
 - `Amigos.razor` solo lista amigos por correo; no muestra estantes, libros ni actividad.
 - `Privacidad.razor:14-17` dice que los amigos pueden ver "lo que decidas compartir".
@@ -634,11 +679,11 @@ Acciones:
 1. **P0-1:** ~~arreglar `CodigoAmigo` y probar dos registros consecutivos.~~ Completado.
 2. **P0-2:** ~~decidir y arreglar el flujo de confirmación/recuperación.~~ Completado (Opción B).
 3. **P0-3:** ~~rotar y mover secretos; key de Gemini fuera de la URL.~~ Completado; rotación manual pendiente.
-4. **P1-4:** unificar eliminación y exportación de datos.
-5. **P1-5:** autorización por propietario en servicios.
-6. **P1-6:** rate limiting y códigos de amigo robustos.
-7. **P1-7/P1-8:** TLS de entrada y dejar de publicar la base de desarrollo.
-8. **P1-9:** completar o corregir la función social y la privacidad.
+4. **P1-4:** ~~unificar eliminación y exportación de datos.~~ Completado.
+5. **P1-5:** ~~autorización por propietario en servicios.~~ Completado.
+6. **P1-6:** ~~rate limiting y códigos de amigo robustos.~~ Completado.
+7. **P1-7/P1-8:** ~~TLS de entrada y dejar de publicar la base de desarrollo.~~ Completado en código; verificar VPS.
+8. **P1-9:** ~~completar o corregir la función social y la privacidad.~~ Completado (Opción B).
 9. **P2:** pruebas, CI, validación, errores, CSP, respaldos, Docker.
 10. **P3:** pulido de UX, i18n y accesibilidad.
 
@@ -672,6 +717,6 @@ Un cambio se considera terminado cuando:
 
 Otium tiene una base funcional y ordenada para un proyecto personal: Blazor Server, Identity, EF Core/SQLite, servicios con interfaces, PWA y una UI cuidada. La compilación está limpia y no hay vulnerabilidades conocidas en paquetes.
 
-Sin embargo, **no está listo para lanzamiento público** por tres bloqueantes concretos: el registro se rompe con el segundo usuario, la recuperación de contraseña no funciona para cuentas nuevas y hay credenciales reales en configuración local con una API key expuesta en URLs/mensajes. Además, la eliminación/exportación de datos no cumple lo que promete la política de privacidad, faltan controles de autorización por propietario y no hay rate limiting, TLS de entrada, respaldos ni pruebas.
+Sin embargo, **todavía no está listo para lanzamiento público**: P0 y P1 están corregidos y cubiertos por 20 pruebas, pero falta verificar TLS/SignalR/PWA en el VPS Oracle y completar P2 (CI, respaldos, validación de entrada, manejo de errores, CSP y endurecimiento de Docker).
 
-Corregir P0 y P1 permitiría una beta privada razonable. Antes de abrir al público, completar P2 y añadir pruebas/CI.
+Con P0/P1 cerrados, la app es viable como beta privada. Antes de abrirla al público, completar P2 y añadir CI/respaldos.

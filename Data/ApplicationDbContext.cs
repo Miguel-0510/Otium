@@ -11,6 +11,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Amistad> Amistades => Set<Amistad>();
     public DbSet<EntradaLectura> EntradasLectura => Set<EntradaLectura>();
     public DbSet<PalabraGlosario> PalabrasGlosario => Set<PalabraGlosario>();
+    public DbSet<Bloqueo> Bloqueos => Set<Bloqueo>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -34,6 +35,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasForeignKey(a => a.ReceptorId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.Entity<Amistad>()
+            .HasIndex(a => a.ClavePar)
+            .IsUnique();
+
         builder.Entity<ApplicationUser>()
             .HasIndex(u => u.CodigoAmigo)
             .IsUnique();
@@ -43,5 +48,21 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany()
             .HasForeignKey(e => e.LibroId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<Bloqueo>()
+            .HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(b => b.UsuarioId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<Bloqueo>()
+            .HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(b => b.BloqueadoId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<Bloqueo>()
+            .HasIndex(b => new { b.UsuarioId, b.BloqueadoId })
+            .IsUnique();
     }
 }

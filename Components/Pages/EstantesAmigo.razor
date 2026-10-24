@@ -1,0 +1,134 @@
+@page "/amigos/{AmigoId}"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Otium.Models
+@using Otium.Services
+@inject IAmistadService Amistades
+@inject ILibroService Libros
+@inject AuthenticationStateProvider ProveedorAuth
+
+<PageTitle>Estantes de @correo | Otium</PageTitle>
+
+<a class="volver" href="/amigos">← Volver a amigos</a>
+
+<h1>Estantes de @correo</h1>
+
+@if (cargando)
+{
+    <p class="nota">Cargando estantes...</p>
+}
+else if (!puedeVer)
+{
+    <section class="ficha">
+        <p class="vacio">@mensaje</p>
+    </section>
+}
+else
+{
+    @foreach (var estante in Enum.GetValues<Estante>())
+    {
+        <section class="ficha">
+            <h2>@Nombre(estante) <span class="contador-badge">@libros.Count(l => l.Estante == estante)</span></h2>
+
+            @if (!libros.Any(l => l.Estante == estante))
+            {
+                <p class="vacio">Este estante está vacío.</p>
+            }
+            else
+            {
+                <div class="rejilla-libros">
+                    @foreach (var libro in libros.Where(l => l.Estante == estante))
+                    {
+                        <article class="libro-compartido">
+                            <div class="caratula">
+                                @if (libro.PortadaUrl != "")
+                                {
+                                    <img src="@libro.PortadaUrl" alt="Portada de @libro.Titulo" loading="lazy" />
+                                }
+                                else
+                                {
+                                    <span class="sin-portada-grande">@Iniciales(libro.Titulo)</span>
+                                }
+                            </div>
+                            <strong class="titulo-libro">@libro.Titulo</strong>
+                            <span class="autor-libro">@libro.Autor</span>
+                            @if (libro.Puntuacion > 0)
+                            {
+                                <span class="estrellas" title="@libro.Puntuacion de 5">@Estrellas(libro.Puntuacion)</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(libro.Resena))
+                            {
+                                <p class="resena-libro">@libro.Resena</p>
+                            }
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+    }
+}
+
+@code {
+    [Parameter]
+    public string AmigoId { get; set; } = "";
+
+    private string usuarioId = "";
+    private string correo = "";
+    private bool cargando = true;
+    private bool puedeVer;
+    private string mensaje = "";
+    private List<Libro> libros = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        libros = new();
+        puedeVer = false;
+
+        var estado = await ProveedorAuth.GetAuthenticationStateAsync();
+        usuarioId = estado.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+
+        var amigo = await Amistades.ObtenerAmigoAsync(usuarioId, AmigoId);
+        if (amigo is null)
+        {
+            correo = "";
+            mensaje = "No puedes ver los estantes de este usuario.";
+            cargando = false;
+            return;
+        }
+
+        correo = amigo.Correo;
+
+        if (!amigo.ComparteEstantes || !await Amistades.PuedeVerEstantesAsync(usuarioId, AmigoId))
+        {
+            mensaje = "Este usuario no comparte sus estantes.";
+            cargando = false;
+            return;
+        }
+
+        libros = await Libros.ObtenerDeUsuarioAsync(AmigoId);
+        puedeVer = true;
+        cargando = false;
+    }
+
+    private static string Nombre(Estante estante) => estante switch
+    {
+        Estante.Leyendo => "Leyendo",
+        Estante.Leido => "Leído",
+        Estante.QuieroLeer => "Quiero leer",
+        _ => estante.ToString()
+    };
+
+    private static string Estrellas(int puntuacion) =>
+        new string('★', Math.Clamp(puntuacion, 0, 5)) +
+        new string('☆', 5 - Math.Clamp(puntuacion, 0, 5));
+
+    private static string Iniciales(string titulo)
+    {
+        if (string.IsNullOrWhiteSpace(titulo)) return "?";
+        return titulo.Trim()[0].ToString().ToUpper();
+    }
+}

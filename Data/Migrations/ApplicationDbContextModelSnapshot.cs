@@ -178,6 +178,9 @@ namespace Otium.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("CompartirEstantes")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("TEXT");
@@ -244,6 +247,10 @@ namespace Otium.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("ClavePar")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Estado")
                         .HasColumnType("INTEGER");
 
@@ -263,11 +270,41 @@ namespace Otium.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ClavePar")
+                        .IsUnique();
+
                     b.HasIndex("ReceptorId");
 
                     b.HasIndex("SolicitanteId");
 
                     b.ToTable("Amistades");
+                });
+
+            modelBuilder.Entity("Otium.Models.Bloqueo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BloqueadoId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UsuarioId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BloqueadoId");
+
+                    b.HasIndex("UsuarioId", "BloqueadoId")
+                        .IsUnique();
+
+                    b.ToTable("Bloqueos");
                 });
 
             modelBuilder.Entity("Otium.Models.EntradaLectura", b =>
@@ -489,6 +526,21 @@ namespace Otium.Migrations
                         .WithMany()
                         .HasForeignKey("SolicitanteId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Otium.Models.Bloqueo", b =>
+                {
+                    b.HasOne("Otium.Data.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("BloqueadoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Otium.Data.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

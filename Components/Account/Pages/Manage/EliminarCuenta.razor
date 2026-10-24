@@ -7,8 +7,7 @@
 
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
-@inject ILibroService ServicioLibros
-@inject IAmistadService ServicioAmistades
+@inject IEliminacionCuentaService Eliminacion
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<EliminarCuenta> Logger
 
@@ -18,7 +17,7 @@
 <StatusMessage Message="@message" />
 
 <p class="error">
-    Esta acción borra tu cuenta, tus libros, reseñas, puntuaciones y tus amistades de forma permanente. No se puede deshacer.
+    Esta acción borra tu cuenta, tus libros, reseñas, puntuaciones, travesías, glosario y amistades de forma permanente. No se puede deshacer.
 </p>
 
 <EditForm Model="Input" FormName="eliminar-cuenta" OnValidSubmit="OnValidSubmitAsync" method="post">
@@ -63,22 +62,11 @@
             return;
         }
 
-        var contrasenaCorrecta = await UserManager.CheckPasswordAsync(user, Input.Password);
-        if (!contrasenaCorrecta)
-        {
-            message = "Error: la contraseña no es correcta.";
-            return;
-        }
-
         var usuarioId = await UserManager.GetUserIdAsync(user);
-
-        await ServicioAmistades.EliminarTodosDeUsuarioAsync(usuarioId);
-        await ServicioLibros.EliminarTodosDeUsuarioAsync(usuarioId);
-
-        var resultado = await UserManager.DeleteAsync(user);
-        if (!resultado.Succeeded)
+        var resultado = await Eliminacion.EliminarAsync(usuarioId, Input.Password);
+        if (!resultado.Exito)
         {
-            message = "Error: no se pudo eliminar la cuenta.";
+            message = "Error: " + resultado.Mensaje;
             return;
         }
 

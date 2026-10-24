@@ -297,6 +297,8 @@ Objetivo: proteger datos de usuarios, evitar abusos y preparar un despliegue seg
 
 ### P1.1 - Unificar eliminación y exportación de datos
 
+**Estado:** [x] Completado (2026-10-23). `IEliminacionCuentaService` transaccional, `IExportacionDatosService` completo, ruta antigua redirigida y pruebas en `EliminacionCuentaTests`/`ExportacionDatosTests`.
+
 **Prioridad:** P1  
 **Esfuerzo:** L  
 **Depende de:** P0 completado
@@ -338,6 +340,8 @@ Objetivo: proteger datos de usuarios, evitar abusos y preparar un despliegue seg
 
 ### P1.2 - Autorización por propietario en servicios
 
+**Estado:** [x] Completado (2026-10-23). Servicios reciben `usuarioId`, filtran por propietario y devuelven `bool`/resultado explícito; pruebas en `AutorizacionPropietarioTests`.
+
 **Prioridad:** P1  
 **Esfuerzo:** M  
 **Depende de:** P1.1
@@ -372,6 +376,8 @@ Objetivo: proteger datos de usuarios, evitar abusos y preparar un despliegue seg
 ---
 
 ### P1.3 - Evitar publicar la base de datos de desarrollo
+
+**Estado:** [x] Completado (2026-10-23). Copia eliminada de `Otium.csproj`; `dotnet publish` verificado sin `Data/app.db`.
 
 **Prioridad:** P1  
 **Esfuerzo:** S  
@@ -410,6 +416,8 @@ Test-Path .\publish\Data\app.db
 
 ### P1.4 - HTTPS/TLS real en producción
 
+**Estado:** [x] Implementado en código (2026-10-23); pendiente verificar login, SignalR, PWA y recuperación en el VPS Oracle con Caddy/Nginx. Soporte dual documentado en `AGENTS.md` sección 6.6.
+
 **Prioridad:** P1  
 **Esfuerzo:** M  
 **Depende de:** P1.3
@@ -443,6 +451,8 @@ Test-Path .\publish\Data\app.db
 ---
 
 ### P1.5 - Rate limiting, códigos de amigo y antiabuso
+
+**Estado:** [x] Completado (2026-10-23). Rate limiting HTTP, throttling por usuario, cuota Gemini, códigos de 8 caracteres, mensajes uniformes e índice único `ClavePar`; pruebas en `RateLimitingTests` y `AmistadAntiabusoTests`.
 
 **Prioridad:** P1  
 **Esfuerzo:** L  
@@ -481,6 +491,8 @@ Test-Path .\publish\Data\app.db
 ---
 
 ### P1.6 - Alinear la función social con la política de privacidad
+
+**Estado:** [x] Completado (2026-10-23, Opción B). `CompartirEstantes` desactivado por defecto, vista `/amigos/{id}` autorizada, eliminar amigo, bloquear/desbloquear y textos de privacidad/registro alineados. Travesías y glosario no se comparten. Pruebas en `CompartirEstantesTests`.
 
 **Prioridad:** P1  
 **Esfuerzo:** XL (decisión de producto)  

@@ -23,6 +23,19 @@
 </section>
 
 <section class="ficha">
+    <h2>Privacidad</h2>
+    <label class="opcion-compartir">
+        <input type="checkbox" @bind="compartirEstantes" @bind:after="GuardarCompartir" />
+        Compartir mis estantes con mis amigos
+    </label>
+    <p class="nota">Tus amigos podrán ver tus libros, puntuaciones y reseñas. Tus travesías y tu glosario siguen siendo privados.</p>
+    @if (!string.IsNullOrEmpty(mensajePrivacidad))
+    {
+        <p class="@(privacidadExito ? "nota" : "error")">@mensajePrivacidad</p>
+    }
+</section>
+
+<section class="ficha">
     <h2>Agregar un amigo</h2>
     <div class="busqueda">
         <label>
@@ -75,12 +88,48 @@
                     <span class="avatar-amigo">@Iniciales(a.Correo)</span>
                     <span class="amigo-info">
                         <strong>@a.Correo</strong>
+                        <span class="estado-pendiente">@(a.ComparteEstantes ? "Comparte sus estantes" : "No comparte sus estantes")</span>
+                    </span>
+                    <span class="acciones-lista">
+                        @if (a.ComparteEstantes)
+                        {
+                            <a class="boton secundario sm" href="/amigos/@a.UsuarioId">Ver estantes</a>
+                        }
+                        <button class="boton secundario sm" @onclick="() => EliminarAmigo(a)">Eliminar</button>
+                        <button class="boton secundario sm" @onclick="() => Bloquear(a)">Bloquear</button>
                     </span>
                 </li>
             }
         </ul>
     }
 </section>
+
+@if (bloqueados.Count > 0)
+{
+    <section class="ficha">
+        <h2>Usuarios bloqueados <span class="contador-badge">@bloqueados.Count</span></h2>
+        <ul class="lista-amigos">
+            @foreach (var b in bloqueados)
+            {
+                <li>
+                    <span class="avatar-amigo">@Iniciales(b.Correo)</span>
+                    <span class="amigo-info">
+                        <strong>@b.Correo</strong>
+                        <span class="estado-pendiente">No puede enviarte solicitudes ni ver tus estantes.</span>
+                    </span>
+                    <span class="acciones-lista">
+                        <button class="boton secundario sm" @onclick="() => Desbloquear(b)">Desbloquear</button>
+                    </span>
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+@if (!string.IsNullOrEmpty(mensajeAccion))
+{
+    <p class="@(accionExito ? "nota" : "error")">@mensajeAccion</p>
+}
 
 @code {
     private string usuarioId = "";
@@ -89,8 +138,14 @@
     private string mensajeEnvio = "";
     private bool envioExitoso;
     private bool copiado;
+    private bool compartirEstantes;
+    private string mensajePrivacidad = "";
+    private bool privacidadExito;
+    private string mensajeAccion = "";
+    private bool accionExito;
     private List<SolicitudPendiente> pendientes = new();
     private List<AmigoInfo> amigos = new();
+    private List<BloqueadoInfo> bloqueados = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -98,6 +153,7 @@
         usuarioId = estado.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
 
         codigo = await Servicio.ObtenerOCrearCodigoAsync(usuarioId);
+        compartirEstantes = await Servicio.ObtenerCompartirEstantesAsync(usuarioId);
         await Recargar();
     }
 
@@ -105,6 +161,56 @@
     {
         pendientes = await Servicio.ObtenerSolicitudesPendientesAsync(usuarioId);
         amigos = await Servicio.ObtenerAmigosAsync(usuarioId);
+        bloqueados = await Servicio.ObtenerBloqueadosAsync(usuarioId);
+    }
+
+    private async Task GuardarCompartir()
+    {
+        privacidadExito = await Servicio.EstablecerCompartirEstantesAsync(usuarioId, compartirEstantes);
+        mensajePrivacidad = privacidadExito
+            ? "Preferencia guardada."
+            : "No se pudo guardar la preferencia.";
+
+        if (!privacidadExito)
+        {
+            compartirEstantes = await Servicio.ObtenerCompartirEstantesAsync(usuarioId);
+        }
+
+        await Recargar();
+    }
+
+    private async Task EliminarAmigo(AmigoInfo amigo)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar a {amigo.Correo} de tus amigos?"))
+        {
+            return;
+        }
+
+        var (exito, mensaje) = await Servicio.EliminarAmigoAsync(usuarioId, amigo.UsuarioId);
+        accionExito = exito;
+        mensajeAccion = mensaje;
+        await Recargar();
+    }
+
+    private async Task Bloquear(AmigoInfo amigo)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Bloquear a {amigo.Correo}? Se eliminará la amistad y no podrá enviarte solicitudes."))
+        {
+            return;
+        }
+
+        var (exito, mensaje) = await Servicio.BloquearAsync(usuarioId, amigo.UsuarioId);
+        accionExito = exito;
+        mensajeAccion = mensaje;
+        await Recargar();
+    }
+
+    private async Task Desbloquear(BloqueadoInfo bloqueado)
+    {
+        var (exito, mensaje) = await Servicio.DesbloquearAsync(usuarioId, bloqueado.UsuarioId);
+        accionExito = exito;
+        mensajeAccion = mensaje;
+        await Recargar();
     }
 
     private async Task CopiarCodigo()
