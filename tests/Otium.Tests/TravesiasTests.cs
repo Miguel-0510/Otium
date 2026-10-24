@@ -62,4 +62,41 @@ public sealed class TravesiasTests
         Assert.False(resultado.Exito);
         Assert.Null(resultado.Entrada);
     }
+
+    [Fact]
+    public async Task Insercion_concurrente_genera_numeros_unicos_sin_fallos()
+    {
+        await using var scope = _fabrica.Services.CreateAsyncScope();
+        var registro = scope.ServiceProvider.GetRequiredService<IRegistroService>();
+        var libros = scope.ServiceProvider.GetRequiredService<ILibroService>();
+
+        var usuario = await registro.RegistrarAsync($"travesias-concurrente-{Guid.NewGuid():N}@example.com", "Password1");
+        Assert.True(usuario.Exito);
+
+        var libro = new Libro { Titulo = "Libro concurrente", Autor = "Autor", Estante = Estante.Leyendo };
+        Assert.True((await libros.AgregarAsync(usuario.Usuario!.Id, libro)).Exito);
+
+        var tareas = new List<Task<(bool Exito, string Mensaje, EntradaLectura? Entrada)>>();
+        const int totalInserciones = 10;
+
+        for (int i = 0; i < totalInserciones; i++)
+        {
+            await using var scopeTarea = _fabrica.Services.CreateAsyncScope();
+            var entradas = scopeTarea.ServiceProvider.GetRequiredService<IEntradaLecturaService>();
+            int numero = i;
+            tareas.Add(entradas.AgregarAsync(usuario.Usuario.Id, libro.Id, numero, numero + 1, $"Travesía concurrente {numero}"));
+        }
+
+        var resultados = await Task.WhenAll(tareas);
+
+        Assert.All(resultados, r => Assert.True(r.Exito, $"Fallo en inserción concurrente: {r.Mensaje}"));
+
+        await using var scopeVerificacion = _fabrica.Services.CreateAsyncScope();
+        var entradasVerificacion = scopeVerificacion.ServiceProvider.GetRequiredService<IEntradaLecturaService>();
+        var lista = await entradasVerificacion.ObtenerDeLibroAsync(usuario.Usuario.Id, libro.Id);
+
+        Assert.Equal(totalInserciones, lista.Count);
+        var numeros = lista.Select(e => e.Numero).OrderBy(n => n).ToList();
+        Assert.Equal(Enumerable.Range(1, totalInserciones), numeros);
+    }
 }

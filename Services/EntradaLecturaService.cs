@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Otium.Data;
 using Otium.Models;
 
@@ -55,23 +56,48 @@ public class EntradaLecturaService : IEntradaLecturaService
             return (false, error, null);
         }
 
-        await using var db = await _fabrica.CreateDbContextAsync(cancellationToken);
-
-        var pertenece = await db.Libros.AnyAsync(l => l.Id == libroId && l.UsuarioId == usuarioId, cancellationToken);
-        if (!pertenece)
+        const int maxReintentos = 3;
+        for (int intento = 0; intento < maxReintentos; intento++)
         {
-            return (false, "No se encontró el libro.", null);
+            await using var db = await _fabrica.CreateDbContextAsync(cancellationToken);
+
+            var pertenece = await db.Libros.AnyAsync(l => l.Id == libroId && l.UsuarioId == usuarioId, cancellationToken);
+            if (!pertenece)
+            {
+                return (false, "No se encontró el libro.", null);
+            }
+
+            var ultimoNumero = await db.EntradasLectura
+                .Where(e => e.LibroId == libroId)
+                .MaxAsync(e => (int?)e.Numero, cancellationToken) ?? 0;
+
+            entrada.Numero = ultimoNumero + 1;
+
+            db.EntradasLectura.Add(entrada);
+
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+                return (true, "", entrada);
+            }
+            catch (DbUpdateException ex) when (EsViolacionIndiceUnico(ex))
+            {
+                if (intento == maxReintentos - 1)
+                {
+                    return (false, "No se pudo guardar la travesía por concurrencia. Inténtalo de nuevo.", null);
+                }
+                await Task.Delay(50 * (intento + 1), cancellationToken);
+            }
         }
 
-        var ultimoNumero = await db.EntradasLectura
-            .Where(e => e.LibroId == libroId)
-            .MaxAsync(e => (int?)e.Numero, cancellationToken) ?? 0;
+        return (false, "No se pudo guardar la travesía por concurrencia. Inténtalo de nuevo.", null);
+    }
 
-        entrada.Numero = ultimoNumero + 1;
-
-        db.EntradasLectura.Add(entrada);
-        await db.SaveChangesAsync(cancellationToken);
-        return (true, "", entrada);
+    private static bool EsViolacionIndiceUnico(DbUpdateException ex)
+    {
+        return ex.InnerException?.Message.Contains("IX_EntradasLectura_LibroId_Numero", StringComparison.OrdinalIgnoreCase) == true
+            || ex.InnerException?.Message.Contains("UNIQUE constraint failed", StringComparison.OrdinalIgnoreCase) == true
+            || ex.Message.Contains("UNIQUE constraint failed", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<bool> EliminarAsync(string usuarioId, int entradaId, CancellationToken cancellationToken = default)
