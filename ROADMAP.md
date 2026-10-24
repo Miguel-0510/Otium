@@ -538,7 +538,7 @@ No iniciar P2 antes de cerrar P0/P1 o de aceptar formalmente el riesgo.
 
 ### P2.1 - Infraestructura de pruebas y CI
 
-**Estado:** [x] Completado (2026-10-23). `tests/Otium.Tests` con 23 pruebas, `coverlet.runsettings` con umbral del 70% de líneas y `.github/workflows/ci.yml` con restore, build, test, cobertura y auditoría de paquetes.
+**Estado:** [x] Completado (2026-10-23). `tests/Otium.Tests` con 27 pruebas, `coverlet.runsettings` con umbral del 70% de líneas y `.github/workflows/ci.yml` con restore, build, test, cobertura y auditoría de paquetes.
 
 **Esfuerzo:** L
 
@@ -563,6 +563,8 @@ No iniciar P2 antes de cerrar P0/P1 o de aceptar formalmente el riesgo.
 - Evitar `int.Parse` y valores nulos en `EmailSender`.
 
 ### P2.3 - Abstraer clientes externos
+
+**Estado:** [x] Completado (2026-10-23). `IBuscadorLibros` y `IGeminiClient` con cancelación, timeout, reintentos acotados, caché de búsquedas y separación de prompt/HTTP/parseo/persistencia.
 
 **Esfuerzo:** M
 

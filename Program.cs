@@ -185,21 +185,24 @@ builder.Services.AddScoped<IEliminacionCuentaService, EliminacionCuentaService>(
 builder.Services.AddScoped<IExportacionDatosService, ExportacionDatosService>();
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, EmailSender>();
 
-builder.Services.AddHttpClient<BuscadorLibros>(cliente =>
+builder.Services.AddHttpClient<IBuscadorLibros, BuscadorLibros>(cliente =>
 {
     cliente.BaseAddress = new Uri("https://openlibrary.org/");
-    cliente.DefaultRequestHeaders.UserAgent.ParseAdd("Otium/1.0 (tu-correo@ejemplo.com)");
+    cliente.DefaultRequestHeaders.UserAgent.ParseAdd("Otium/1.0");
     cliente.Timeout = TimeSpan.FromSeconds(10);
 });
 
 builder.Services.AddScoped<ILibroService, LibroService>();
 builder.Services.AddScoped<IAmistadService, AmistadService>();
 builder.Services.AddScoped<IEntradaLecturaService, EntradaLecturaService>();
-builder.Services.AddHttpClient<IGlosarioService, GlosarioService>(cliente =>
+
+builder.Services.AddHttpClient<IGeminiClient, GeminiClient>(cliente =>
 {
     cliente.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
     cliente.Timeout = TimeSpan.FromSeconds(15);
 });
+
+builder.Services.AddScoped<IGlosarioService, GlosarioService>();
 
 var app = builder.Build();
 

@@ -122,8 +122,9 @@ Services/
   LibroService.cs                 CRUD de libros
   AmistadService.cs               Código, solicitudes, amigos
   EntradaLecturaService.cs        CRUD de travesías
-  GlosarioService.cs              Gemini + persistencia del glosario
-  BuscadorLibros.cs               Cliente Open Library
+  GlosarioService.cs              Persistencia y cuotas del glosario
+  GeminiClient.cs                 Cliente Gemini: prompt, HTTP y parseo
+  BuscadorLibros.cs               Cliente Open Library con caché y reintentos
   EmailSender.cs                  Envío SMTP
 wwwroot/
   app.css, tema.js                Estilos y tema
@@ -191,7 +192,7 @@ dotnet user-secrets set "Correo:Clave" "<valor>"
 | Aplicación | `Services/*` | Parcial; mezcla casos de uso, persistencia y configuración |
 | Dominio | `Models/*` | Entidades anémicas, sin reglas de negocio |
 | Infraestructura | EF Core, SQLite, SMTP, HttpClient | Existe |
-| Contratos | Interfaces de servicios | Parcial; `BuscadorLibros` no tiene interfaz y se inyecta concreto |
+| Contratos | Interfaces de servicios | Parcial; `IBuscadorLibros` e `IGeminiClient` existen; faltan DTOs de entrada/salida |
 
 Flujo típico de una página Blazor:
 
@@ -305,7 +306,7 @@ La suite vive en `tests/Otium.Tests` y usa `WebApplicationFactory` con SQLite te
 | **O** - Abierto/cerrado | Parcial | Añadir un estante obliga a tocar el enum, `Nombre()` y varias vistas. Añadir un proveedor de búsqueda obliga a tocar la página. | Centralizar nombres/estantes y abstraer proveedores con interfaces. |
 | **L** - Sustitución de Liskov | Cumple | Las implementaciones respetan sus interfaces; no hay jerarquías problemáticas. | Mantener contratos pequeños y explícitos. |
 | **I** - Segregación de interfaces | Cumple | `ILibroService`, `IAmistadService`, `IEntradaLecturaService` son acotadas. | No engordar interfaces existentes; crear contratos específicos. |
-| **D** - Inversión de dependencias | Parcial | Servicios dependen de `IDbContextFactory`, interfaces y `IOptions<T>`; las páginas siguen dependiendo de `BuscadorLibros` concreto y las entidades EF se filtran a la UI. | Introducir `IBuscadorLibros` y DTOs/view models. |
+| **D** - Inversión de dependencias | Parcial | Servicios dependen de `IDbContextFactory`, interfaces y `IOptions<T>`; las páginas usan `IBuscadorLibros`, pero las entidades EF se filtran a la UI. | Introducir DTOs/view models. |
 
 Conclusión SOLID: **parcial**. La base es razonable para una app pequeña, pero la UI y algunos servicios concentran demasiadas responsabilidades y dependen de detalles de infraestructura.
 
@@ -352,7 +353,7 @@ La separación actual es **aceptable para beta privada**, no para un diseño por
 | Área | Estado | Nota |
 |---|---|---|
 | Compilación | Sí | 0 errores, 0 advertencias |
-| Pruebas automatizadas | Sí | `tests/Otium.Tests`; 23 pruebas y cobertura mínima del 70% de líneas |
+| Pruebas automatizadas | Sí | `tests/Otium.Tests`; 27 pruebas y cobertura mínima del 70% de líneas |
 | CI/CD | Sí | `.github/workflows/ci.yml`: restore, build, test con cobertura y auditoría de paquetes |
 | README / LICENSE / CHANGELOG | No | No existen |
 | `.editorconfig` / `global.json` | No | Sin convenciones ni SDK fijado |
@@ -656,9 +657,11 @@ Acciones:
 
 #### P2-20. Dependencias externas sin resiliencia
 
-- Open Library y Gemini no tienen reintentos, circuit breaker, caché ni cancelación.
-- El `User-Agent` de Open Library usa un correo de ejemplo (`BuscadorLibros.cs:58`).
-- Si Open Library falla, la UI muestra el error crudo.
+**Estado: parcialmente corregido (2026-10-23).** Open Library y Gemini tienen timeout, reintentos acotados y cancelación; las búsquedas se cachean 10 minutos y los errores de Open Library son mensajes amigables. Falta circuit breaker y caché de definiciones.
+
+- ~~Open Library y Gemini no tienen reintentos, circuit breaker, caché ni cancelación.~~ Quedan circuit breaker y caché de definiciones.
+- ~~El `User-Agent` de Open Library usa un correo de ejemplo.~~ Ahora usa `Otium/1.0`.
+- ~~Si Open Library falla, la UI muestra el error crudo.~~ El cliente lanza un mensaje amigable.
 - Añadir timeout, reintentos acotados, caché y mensajes amigables.
 
 ### P3 - Bajo

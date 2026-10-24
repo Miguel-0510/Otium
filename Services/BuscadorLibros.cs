@@ -1,5 +1,7 @@
-﻿using System.Net.Http.Json;
+﻿using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Otium.Services;
 
@@ -8,26 +10,61 @@ public record ResultadoLibro(string IdExterno, string Titulo, string Autor, stri
     public string Detalle => Anio is int a ? $"{Autor}, {a}" : Autor;
 }
 
-public class BuscadorLibros
+public interface IBuscadorLibros
 {
-    private readonly HttpClient _http;
+    Task<List<ResultadoLibro>> BuscarAsync(string texto, CancellationToken cancellationToken = default);
+}
 
-    public BuscadorLibros(HttpClient http)
+public class BuscadorLibros : IBuscadorLibros
+{
+    private const int MaxIntentos = 3;
+    private static readonly TimeSpan DuracionCache = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan EsperaEntreIntentos = TimeSpan.FromMilliseconds(200);
+
+    private readonly HttpClient _http;
+    private readonly IMemoryCache _cache;
+    private readonly ILogger<BuscadorLibros> _logger;
+
+    public BuscadorLibros(HttpClient http, IMemoryCache cache, ILogger<BuscadorLibros> logger)
     {
         _http = http;
+        _cache = cache;
+        _logger = logger;
     }
 
-    public async Task<List<ResultadoLibro>> BuscarAsync(string texto)
+    public async Task<List<ResultadoLibro>> BuscarAsync(string texto, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(texto))
+        var consulta = (texto ?? "").Trim();
+        if (consulta.Length == 0)
+        {
             return new();
+        }
+
+        var claveCache = $"openlibrary:{consulta.ToLowerInvariant()}";
+        if (_cache.TryGetValue(claveCache, out List<ResultadoLibro>? guardados) && guardados is not null)
+        {
+            return guardados;
+        }
 
         var url = "search.json?limit=8&fields=key,title,author_name,cover_i,first_publish_year&q="
-                  + Uri.EscapeDataString(texto.Trim());
+                  + Uri.EscapeDataString(consulta);
 
-        var respuesta = await _http.GetFromJsonAsync<RespuestaBusqueda>(url);
+        using var respuesta = await EnviarConReintentosAsync(url, cancellationToken);
 
-        return respuesta?.Docs
+        if (!respuesta.IsSuccessStatusCode)
+        {
+            _logger.LogWarning(
+                "Open Library respondió {Estado} al buscar {Consulta}.",
+                (int)respuesta.StatusCode,
+                consulta);
+
+            throw new InvalidOperationException(
+                "No pude consultar Open Library en este momento. Inténtalo más tarde.");
+        }
+
+        var datos = await respuesta.Content.ReadFromJsonAsync<RespuestaBusqueda>(cancellationToken);
+
+        var resultados = datos?.Docs
             .Select(d => new ResultadoLibro(
                 d.Key ?? "",
                 d.Title ?? "",
@@ -35,7 +72,40 @@ public class BuscadorLibros
                 d.CoverId is int id ? $"https://covers.openlibrary.org/b/id/{id}-M.jpg" : "",
                 d.FirstPublishYear))
             .ToList() ?? new();
+
+        _cache.Set(claveCache, resultados, DuracionCache);
+        return resultados;
     }
+
+    private async Task<HttpResponseMessage> EnviarConReintentosAsync(string url, CancellationToken cancellationToken)
+    {
+        for (var intento = 1; intento <= MaxIntentos; intento++)
+        {
+            HttpResponseMessage respuesta;
+            try
+            {
+                respuesta = await _http.GetAsync(url, cancellationToken);
+            }
+            catch (HttpRequestException) when (intento < MaxIntentos)
+            {
+                await Task.Delay(EsperaEntreIntentos * intento, cancellationToken);
+                continue;
+            }
+
+            if (respuesta.IsSuccessStatusCode || intento == MaxIntentos || !EsTransitorio(respuesta.StatusCode))
+            {
+                return respuesta;
+            }
+
+            respuesta.Dispose();
+            await Task.Delay(EsperaEntreIntentos * intento, cancellationToken);
+        }
+
+        throw new InvalidOperationException("No se pudo completar la búsqueda en Open Library.");
+    }
+
+    private static bool EsTransitorio(HttpStatusCode estado) =>
+        estado == HttpStatusCode.RequestTimeout || (int)estado >= 500;
 }
 
 internal class RespuestaBusqueda
