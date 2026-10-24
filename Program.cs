@@ -6,6 +6,7 @@ using Otium.Components;
 using Otium.Components.Account;
 using Otium.Data;
 using Otium.Services;
+using Otium.Services.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +51,18 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddDefaultTokenProviders()
     .AddErrorDescriber<DescriptorErroresEs>();
 
+builder.Services.AddOptions<CorreoOptions>()
+    .Bind(builder.Configuration.GetSection(CorreoOptions.Seccion))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<GeminiOptions>()
+    .Bind(builder.Configuration.GetSection(GeminiOptions.Seccion));
+
+builder.Services.AddSingleton<ICodigoAmigoGenerator, CodigoAmigoGenerator>();
+builder.Services.AddScoped<ICodigoAmigoService, CodigoAmigoService>();
+builder.Services.AddScoped<IRegistroService, RegistroService>();
+builder.Services.AddScoped<IRecuperacionContrasenaService, RecuperacionContrasenaService>();
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, EmailSender>();
 
 builder.Services.AddHttpClient<BuscadorLibros>(cliente =>
@@ -113,6 +126,9 @@ app.MapRazorComponents<App>()
 app.MapAdditionalIdentityEndpoints();
 
 app.Run();
+
+public partial class Program { }
+
 
 
 

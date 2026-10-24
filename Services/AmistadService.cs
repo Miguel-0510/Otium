@@ -7,15 +7,23 @@ namespace Otium.Services;
 
 public class AmistadService : IAmistadService
 {
-    private const string Caracteres = "0123456789";
+    private const int MaxIntentosCodigo = 5;
 
     private readonly IDbContextFactory<ApplicationDbContext> _fabrica;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ICodigoAmigoService _codigos;
+    private readonly ILogger<AmistadService> _logger;
 
-    public AmistadService(IDbContextFactory<ApplicationDbContext> fabrica, UserManager<ApplicationUser> userManager)
+    public AmistadService(
+        IDbContextFactory<ApplicationDbContext> fabrica,
+        UserManager<ApplicationUser> userManager,
+        ICodigoAmigoService codigos,
+        ILogger<AmistadService> logger)
     {
         _fabrica = fabrica;
         _userManager = userManager;
+        _codigos = codigos;
+        _logger = logger;
     }
 
     public async Task<string> ObtenerOCrearCodigoAsync(string usuarioId)
@@ -26,21 +34,25 @@ public class AmistadService : IAmistadService
         if (!string.IsNullOrEmpty(user.CodigoAmigo))
             return user.CodigoAmigo;
 
-        await using var db = await _fabrica.CreateDbContextAsync();
-        var aleatorio = new Random();
-        string codigo;
-        var intentos = 0;
-
-        do
+        for (var intento = 1; intento <= MaxIntentosCodigo; intento++)
         {
-            codigo = new string(Enumerable.Range(0, 4).Select(_ => Caracteres[aleatorio.Next(Caracteres.Length)]).ToArray());
-            intentos++;
-        }
-        while (await db.Users.AnyAsync(u => u.CodigoAmigo == codigo) && intentos < 20);
+            user.CodigoAmigo = await _codigos.GenerarCodigoUnicoAsync();
+            var resultado = await _userManager.UpdateAsync(user);
 
-        user.CodigoAmigo = codigo;
-        await _userManager.UpdateAsync(user);
-        return codigo;
+            if (resultado.Succeeded)
+                return user.CodigoAmigo;
+
+            if (resultado.Errors.Any(e => e.Code == "DuplicateUserName"))
+            {
+                _logger.LogWarning("Colisión al asignar CodigoAmigo para {UsuarioId}; reintentando.", usuarioId);
+                continue;
+            }
+
+            throw new InvalidOperationException(
+                "No se pudo asignar el código de amigo: " + string.Join(" ", resultado.Errors.Select(e => e.Description)));
+        }
+
+        throw new InvalidOperationException("No se pudo asignar un código de amigo único tras varios intentos.");
     }
 
     public async Task<(bool Exito, string Mensaje)> EnviarSolicitudAsync(string usuarioId, string codigoIngresado)

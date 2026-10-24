@@ -1,0 +1,677 @@
+# AGENTS.md - Otium
+
+Guía de trabajo y auditoría técnica del proyecto.
+
+- **Fuente de verdad:** `C:\Proyectos\Otium`
+- **Build publicado:** `C:\Otium\OtiumServidor` (no editar a mano)
+- **Datos de producción:** `C:\OtiumDatos\app.db`
+- **Commit auditado:** `0f02b1b` (`main`)
+- **Fecha de auditoría:** 2026-10-23
+- **Estado:** beta privada funcional; **no listo para lanzamiento público** hasta resolver los hallazgos P0/P1.
+
+---
+
+## 1. Qué es Otium
+
+Otium es una aplicación web personal de diario de lectura y gestión de biblioteca.
+
+Funciones principales:
+
+- Registro e inicio de sesión con ASP.NET Core Identity.
+- Estantes personales: `Leyendo`, `Leido`, `QuieroLeer`.
+- Búsqueda de libros por título o autor en Open Library.
+- Portadas, puntuación de 1 a 5 y reseñas.
+- "Travesías": entradas de lectura con páginas y resumen.
+- Glosario personal con definiciones generadas por Gemini.
+- Amigos mediante código de 4 dígitos.
+- Tema claro/oscuro.
+- PWA instalable con página de aviso sin conexión.
+- Eliminación de cuenta y política de privacidad.
+
+La interfaz y el dominio están en español. Quedan pantallas heredadas de la plantilla de Identity en inglés.
+
+---
+
+## 2. Stack y datos rápidos
+
+| Elemento | Valor |
+|---|---|
+| Framework | ASP.NET Core `net10.0` |
+| UI | Blazor Web App, render `InteractiveServer` |
+| Autenticación | ASP.NET Core Identity + cookies |
+| Base de datos | SQLite + EF Core |
+| Paquetes EF/Identity | `10.0.12` |
+| APIs externas | Open Library (HTTPS), Google Gemini (HTTPS), SMTP Brevo (SSL) |
+| PWA | `manifest.json`, `sw.js`, `instalar.js` |
+| Puerto local publicado | `http://localhost:5000` |
+| Puerto de desarrollo | `http://localhost:5235`, `https://localhost:7111` |
+| SDK instalado | .NET SDK `10.0.102` y `10.0.401` |
+| Pruebas automatizadas | `tests/Otium.Tests` (xUnit + WebApplicationFactory); `dotnet test` |
+| CI/CD | No existe |
+
+La compilación actual pasa sin errores ni advertencias:
+
+```powershell
+dotnet build Otium.csproj -c Release --nologo
+# Compilación correcta. 0 advertencias, 0 errores.
+```
+
+No se encontraron paquetes vulnerables con `dotnet list package --vulnerable --include-transitive`.
+
+---
+
+## 3. Comandos de trabajo
+
+Ejecutar desde `C:\Proyectos\Otium`:
+
+```powershell
+dotnet restore
+dotnet build -c Release
+dotnet run
+```
+
+Publicar:
+
+```powershell
+dotnet publish Otium.csproj -c Release -o <carpeta>
+```
+
+Migraciones:
+
+```powershell
+dotnet ef migrations add <Nombre>
+dotnet ef database update
+```
+
+La aplicación aplica migraciones automáticamente al iniciar (`Program.cs:73-77`). Para producción conviene respaldar antes y evitar múltiples instancias ejecutando migraciones a la vez.
+
+Base de datos local de desarrollo:
+
+- `Data/app.db` está ignorada por Git.
+- **No usar datos reales en desarrollo.**
+- El `.csproj` copia `Data/app.db` a la salida (`Otium.csproj:11-13`), lo que puede publicar datos de desarrollo. Ver hallazgo P1-8.
+
+---
+
+## 4. Estructura del repositorio
+
+```text
+Program.cs                         Arranque, DI, pipeline, cabeceras, migraciones
+Otium.csproj                       Proyecto web net10.0
+appsettings.json                   Configuración base
+appsettings.Development.json       Configuración local ignorada por Git (contiene secretos reales)
+Dockerfile                         Imagen de publicación
+Components/
+  App.razor                        HTML raíz, CSS, PWA, scripts
+  Routes.razor                     Router y AuthorizeRouteView
+  _Imports.razor                   Usings globales de Razor
+  Layout/                          MainLayout, menú, tema, instalación, reconexión
+  Pages/                           Estantes, Amigos, Glosario, Privacidad, Error, NotFound
+  Account/                         Identity: login, registro, gestión, 2FA, passkeys
+Data/
+  ApplicationDbContext.cs          EF Core + relaciones
+  ApplicationUser.cs               Usuario + CodigoAmigo
+  DescriptorErroresEs.cs           Traducción de errores de Identity
+  Migrations/                      Migraciones EF Core
+Models/
+  Libro.cs                         Libro + enum Estante
+  Amistad.cs                       Amistad + enum EstadoAmistad
+  EntradaLectura.cs               Travesías
+  PalabraGlosario.cs              Glosario
+Services/
+  LibroService.cs                 CRUD de libros
+  AmistadService.cs               Código, solicitudes, amigos
+  EntradaLecturaService.cs        CRUD de travesías
+  GlosarioService.cs              Gemini + persistencia del glosario
+  BuscadorLibros.cs               Cliente Open Library
+  EmailSender.cs                  Envío SMTP
+wwwroot/
+  app.css, tema.js                Estilos y tema
+  manifest.json, sw.js            PWA
+  icons/                          Iconos PWA
+```
+
+---
+
+## 5. Configuración y secretos
+
+Claves usadas:
+
+| Clave | Uso | Dónde |
+|---|---|---|
+| `ConnectionStrings:DefaultConnection` | SQLite | `appsettings.json` |
+| `DataProtection:KeysPath` | Persistencia de claves | Entorno/Docker |
+| `Correo:Host` | Servidor SMTP | Configuración local/entorno |
+| `Correo:Puerto` | Puerto SMTP | Configuración local/entorno |
+| `Correo:Usuario` | Usuario SMTP | Configuración local/entorno |
+| `Correo:Clave` | Contraseña SMTP | Configuración local/entorno |
+| `Correo:Remitente` | Remitente | Configuración local/entorno |
+| `Gemini:ApiKey` | API key de Gemini | Configuración local/entorno |
+| `Gemini:Modelo` | Modelo Gemini | Opcional |
+| `Invitacion:Codigo` | Legado; ya no se usa en el fuente actual | `appsettings.Development.json` |
+
+Reglas:
+
+- **Nunca** commitear `appsettings.Development.json`, claves, tokens, cadenas de conexión reales ni archivos `.db`.
+- El archivo local `appsettings.Development.json` contiene credenciales reales y está ignorado por Git (`.gitignore:489`). Tratarlo como secreto: si se compartió, rotar las claves.
+- Mover secretos a User Secrets en desarrollo:
+
+```powershell
+dotnet user-secrets init
+dotnet user-secrets set "Gemini:ApiKey" "<valor>"
+dotnet user-secrets set "Correo:Clave" "<valor>"
+```
+
+- En producción usar variables de entorno o un gestor de secretos, nunca el archivo del repositorio.
+- `DataProtection:KeysPath` debe existir y tener permisos restringidos. Sin esa configuración se usan claves efímeras y se invalidan sesiones/tokens al reiniciar.
+- `Gemini:ApiKey` se envía actualmente en la query string (`GlosarioService.cs:57`); cambiarlo a cabecera `x-goog-api-key` para no exponerlo en logs, trazas ni mensajes de excepción.
+
+---
+
+## 6. Arquitectura y flujos
+
+### 6.1 Pipeline de arranque
+
+`Program.cs`:
+
+1. Registra Razor Components interactivos por servidor.
+2. Configura autenticación, Identity, cookies y revalidación de seguridad.
+3. Registra `ApplicationDbContext` y `IDbContextFactory<ApplicationDbContext>` con SQLite.
+4. Configura Data Protection si existe `DataProtection:KeysPath`.
+5. Registra servicios de libros, amigos, travesías, glosario, Open Library y correo.
+6. Aplica migraciones al iniciar.
+7. Configura HSTS, manejo de errores, cabeceras de seguridad, redirección HTTPS y antiforgery.
+8. Mapea componentes Blazor y endpoints adicionales de Identity.
+
+### 6.2 Capas de aplicación
+
+| Capa | Implementación | Estado |
+|---|---|---|
+| Presentación | Componentes Razor, CSS aislado, JS mínimo | Existe, pero `Estantes.razor` concentra demasiada lógica |
+| Aplicación | `Services/*` | Parcial; mezcla casos de uso, persistencia y configuración |
+| Dominio | `Models/*` | Entidades anémicas, sin reglas de negocio |
+| Infraestructura | EF Core, SQLite, SMTP, HttpClient | Existe |
+| Contratos | Interfaces de servicios | Parcial; `BuscadorLibros` no tiene interfaz y se inyecta concreto |
+
+Flujo típico de una página Blazor:
+
+```text
+Componente Razor
+  -> AuthenticationStateProvider (obtiene UsuarioId)
+  -> servicio de aplicación (ILibroService, IAmistadService, ...)
+  -> IDbContextFactory<ApplicationDbContext>
+  -> SQLite
+```
+
+### 6.3 Modelo de datos
+
+- `ApplicationUser` extiende `IdentityUser` y añade `CodigoAmigo`.
+- `Libro` pertenece a un usuario. `Estante` se guarda como entero.
+- `EntradaLectura` pertenece a `Libro` y se elimina en cascada.
+- `Amistad` relaciona solicitante y receptor; ambas FK son `Restrict`.
+- `PalabraGlosario` guarda `UsuarioId` como texto, **sin FK ni cascada**.
+
+Relaciones relevantes en `Data/ApplicationDbContext.cs`:
+
+- `Libros -> AspNetUsers`: cascada.
+- `Amistades -> AspNetUsers`: restrict.
+- `EntradasLectura -> Libros`: cascada.
+- `PalabrasGlosario`: sin relación configurada.
+
+### 6.4 Autenticación
+
+- Login por correo (el correo también es `UserName`).
+- Contraseña mínima: 8 caracteres; mayúscula, minúscula y número; sin requerir símbolo (`Program.cs:41-47`).
+- Confirmación de cuenta desactivada (`SignIn.RequireConfirmedAccount = false`).
+- Lockout por intentos fallidos activado en el login.
+- Sesión persistente opcional.
+- Recuperación de contraseña funcional sin exigir confirmación de correo (Opción B). Ver P0-2.
+- 2FA, passkeys, correo y datos personales heredados de la plantilla de Identity.
+
+### 6.5 Integraciones externas
+
+- **Open Library:** búsqueda de 8 resultados por título/autor; portadas desde `covers.openlibrary.org`.
+- **Gemini:** definiciones breves; modelo por defecto `gemini-flash-lite-latest`.
+- **SMTP:** envío de enlaces de confirmación y recuperación.
+- **PWA:** el service worker solo guarda la página de aviso sin conexión. La app requiere conexión, por diseño.
+
+---
+
+## 7. Convenciones para agentes
+
+- Trabajar en `C:\Proyectos\Otium`, no en `C:\Otium`.
+- Mantener la UI y los mensajes de dominio en español. Si se toca una pantalla heredada en inglés, traducirla de forma consistente.
+- Mantener `Nullable` habilitado y evitar introducir `!` innecesarios.
+- Usar `async`/`await`; no usar `.Result`, `.Wait()` ni `async void`.
+- Añadir `CancellationToken` en operaciones nuevas de I/O.
+- No editar migraciones ya aplicadas. Crear una migración nueva.
+- No commitear secretos, bases de datos, `bin/`, `obj/` ni `.vs/`.
+- No cambiar el orden numérico de los enums persistidos (`Estante`, `EstadoAmistad`) sin migración de datos.
+- Preferir interfaces para nuevos servicios y mantener la inyección de dependencias.
+- Seguir el patrón existente de CSS aislado por componente (`.razor.css`).
+- No añadir librerías nuevas sin revisar si ya existe una solución en el proyecto.
+- Antes de terminar: compilar y verificar que no haya advertencias nuevas.
+- Si se corrige un hallazgo de este archivo, actualizar su estado y la evidencia.
+
+Comandos de verificación mínimos:
+
+```powershell
+dotnet build Otium.csproj -c Release --nologo
+dotnet test Otium.slnx -c Release --nologo
+dotnet list Otium.csproj package --vulnerable --include-transitive
+```
+
+La suite vive en `tests/Otium.Tests` y usa `WebApplicationFactory` con SQLite temporal. No toca `Data/app.db` ni `C:\OtiumDatos\app.db`.
+
+---
+
+## 8. Evaluación SOLID
+
+| Principio | Estado | Evidencia | Recomendación |
+|---|---|---|---|
+| **S** - Responsabilidad única | Parcial | `Estantes.razor` tiene búsqueda, CRUD, reseñas, travesías y presentación. `GlosarioService` mezcla HTTP, prompt, parsing, persistencia y traducción de errores. `AmistadService` mezcla Identity, generación de códigos y acceso a datos. | Extraer componentes/vistas y separar casos de uso, generación de códigos y clientes externos. |
+| **O** - Abierto/cerrado | Parcial | Añadir un estante obliga a tocar el enum, `Nombre()` y varias vistas. Añadir un proveedor de búsqueda obliga a tocar la página. | Centralizar nombres/estantes y abstraer proveedores con interfaces. |
+| **L** - Sustitución de Liskov | Cumple | Las implementaciones respetan sus interfaces; no hay jerarquías problemáticas. | Mantener contratos pequeños y explícitos. |
+| **I** - Segregación de interfaces | Cumple | `ILibroService`, `IAmistadService`, `IEntradaLecturaService` son acotadas. | No engordar interfaces existentes; crear contratos específicos. |
+| **D** - Inversión de dependencias | Parcial | Servicios dependen de `IDbContextFactory` e interfaces, pero las páginas dependen de `BuscadorLibros` concreto, `GlosarioService` lee `IConfiguration` directamente y las entidades EF se filtran a la UI. | Introducir `IBuscadorLibros`, `IOptions<T>` y DTOs/view models. |
+
+Conclusión SOLID: **parcial**. La base es razonable para una app pequeña, pero la UI y algunos servicios concentran demasiadas responsabilidades y dependen de detalles de infraestructura.
+
+---
+
+## 9. Capas y modelo OSI
+
+OSI es un modelo de comunicaciones de red, no una arquitectura de software. No existe un "cumplimiento OSI" del código fuente. Lo verificable es el uso correcto de protocolos y la separación en capas de la aplicación.
+
+### 9.1 Stack de red
+
+| Capa OSI | Uso en Otium | Estado |
+|---|---|---|
+| 7 Aplicación | HTTP/HTTPS, Blazor SignalR, Open Library, Gemini, SMTP | Correcto en salidas; entrada publicada sin TLS |
+| 6 Presentación | HTML, CSS, JS, JSON, UTF-8 | Correcto |
+| 5 Sesión | Cookies de Identity, circuito SignalR, Data Protection | Correcto con salvedades de claves |
+| 4 Transporte | TCP | Correcto |
+| 3 Red | IP, proxy inverso | No documentado; depende del despliegue |
+| 2/1 Enlace/Físico | Infraestructura | Fuera del alcance del código |
+
+Hallazgos de red:
+
+- Las APIs externas usan HTTPS.
+- SMTP usa SSL (`EnableSsl = true`).
+- La publicación actual escucha HTTP en `http://localhost:5000` y el Dockerfile expone HTTP en `8080`.
+- `UseHttpsRedirection()` y `UseHsts()` existen, pero sin un puerto HTTPS o proxy TLS delante no protegen nada.
+- Las cookies de autenticación deben ir con `Secure` en producción; eso exige HTTPS real.
+- El CSP declara `wss:` pero no `ws:`. En desarrollo por HTTP, el WebSocket de Blazor puede quedar bloqueado y caer a otro transporte. Añadir `ws:` solo en desarrollo o generar CSP por entorno.
+
+### 9.2 Capas de software
+
+La separación actual es **aceptable para beta privada**, no para un diseño por capas estricto:
+
+- Presentación: componentes Razor, con lógica de negocio incrustada.
+- Aplicación: servicios, sin una capa de casos de uso formal.
+- Dominio: modelos anémicos, sin validaciones ni reglas.
+- Infraestructura: EF Core, SQLite, SMTP, HttpClient.
+- No hay DTOs: las entidades se enlazan directamente a formularios y vistas.
+
+---
+
+## 10. Checklist de lanzamiento
+
+| Área | Estado | Nota |
+|---|---|---|
+| Compilación | Sí | 0 errores, 0 advertencias |
+| Pruebas automatizadas | Sí | `tests/Otium.Tests`; 7 pruebas de P0 en verde |
+| CI/CD | No | No hay workflows |
+| README / LICENSE / CHANGELOG | No | No existen |
+| `.editorconfig` / `global.json` | No | Sin convenciones ni SDK fijado |
+| Secretos fuera del repo | Sí | Credenciales locales movidas a User Secrets; `appsettings.Development.json` saneado. Rotación pendiente por el propietario |
+| HTTPS/TLS de entrada | No | Publicación y Docker en HTTP |
+| Rate limiting | No | Login, registro, códigos de amigo y Gemini sin límite |
+| Confirmación de correo | Parcial | Opción B: confirmación opcional; el correo solo se envía al recuperar contraseña |
+| Recuperación de contraseña | Sí | Funciona sin exigir `EmailConfirmed`; probado con `IEmailSender` falso |
+| Eliminación de cuenta | Parcial | Inconsistente entre dos flujos |
+| Exportación de datos | Parcial | Solo datos de Identity, no libros/glosario/amistades |
+| Respaldos | No | No hay implementación en el código actual |
+| Health checks | No | No hay endpoint |
+| Observabilidad | Parcial | Logging básico de framework/Identity |
+| Validación de entrada | Parcial | UI valida poco; servicios no validan |
+| Manejo de errores | Parcial | Algunos errores internos llegan al usuario |
+| Cabeceras de seguridad | Sí | CSP, nosniff, referrer, frame-options; CSP mejorable |
+| CSRF | Sí | Antiforgery en formularios y endpoints sensibles |
+| Autorización de páginas | Sí | `[Authorize]` en estantes, amigos y glosario |
+| Autorización a nivel de dato | No | Servicios no verifican propiedad del recurso |
+| Accesibilidad | Parcial | Buenas bases; falta auditoría formal |
+| Internacionalización | Parcial | Español mezclado con scaffold en inglés |
+| PWA | Sí | Manifiesto, iconos, service worker, instalación |
+| Rendimiento | Aceptable | Suficiente para uso personal/pequeño |
+| Escalabilidad horizontal | No | SQLite + Blazor Server con estado por circuito |
+| Docker | Parcial | Sin usuario no root, healthcheck ni volumen declarado |
+| Dependencias vulnerables | Sí | Sin vulnerabilidades conocidas al momento de la auditoría |
+
+**Veredicto:** no lanzar públicamente todavía. Es viable como beta privada después de corregir los P0 y, como mínimo, los P1 de seguridad y datos.
+
+---
+
+## 11. Hallazgos priorizados
+
+### P0 - Bloqueantes
+
+#### P0-1. El registro falla a partir del segundo usuario nuevo
+
+**Estado: corregido (2026-10-23).** El registro usa `IRegistroService`, que asigna un `CodigoAmigo` criptográfico de 8 caracteres (`ICodigoAmigoGenerator`) antes de `CreateAsync` y reintenta ante colisiones. `AmistadService` reutiliza el mismo generador y valida `UpdateAsync`. Pruebas en `RegistroTests`.
+
+Evidencia histórica:
+
+- `Data/ApplicationUser.cs:7`: `CodigoAmigo` por defecto `""`.
+- `Data/ApplicationDbContext.cs:37-39`: índice único sobre `CodigoAmigo`.
+- `Data/Migrations/20260923221056_AgregarIndiceCodigoAmigo.cs:13-17`: índice `unique: true`.
+- `Components/Account/Pages/Register.razor:71-90`: el registro no genera `CodigoAmigo`.
+
+Reproducido en una base limpia:
+
+```text
+Registro 1: HTTP 200
+Registro 2: HTTP 500
+SQLite Error 19: UNIQUE constraint failed: AspNetUsers.CodigoAmigo
+```
+
+El primer usuario queda con `CodigoAmigo = ""` hasta que visita Amigos; el segundo ya no puede registrarse.
+
+Corrección recomendada:
+
+1. Generar el código en el registro, antes de `CreateAsync`.
+2. O hacer `CodigoAmigo` nullable y crear un índice único filtrado para valores no nulos.
+3. Validar el resultado de `UpdateAsync` y cubrir la carrera con reintentos.
+4. Añadir una prueba de integración que registre dos usuarios seguidos.
+
+#### P0-2. La recuperación de contraseña no funciona para cuentas nuevas
+
+**Estado: corregido (2026-10-23) con la Opción B.** Se eliminó la comprobación `IsEmailConfirmedAsync`; `IRecuperacionContrasenaService` envía el enlace a cualquier cuenta existente y mantiene la misma respuesta para no enumerar usuarios. El correo solo se envía al solicitar recuperación. Pruebas en `RecuperacionContrasenaTests`.
+
+Evidencia histórica:
+
+- `Program.cs:43`: `RequireConfirmedAccount = false`.
+- `Register.razor:71-90`: registra e inicia sesión sin confirmar correo ni enviar confirmación.
+- `ForgotPassword.razor:47-53`: solo envía el enlace si `IsEmailConfirmedAsync(user)` es verdadero.
+- La base de datos revisada tiene todas las cuentas con `EmailConfirmed = 0`.
+
+Resultado: el usuario nunca recibe el correo de recuperación, aunque la pantalla diga que lo haga.
+
+Corrección recomendada:
+
+- Decidir el flujo: confirmación obligatoria o recuperación sin confirmación.
+- Si se exige confirmación: enviar confirmación al registrar, bloquear login hasta confirmar y ofrecer reenvío.
+- Si no se exige: quitar la comprobación `IsEmailConfirmedAsync` del flujo de recuperación.
+- Probar el flujo completo con un buzón real o un servidor SMTP de pruebas.
+
+#### P0-3. Gestión de secretos y exposición de la API key de Gemini
+
+**Estado: corregido (2026-10-23); rotación de credenciales pendiente por el propietario.** La key viaja en la cabecera `x-goog-api-key`, los errores ya no exponen `ex.Message` ni el detalle HTTP, y las credenciales locales se movieron a User Secrets dejando `appsettings.Development.json` sin secretos. `CorreoOptions` valida la configuración al arrancar.
+
+Evidencia histórica:
+
+- `appsettings.Development.json:11-20` contiene credenciales reales de Gemini y SMTP.
+- El archivo está ignorado por Git (`.gitignore:489`), pero sigue siendo un secreto local.
+- `Services/GlosarioService.cs:57`: la API key viaja en la URL.
+- `Services/GlosarioService.cs:92-95`: un error devuelve `ex.Message` al usuario; puede incluir la URL con la key.
+
+Acciones:
+
+- Rotar las credenciales si el archivo se compartió o se subió a algún entorno.
+- Moverlas a User Secrets/entorno.
+- Enviar la key en la cabecera `x-goog-api-key`.
+- No devolver mensajes de excepción crudos al usuario.
+- Revisar que `.gitignore` siga excluyendo el archivo y que no exista en el historial.
+
+### P1 - Alto
+
+#### P1-4. Eliminación de cuenta y exportación de datos inconsistentes
+
+Evidencia:
+
+- `Components/Account/Pages/Manage/EliminarCuenta.razor:73-83` elimina amistades y libros, pero no el glosario.
+- `Models/PalabraGlosario.cs:6` guarda `UsuarioId` sin relación ni cascada en `ApplicationDbContext.cs:41-45`.
+- `Components/Account/Pages/Manage/DeletePersonalData.razor:78-89` sigue accesible y elimina el usuario sin limpiar libros/amistades/glosario.
+- Con amistades, las FK `Restrict` (`ApplicationDbContext.cs:25-35`) pueden hacer fallar `UserManager.DeleteAsync`.
+- `Components/Account/Pages/Manage/PersonalData.razor:20-25` descarga un JSON que no incluye libros, reseñas, travesías, glosario ni amistades.
+- `Privacidad.razor:22-23` promete borrar "todos tus libros, reseñas y puntuaciones".
+
+Corrección recomendada:
+
+- Un solo flujo de eliminación, transaccional y completo.
+- Añadir FK/cascada o borrado explícito para `PalabrasGlosario` y `EntradasLectura`.
+- Eliminar o proteger la ruta antigua `DeletePersonalData`.
+- Ampliar la exportación de datos a todas las entidades del usuario.
+- Añadir prueba de eliminación con libros, travesías, glosario y amistades.
+
+#### P1-5. Falta de verificación de propiedad en servicios
+
+Evidencia:
+
+- `Services/EntradaLecturaService.cs:16-52`: recibe `libroId` o `EntradaLectura` sin comprobar que pertenezcan al usuario actual.
+- `Services/LibroService.cs:32-43`: `ActualizarAsync` y `EliminarAsync` confían en la entidad recibida.
+- La UI comprueba `UsuarioId` en `Estantes.razor:413-432` y `:525-534`, pero la regla no está en la capa de servicio.
+
+Riesgo: si en el futuro se expone un endpoint o se reutiliza el servicio, un usuario podría modificar recursos ajenos (IDOR).
+
+Corrección recomendada:
+
+- Pasar siempre `usuarioId` a los servicios y filtrar por propietario.
+- Usar DTOs de entrada, no entidades completas.
+- Añadir pruebas de autorización con dos usuarios.
+
+#### P1-6. Sin rate limiting y códigos de amigo débiles/enumerables
+
+Evidencia:
+
+- No hay `AddRateLimiter` en `Program.cs`.
+- `Services/AmistadService.cs:30-39`: `Random` no criptográfico, solo 10.000 combinaciones de 4 dígitos, 20 intentos y sin control del resultado de `UpdateAsync`.
+- `Amigos.razor:30` sugiere un código alfanumérico de 6 caracteres, pero el servicio genera 4 dígitos.
+- `AmistadService.cs:54-66` distingue entre "no existe" y "ya existe", lo que permite enumerar usuarios.
+- `GlosarioService` puede consumir cuota de Gemini sin límite.
+- Login y registro no tienen límite por IP.
+
+Corrección recomendada:
+
+- `RandomNumberGenerator` y códigos de 6-8 caracteres alfanuméricos.
+- Rate limiting en login, registro, solicitudes de amistad y glosario.
+- Mensaje uniforme para solicitudes de amistad.
+- Índice único para pares de amistad y control de carreras.
+
+#### P1-7. Producción sin HTTPS real
+
+Evidencia:
+
+- `Properties/launchSettings.json` usa HTTP/HTTPS en desarrollo.
+- El script publicado usa `http://localhost:5000`.
+- `Dockerfile:12-18` expone HTTP en `8080`.
+- `Program.cs:85-106` configura HSTS y redirección, pero sin TLS delante no hay protección efectiva.
+
+Riesgo: cookies de sesión, credenciales y datos personales viajan sin cifrar si el servicio se expone fuera de localhost.
+
+Corrección recomendada:
+
+- Publicar detrás de un proxy inverso con TLS (Caddy, Nginx, IIS, Cloudflare Tunnel, etc.).
+- Configurar `ForwardedHeaders` si hay proxy.
+- Forzar HTTPS y cookies `Secure`.
+- No exponer Kestrel directamente a Internet.
+
+#### P1-8. La base de datos de desarrollo puede publicarse
+
+Evidencia:
+
+- `Otium.csproj:11-13` copia `Data/app.db` a la salida.
+- `Data/app.db` contiene usuarios, hashes de contraseña, libros y glosario de desarrollo.
+- El `.dockerignore` la excluye para Docker, pero no para `dotnet publish` local.
+
+Acciones:
+
+- Quitar esa copia del `.csproj` o usar una base de datos de desarrollo separada y vacía.
+- Nunca publicar `Data/app.db` con datos reales.
+- Documentar la ruta de datos de producción (`C:\OtiumDatos\app.db`).
+
+#### P1-9. La función social está incompleta respecto a lo que promete la privacidad
+
+Evidencia:
+
+- `Amigos.razor` solo lista amigos por correo; no muestra estantes, libros ni actividad.
+- `Privacidad.razor:14-17` dice que los amigos pueden ver "lo que decidas compartir".
+- No hay opción de compartir, dejar de ser amigo, bloquear ni notificaciones.
+- El registro dice "solo para ti y tus amigos" (`Register.razor:18`).
+
+Acciones:
+
+- Implementar el compartir o corregir el texto para que refleje el estado real.
+- Añadir eliminar amigo/bloquear si se mantiene la función social.
+- Definir qué datos ve un amigo y aplicar autorización explícita.
+
+### P2 - Medio
+
+#### P2-10. Sin pruebas, CI, documentación ni licencia
+
+- No hay proyecto de tests, workflows, README, LICENSE, CHANGELOG, `.editorconfig` ni `global.json`.
+- La compilación es la única verificación automática.
+- Añadir como mínimo pruebas de:
+  - Registro de dos usuarios.
+  - Recuperación de contraseña.
+  - Eliminación de cuenta con datos relacionados.
+  - Autorización entre usuarios.
+  - Generación/colisión de códigos de amigo.
+
+#### P2-11. Validación de entrada insuficiente
+
+- `Libro`, `EntradaLectura` y `PalabraGlosario` no tienen DataAnnotations ni validación de longitud.
+- `Puntuacion` no se valida en el servicio (solo la UI limita a 1-5).
+- `PaginaInicio`/`PaginaFin` no validan negativos ni orden.
+- `Resena` y `Resumen` no tienen longitud máxima.
+- `GlosarioService` no limita el tamaño de la palabra ni del título.
+- `EntradaLecturaService.AgregarAsync` no valida que `libroId` exista o pertenezca al usuario.
+
+#### P2-12. Numeración de travesías con carreras y reutilización
+
+- `EntradaLecturaService.cs:29-31` usa `CountAsync() + 1`.
+- Dos altas simultáneas pueden generar el mismo `Numero`.
+- Al borrar una entrada intermedia, el siguiente `Count + 1` puede repetir un número existente.
+- No hay índice único `(LibroId, Numero)`.
+- Usar un contador persistido o calcular `Max(Numero) + 1` con transacción, y añadir restricción.
+
+#### P2-13. Fugas de información en mensajes de error
+
+- `Estantes.razor:479-482` muestra `ex.Message` de Open Library.
+- `GlosarioService.cs:92-95` muestra `ex.Message` de Gemini.
+- `IdentityComponentsEndpointRouteBuilderExtensions.cs:64` y `:122` devuelven IDs internos en errores.
+- `EmailSender.cs:56-60` registra la excepción con destinatario (correcto), pero el flujo de UI debe mostrar mensajes genéricos.
+
+#### P2-14. Cabeceras y CSP mejorables
+
+- `Program.cs:94-101` permite `'unsafe-inline'` en scripts y estilos.
+- `connect-src` no incluye `ws:` para desarrollo HTTP.
+- Se observaron dos cabeceras CSP en la respuesta (la propia y `frame-ancestors 'self'`), conviene unificar.
+- `X-Frame-Options: DENY` y `frame-ancestors 'self'` no son equivalentes; alinear la política.
+- `AllowedHosts: "*"` en `appsettings.json:11`; restringir en producción.
+
+#### P2-15. `async void` y excepciones silenciadas
+
+- `Components/Layout/BotonTema.razor:44-47` usa `async void`.
+- `BotonTema.razor:57-60` y `:69-71` capturan y silencian todas las excepciones.
+- `BotonInstalar.razor:77` también silencia.
+- Usar un manejador seguro, registrar el error y no tragar excepciones.
+
+#### P2-16. Código y pantallas redundantes
+
+- `Components/Account/IdentityNoOpEmailSender.cs` no se usa (se registra `EmailSender`).
+- `DeletePersonalData.razor` y `PersonalData.razor` son rutas heredadas no enlazadas en el menú.
+- `Email.razor`, `ChangePassword` y otras pantallas de Identity conviven en inglés/español.
+- `Invitacion:Codigo` ya no se usa en el fuente actual.
+- Hay reglas CSS duplicadas en `Estantes.razor.css` (`.entradas-lectura`, `.entrada-cabecera`, `.quitar-entrada`, `.form-entrada`, `.campo-resumen`, `.bloc-notas`).
+- `AddDbContext` y `AddDbContextFactory` duplican la configuración de SQLite (`Program.cs:27-30`).
+
+#### P2-17. `EmailSender` frágil
+
+- `Services/EmailSender.cs:33-37` usa `int.Parse` y claves opcionales sin validación.
+- Si falta `Correo:Host`, `Correo:Usuario` o `Correo:Clave`, falla en tiempo de ejecución.
+- `SmtpClient` es una API heredada; valorar MailKit.
+- Enviar correo dentro de la petición puede aumentar la latencia; valorar cola/outbox.
+- No hay reintentos, cancelación ni verificación de configuración al arrancar.
+
+#### P2-18. Sin respaldos ni recuperación documentada
+
+- El commit `6da7685` menciona respaldo automático, pero el código actual no contiene lógica de backup.
+- Añadir backup diario de `app.db` con retención, verificación y prueba de restauración.
+- Documentar el procedimiento de recuperación.
+
+#### P2-19. Docker y operación
+
+- `Dockerfile` corre como root, no declara `VOLUME /data`, no tiene `HEALTHCHECK` y no fija imágenes por digest.
+- `DataProtection:KeysPath=/data/keys` requiere que el directorio exista y tenga permisos.
+- No hay límites de recursos, logs persistentes ni estrategia de actualización.
+- `db.Database.Migrate()` al arrancar puede fallar y tumbar la app; en producción conviene un paso de migración controlado.
+
+#### P2-20. Dependencias externas sin resiliencia
+
+- Open Library y Gemini no tienen reintentos, circuit breaker, caché ni cancelación.
+- El `User-Agent` de Open Library usa un correo de ejemplo (`BuscadorLibros.cs:58`).
+- Si Open Library falla, la UI muestra el error crudo.
+- Añadir timeout, reintentos acotados, caché y mensajes amigables.
+
+### P3 - Bajo
+
+- `NotFound.razor` y `Error.razor` siguen en inglés.
+- `MenuUsuario` no muestra "Salir"; el logout está dentro de "Mi cuenta".
+- `CopiarCodigo` no captura errores de `navigator.clipboard` (puede fallar fuera de contexto seguro).
+- `BotonInstalar` no protege la llamada JS de la primera renderización.
+- Las imágenes de portada usan `alt=""`; correcto si son decorativas, pero la tarjeta debería describir el libro.
+- No hay `robots.txt`, `security.txt`, términos de uso ni página de soporte.
+- El glosario no evita duplicados y no permite editar definiciones.
+- La búsqueda de libros no guarda caché ni permite paginación.
+- No hay auditoría de accesibilidad ni pruebas en móviles reales.
+- No hay telemetría de errores (Sentry, Application Insights, etc.).
+
+---
+
+## 12. Orden recomendado de corrección
+
+1. **P0-1:** ~~arreglar `CodigoAmigo` y probar dos registros consecutivos.~~ Completado.
+2. **P0-2:** ~~decidir y arreglar el flujo de confirmación/recuperación.~~ Completado (Opción B).
+3. **P0-3:** ~~rotar y mover secretos; key de Gemini fuera de la URL.~~ Completado; rotación manual pendiente.
+4. **P1-4:** unificar eliminación y exportación de datos.
+5. **P1-5:** autorización por propietario en servicios.
+6. **P1-6:** rate limiting y códigos de amigo robustos.
+7. **P1-7/P1-8:** TLS de entrada y dejar de publicar la base de desarrollo.
+8. **P1-9:** completar o corregir la función social y la privacidad.
+9. **P2:** pruebas, CI, validación, errores, CSP, respaldos, Docker.
+10. **P3:** pulido de UX, i18n y accesibilidad.
+
+---
+
+## 13. Definition of Done para cambios
+
+Un cambio se considera terminado cuando:
+
+- Compila en Release sin errores ni advertencias nuevas.
+- No introduce secretos ni datos personales en el repositorio.
+- Respeta la separación UI/servicio/datos existente o mejora la existente.
+- Incluye validación de entrada y autorización si toca datos de usuario.
+- Actualiza o crea la migración correspondiente si cambia el modelo.
+- Tiene una prueba automatizada si corrige un flujo crítico.
+- Actualiza este `AGENTS.md` si cambia arquitectura, configuración o estado de un hallazgo.
+
+---
+
+## 14. Diferencias entre fuente y publicación
+
+- `C:\Otium\OtiumServidor` corresponde a un build anterior (`1bcddde`) y todavía usa código de invitación.
+- `C:\Proyectos\Otium` está en `0f02b1b` y ya no usa invitación.
+- El script publicado configura `Invitacion__Codigo`, pero el fuente actual no lo lee.
+- La base publicada en `C:\Otium\OtiumServidor\Data\app.db` no es la base activa; la activa es `C:\OtiumDatos\app.db`.
+- Cualquier cambio debe hacerse en el fuente y volver a publicar; no editar los archivos de `C:\Otium`.
+
+---
+
+## 15. Resumen ejecutivo
+
+Otium tiene una base funcional y ordenada para un proyecto personal: Blazor Server, Identity, EF Core/SQLite, servicios con interfaces, PWA y una UI cuidada. La compilación está limpia y no hay vulnerabilidades conocidas en paquetes.
+
+Sin embargo, **no está listo para lanzamiento público** por tres bloqueantes concretos: el registro se rompe con el segundo usuario, la recuperación de contraseña no funciona para cuentas nuevas y hay credenciales reales en configuración local con una API key expuesta en URLs/mensajes. Además, la eliminación/exportación de datos no cumple lo que promete la política de privacidad, faltan controles de autorización por propietario y no hay rate limiting, TLS de entrada, respaldos ni pruebas.
+
+Corregir P0 y P1 permitiría una beta privada razonable. Antes de abrir al público, completar P2 y añadir pruebas/CI.

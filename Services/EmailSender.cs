@@ -1,18 +1,20 @@
 ﻿using System.Net;
 using System.Net.Mail;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using Otium.Data;
+using Otium.Services.Options;
 
 namespace Otium.Services;
 
 public class EmailSender : IEmailSender<ApplicationUser>
 {
-    private readonly IConfiguration _config;
+    private readonly CorreoOptions _opciones;
     private readonly ILogger<EmailSender> _logger;
 
-    public EmailSender(IConfiguration config, ILogger<EmailSender> logger)
+    public EmailSender(IOptions<CorreoOptions> opciones, ILogger<EmailSender> logger)
     {
-        _config = config;
+        _opciones = opciones.Value;
         _logger = logger;
     }
 
@@ -30,22 +32,16 @@ public class EmailSender : IEmailSender<ApplicationUser>
 
     private async Task EnviarAsync(string destinatario, string asunto, string cuerpoHtml)
     {
-        var host = _config["Correo:Host"];
-        var puerto = int.Parse(_config["Correo:Puerto"] ?? "587");
-        var usuario = _config["Correo:Usuario"];
-        var clave = _config["Correo:Clave"];
-        var remitente = _config["Correo:Remitente"] ?? usuario;
-
         using var mensaje = new MailMessage();
-        mensaje.From = new MailAddress(remitente!, "Otium");
+        mensaje.From = new MailAddress(_opciones.Remitente, "Otium");
         mensaje.To.Add(destinatario);
         mensaje.Subject = asunto;
         mensaje.Body = cuerpoHtml;
         mensaje.IsBodyHtml = true;
 
-        using var cliente = new SmtpClient(host, puerto)
+        using var cliente = new SmtpClient(_opciones.Host, _opciones.Puerto)
         {
-            Credentials = new NetworkCredential(usuario, clave),
+            Credentials = new NetworkCredential(_opciones.Usuario, _opciones.Clave),
             EnableSsl = true
         };
 

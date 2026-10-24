@@ -1,8 +1,10 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Otium.Data;
 using Otium.Models;
+using Otium.Services.Options;
 
 namespace Otium.Services;
 
@@ -18,15 +20,21 @@ public class GlosarioService : IGlosarioService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _fabrica;
     private readonly HttpClient _http;
+    private readonly ILogger<GlosarioService> _logger;
     private readonly string _apiKey;
     private readonly string _modelo;
 
-    public GlosarioService(IDbContextFactory<ApplicationDbContext> fabrica, HttpClient http, IConfiguration configuracion)
+    public GlosarioService(
+        IDbContextFactory<ApplicationDbContext> fabrica,
+        HttpClient http,
+        IOptions<GeminiOptions> opciones,
+        ILogger<GlosarioService> logger)
     {
         _fabrica = fabrica;
         _http = http;
-        _apiKey = configuracion["Gemini:ApiKey"] ?? "";
-        _modelo = configuracion["Gemini:Modelo"] ?? "gemini-flash-lite-latest";
+        _logger = logger;
+        _apiKey = opciones.Value.ApiKey;
+        _modelo = opciones.Value.Modelo;
     }
 
     public async Task<List<PalabraGlosario>> ObtenerDeUsuarioAsync(string usuarioId)
@@ -54,19 +62,30 @@ public class GlosarioService : IGlosarioService
 
         try
         {
-            var url = $"v1beta/models/{_modelo}:generateContent?key={_apiKey}";
+            var url = $"v1beta/models/{_modelo}:generateContent";
             var cuerpo = new
             {
                 contents = new[] { new { parts = new[] { new { text = prompt } } } },
                 generationConfig = new { maxOutputTokens = 150, temperature = 0.2 }
             };
 
-            var respuestaHttp = await _http.PostAsJsonAsync(url, cuerpo);
+            using var solicitud = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = JsonContent.Create(cuerpo)
+            };
+            solicitud.Headers.Add("x-goog-api-key", _apiKey);
+
+            using var respuestaHttp = await _http.SendAsync(solicitud);
 
             if (!respuestaHttp.IsSuccessStatusCode)
             {
                 var detalle = await respuestaHttp.Content.ReadAsStringAsync();
-                return (false, $"Gemini respondio con un error ({(int)respuestaHttp.StatusCode}): {detalle}", null);
+                _logger.LogWarning(
+                    "Gemini respondió {Estado} al definir una palabra. Detalle: {Detalle}",
+                    (int)respuestaHttp.StatusCode,
+                    detalle);
+
+                return (false, "No pude consultar la definición en este momento. Inténtalo más tarde.", null);
             }
 
             var datos = await respuestaHttp.Content.ReadFromJsonAsync<RespuestaGemini>();
@@ -91,7 +110,8 @@ public class GlosarioService : IGlosarioService
         }
         catch (Exception ex)
         {
-            return (false, "No pude consultar la definicion: " + ex.Message, null);
+            _logger.LogError(ex, "Error al consultar Gemini para el glosario.");
+            return (false, "No pude consultar la definición en este momento. Inténtalo más tarde.", null);
         }
     }
 

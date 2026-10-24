@@ -3,9 +3,9 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
 @using Otium.Data
+@using Otium.Services
 
-@inject UserManager<ApplicationUser> UserManager
-@inject IUserStore<ApplicationUser> UserStore
+@inject IRegistroService Registro
 @inject SignInManager<ApplicationUser> SignInManager
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
@@ -70,45 +70,18 @@
 
     public async Task RegisterUser(EditContext editContext)
     {
-        var user = CreateUser();
+        var resultado = await Registro.RegistrarAsync(Input.Email, Input.Password);
 
-        await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
-        var emailStore = GetEmailStore();
-        await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
-        var result = await UserManager.CreateAsync(user, Input.Password);
-
-        if (!result.Succeeded)
+        if (!resultado.Exito)
         {
-            identityErrors = result.Errors;
+            identityErrors = resultado.Errores;
             return;
         }
 
         Logger.LogInformation("User created a new account with password.");
 
-        await SignInManager.SignInAsync(user, isPersistent: false);
+        await SignInManager.SignInAsync(resultado.Usuario!, isPersistent: false);
         RedirectManager.RedirectTo(ReturnUrl);
-    }
-
-    private ApplicationUser CreateUser()
-    {
-        try
-        {
-            return Activator.CreateInstance<ApplicationUser>();
-        }
-        catch
-        {
-            throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
-                $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor.");
-        }
-    }
-
-    private IUserEmailStore<ApplicationUser> GetEmailStore()
-    {
-        if (!UserManager.SupportsUserEmail)
-        {
-            throw new NotSupportedException("The default UI requires a user store with email support.");
-        }
-        return (IUserEmailStore<ApplicationUser>)UserStore;
     }
 
     private sealed class InputModel
