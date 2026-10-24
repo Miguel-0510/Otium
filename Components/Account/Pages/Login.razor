@@ -31,6 +31,7 @@
             <label for="Input.Password">Contraseña</label>
             <InputText @bind-Value="Input.Password" id="Input.Password" type="password" autocomplete="current-password" aria-required="true" />
             <ValidationMessage For="() => Input.Password" class="text-danger" />
+            <a class="olvide" href="Account/ForgotPassword">¿Olvidaste tu contraseña?</a>
         </div>
 
         <label class="recordar">
