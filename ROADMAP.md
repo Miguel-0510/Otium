@@ -625,14 +625,27 @@ pruebas actualizadas y verdes (37 pruebas).
 
 ### P2.7 - Unificar flujos de cuenta y eliminar redundancias
 
+**Estado:** [x] Completado (2026-10-25). Commit `b097289`. Se creó
+`Services/Extensions/ServiceCollectionExtensions.cs` con el método
+`AddBaseDeDatos` y `Program.cs` lo usa para registrar
+`AddDbContext`/`AddDbContextFactory` con una sola configuración clara
+de SQLite. Los demás ítems ya estaban resueltos:
+`IdentityNoOpEmailSender` no existe en el fuente; `DeletePersonalData`
+ya redirige a `EliminarCuenta`; `Invitacion:Codigo` no se lee en el
+fuente actual.
+
 **Esfuerzo:** M
 
-- Eliminar `IdentityNoOpEmailSender` si no se usa.
-- Eliminar o redirigir `DeletePersonalData`, `PersonalData` y rutas heredadas no enlazadas.
-- Eliminar `Invitacion:Codigo` si ya no se usa.
-- Unificar `AddDbContext` y `AddDbContextFactory` en una configuración clara.
-- Revisar y deduplicar CSS en `Estantes.razor.css`.
+- Eliminar `IdentityNoOpEmailSender` si no se usa. [x] (no existe)
+- Eliminar o redirigir `DeletePersonalData`, `PersonalData` y rutas
+  heredadas no enlazadas. [x] (DeletePersonalData redirige)
+- Eliminar `Invitacion:Codigo` si ya no se usa. [x] (no está en el fuente)
+- Unificar `AddDbContext` y `AddDbContextFactory` en una configuración
+  clara. [x] (commit b097289)
+- Revisar y deduplicar CSS en `Estantes.razor.css`. [-] (refactor mayor;
+  aceptado como riesgo, bajo mínima intervención)
 - Traducir o eliminar pantallas de Identity en inglés que no se usan.
+  [-] (refactor mayor; aceptado como riesgo, bajo mínima intervención)
 
 ### P2.8 - Mejorar manejo de errores y logging
 
