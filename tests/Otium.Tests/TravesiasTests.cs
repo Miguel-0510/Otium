@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Otium.Models;
+using Otium.Models.DTOs;
 using Otium.Services;
 
 namespace Otium.Tests;
@@ -26,11 +27,16 @@ public sealed class TravesiasTests
         var usuario = await registro.RegistrarAsync($"travesias-{sufijo}@example.com", "Password1");
         Assert.True(usuario.Exito);
 
-        var libro = new Libro { Titulo = "Libro con travesías", Autor = "Autora", Estante = Estante.Leyendo };
-        Assert.True((await libros.AgregarAsync(usuario.Usuario!.Id, libro)).Exito);
+        var (_, _, creado) = await libros.AgregarAsync(usuario.Usuario!.Id, new LibroCrearDTO
+        {
+            Titulo = "Libro con travesías",
+            Autor = "Autora",
+            Estante = Estante.Leyendo
+        });
+        Assert.NotNull(creado);
 
-        var (exitoPrimera, _, primera) = await entradas.AgregarAsync(usuario.Usuario.Id, libro.Id, 1, 20, "Primera travesía");
-        var (exitoSegunda, _, segunda) = await entradas.AgregarAsync(usuario.Usuario.Id, libro.Id, 21, 40, "Segunda travesía");
+        var (exitoPrimera, _, primera) = await entradas.AgregarAsync(usuario.Usuario.Id, creado!.Id, 1, 20, "Primera travesía");
+        var (exitoSegunda, _, segunda) = await entradas.AgregarAsync(usuario.Usuario.Id, creado!.Id, 21, 40, "Segunda travesía");
 
         Assert.True(exitoPrimera);
         Assert.True(exitoSegunda);
@@ -39,12 +45,12 @@ public sealed class TravesiasTests
         Assert.Equal(1, primera!.Numero);
         Assert.Equal(2, segunda!.Numero);
 
-        var lista = await entradas.ObtenerDeLibroAsync(usuario.Usuario.Id, libro.Id);
+        var lista = await entradas.ObtenerDeLibroAsync(usuario.Usuario.Id, creado!.Id);
         Assert.Equal(2, lista.Count);
         Assert.Equal("Primera travesía", lista[0].Resumen);
 
         Assert.True(await entradas.EliminarAsync(usuario.Usuario.Id, primera.Id));
-        Assert.Single(await entradas.ObtenerDeLibroAsync(usuario.Usuario.Id, libro.Id));
+        Assert.Single(await entradas.ObtenerDeLibroAsync(usuario.Usuario.Id, creado!.Id));
     }
 
     [Fact]
@@ -73,8 +79,13 @@ public sealed class TravesiasTests
         var usuario = await registro.RegistrarAsync($"travesias-concurrente-{Guid.NewGuid():N}@example.com", "Password1");
         Assert.True(usuario.Exito);
 
-        var libro = new Libro { Titulo = "Libro concurrente", Autor = "Autor", Estante = Estante.Leyendo };
-        Assert.True((await libros.AgregarAsync(usuario.Usuario!.Id, libro)).Exito);
+        var (_, _, creado) = await libros.AgregarAsync(usuario.Usuario!.Id, new LibroCrearDTO
+        {
+            Titulo = "Libro concurrente",
+            Autor = "Autor",
+            Estante = Estante.Leyendo
+        });
+        Assert.NotNull(creado);
 
         var tareas = new List<Task<(bool Exito, string Mensaje, EntradaLectura? Entrada)>>();
         const int totalInserciones = 10;
@@ -84,7 +95,7 @@ public sealed class TravesiasTests
             await using var scopeTarea = _fabrica.Services.CreateAsyncScope();
             var entradas = scopeTarea.ServiceProvider.GetRequiredService<IEntradaLecturaService>();
             int numero = i;
-            tareas.Add(entradas.AgregarAsync(usuario.Usuario.Id, libro.Id, numero, numero + 1, $"Travesía concurrente {numero}"));
+            tareas.Add(entradas.AgregarAsync(usuario.Usuario.Id, creado!.Id, numero, numero + 1, $"Travesía concurrente {numero}"));
         }
 
         var resultados = await Task.WhenAll(tareas);
@@ -93,7 +104,7 @@ public sealed class TravesiasTests
 
         await using var scopeVerificacion = _fabrica.Services.CreateAsyncScope();
         var entradasVerificacion = scopeVerificacion.ServiceProvider.GetRequiredService<IEntradaLecturaService>();
-        var lista = await entradasVerificacion.ObtenerDeLibroAsync(usuario.Usuario.Id, libro.Id);
+        var lista = await entradasVerificacion.ObtenerDeLibroAsync(usuario.Usuario.Id, creado!.Id);
 
         Assert.Equal(totalInserciones, lista.Count);
         var numeros = lista.Select(e => e.Numero).OrderBy(n => n).ToList();

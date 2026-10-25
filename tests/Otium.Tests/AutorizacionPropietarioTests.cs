@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Otium.Data;
 using Otium.Models;
+using Otium.Models.DTOs;
 using Otium.Services;
 
 namespace Otium.Tests;
@@ -30,28 +31,45 @@ public sealed class AutorizacionPropietarioTests
         Assert.True(usuarioA.Exito);
         Assert.True(usuarioB.Exito);
 
-        var libro = new Libro
+        var crear = new LibroCrearDTO
         {
             Titulo = "Propiedad de A",
             Autor = "Autora",
             Estante = Estante.Leyendo
         };
-        var (creado, _, _) = await libros.AgregarAsync(usuarioA.Usuario!.Id, libro);
-        Assert.True(creado);
+        var (exito, _, creado) = await libros.AgregarAsync(usuarioA.Usuario!.Id, crear);
+        Assert.True(exito);
+        Assert.NotNull(creado);
 
         Assert.Single(await libros.ObtenerDeUsuarioAsync(usuarioA.Usuario.Id));
         Assert.Empty(await libros.ObtenerDeUsuarioAsync(usuarioB.Usuario!.Id));
 
-        libro.Titulo = "Intento de B";
-        Assert.False((await libros.ActualizarAsync(usuarioB.Usuario.Id, libro)).Exito);
-        Assert.False(await libros.EliminarAsync(usuarioB.Usuario.Id, libro.Id));
+        var actualizarB = new LibroActualizarDTO
+        {
+            Id = creado.Id,
+            Titulo = "Intento de B",
+            Autor = "Autora",
+            Estante = Estante.Leyendo,
+            Puntuacion = 0,
+            Resena = ""
+        };
+        Assert.False((await libros.ActualizarAsync(usuarioB.Usuario.Id, actualizarB)).Exito);
+        Assert.False(await libros.EliminarAsync(usuarioB.Usuario.Id, creado.Id));
 
-        var enBase = await db.Libros.AsNoTracking().FirstAsync(l => l.Id == libro.Id);
+        var enBase = await db.Libros.AsNoTracking().FirstAsync(l => l.Id == creado.Id);
         Assert.Equal("Propiedad de A", enBase.Titulo);
         Assert.Equal(usuarioA.Usuario.Id, enBase.UsuarioId);
 
-        libro.Titulo = "Titulo actualizado por A";
-        Assert.True((await libros.ActualizarAsync(usuarioA.Usuario.Id, libro)).Exito);
+        var actualizarA = new LibroActualizarDTO
+        {
+            Id = creado.Id,
+            Titulo = "Titulo actualizado por A",
+            Autor = "Autora",
+            Estante = Estante.Leyendo,
+            Puntuacion = 0,
+            Resena = ""
+        };
+        Assert.True((await libros.ActualizarAsync(usuarioA.Usuario.Id, actualizarA)).Exito);
     }
 
     [Fact]
@@ -68,24 +86,29 @@ public sealed class AutorizacionPropietarioTests
         Assert.True(usuarioA.Exito);
         Assert.True(usuarioB.Exito);
 
-        var libro = new Libro { Titulo = "Libro de A", Autor = "Autora", Estante = Estante.Leyendo };
-        Assert.True((await libros.AgregarAsync(usuarioA.Usuario!.Id, libro)).Exito);
+        var (_, _, creado) = await libros.AgregarAsync(usuarioA.Usuario!.Id, new LibroCrearDTO
+        {
+            Titulo = "Libro de A",
+            Autor = "Autora",
+            Estante = Estante.Leyendo
+        });
+        Assert.NotNull(creado);
 
-        var (exitoEntrada, _, entrada) = await entradas.AgregarAsync(usuarioA.Usuario.Id, libro.Id, 1, 10, "Travesía de A");
+        var (exitoEntrada, _, entrada) = await entradas.AgregarAsync(usuarioA.Usuario.Id, creado!.Id, 1, 10, "Travesía de A");
         Assert.True(exitoEntrada);
         Assert.NotNull(entrada);
 
-        Assert.Empty(await entradas.ObtenerDeLibroAsync(usuarioB.Usuario!.Id, libro.Id));
+        Assert.Empty(await entradas.ObtenerDeLibroAsync(usuarioB.Usuario!.Id, creado!.Id));
 
-        var intento = await entradas.AgregarAsync(usuarioB.Usuario.Id, libro.Id, 11, 20, "Intento de B");
+        var intento = await entradas.AgregarAsync(usuarioB.Usuario.Id, creado!.Id, 11, 20, "Intento de B");
         Assert.False(intento.Exito);
         Assert.Null(intento.Entrada);
 
         Assert.False(await entradas.EliminarAsync(usuarioB.Usuario.Id, entrada!.Id));
 
-        Assert.Single(await entradas.ObtenerDeLibroAsync(usuarioA.Usuario.Id, libro.Id));
+        Assert.Single(await entradas.ObtenerDeLibroAsync(usuarioA.Usuario.Id, creado!.Id));
         Assert.True(await entradas.EliminarAsync(usuarioA.Usuario.Id, entrada.Id));
-        Assert.Empty(await entradas.ObtenerDeLibroAsync(usuarioA.Usuario.Id, libro.Id));
+        Assert.Empty(await entradas.ObtenerDeLibroAsync(usuarioA.Usuario.Id, creado!.Id));
     }
 
     [Fact]

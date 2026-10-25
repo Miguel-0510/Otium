@@ -6,6 +6,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using Otium.Models
+@using Otium.Models.DTOs
 @using Otium.Services
 @inject ILibroService Servicio
 @inject IEntradaLecturaService ServicioEntradas
@@ -70,7 +71,7 @@
     <section class="ficha">
         <FichaDetalleLibro Libro="@seleccionado" UsuarioId="@usuarioId" />
 
-        @if (seleccionado is Libro libro)
+        @if (seleccionado is LibroDTO libro)
         {
             <h3>Estante</h3>
             <div class="pestanas">
@@ -95,7 +96,7 @@
             </div>
         }
 
-        @if (seleccionado is Libro libroActual)
+        @if (seleccionado is LibroDTO libroActual)
         {
             <button class="boton-travesias boton-glosario" @onclick="() => IrAGlosario(libroActual.Titulo)">
                 Buscar palabra desconocida
@@ -128,9 +129,9 @@
 
 @code {
     private string usuarioId = "";
-    private List<Libro> libros = new();
+    private List<LibroDTO> libros = new();
     private Estante estanteActual = Estante.Leido;
-    private Libro? seleccionado;
+    private LibroDTO? seleccionado;
     private bool confirmandoQuitar = false;
     private string vista = "lomos";
 
@@ -157,7 +158,7 @@
         await Elegir(libros.FirstOrDefault(l => l.Estante == estanteActual));
     }
 
-    private async Task Elegir(Libro? libro)
+    private async Task Elegir(LibroDTO? libro)
     {
         seleccionado = libro;
         entradasExpandidas = new();
@@ -173,16 +174,15 @@
         await Elegir(libros.FirstOrDefault(l => l.Estante == estante));
     }
 
-    private async Task OnLibroSeleccionado(Libro? libro)
+    private async Task OnLibroSeleccionado(LibroDTO? libro)
     {
         await Elegir(libro);
     }
 
     private async Task OnGuardarLibro((string Titulo, string Autor, Estante Estante, string PortadaUrl, string IdExterno) datos)
     {
-        var nuevo = new Libro
+        var dto = new LibroCrearDTO
         {
-            UsuarioId = usuarioId,
             Titulo = datos.Titulo,
             Autor = datos.Autor,
             Estante = datos.Estante,
@@ -190,7 +190,7 @@
             IdExterno = datos.IdExterno
         };
 
-        var (exito, mensaje, creado) = await Servicio.AgregarAsync(usuarioId, nuevo);
+        var (exito, mensaje, creado) = await Servicio.AgregarAsync(usuarioId, dto);
 
         if (!exito || creado is null)
         {
@@ -224,25 +224,6 @@
         errorFormulario = "";
     }
 
-    private async Task OnEstanteCambiado(Estante destino)
-    {
-        if (seleccionado is not null)
-        {
-            seleccionado.Estante = destino;
-            estanteActual = destino;
-            await Guardar(seleccionado);
-        }
-    }
-
-    private async Task OnPuntuacionCambiada(int valor)
-    {
-        if (seleccionado is not null)
-        {
-            seleccionado.Puntuacion = valor;
-            await Guardar(seleccionado);
-        }
-    }
-
     private async Task OnQuitarLibro()
     {
         if (seleccionado is not null && seleccionado.UsuarioId == usuarioId)
@@ -259,22 +240,37 @@
         Navegacion.NavigateTo($"/glosario?libro={System.Web.HttpUtility.UrlEncode(titulo)}");
     }
 
-    private async Task Guardar(Libro libro)
-    {
-        if (libro.UsuarioId != usuarioId)
-            return;
-
-        var (exito, mensaje) = await Servicio.ActualizarAsync(usuarioId, libro);
-        errorGeneral = exito ? "" : mensaje;
-    }
-
     private async Task CambiarEstante(Estante destino)
     {
         if (seleccionado is not null)
         {
+            var dto = new LibroActualizarDTO
+            {
+                Id = seleccionado.Id,
+                Titulo = seleccionado.Titulo,
+                Autor = seleccionado.Autor,
+                Estante = destino,
+                Puntuacion = seleccionado.Puntuacion,
+                Resena = seleccionado.Resena,
+                PortadaUrl = seleccionado.PortadaUrl,
+                IdExterno = seleccionado.IdExterno
+            };
+
+            var (exito, mensaje) = await Servicio.ActualizarAsync(usuarioId, dto);
+            if (!exito)
+            {
+                errorGeneral = mensaje;
+                return;
+            }
+
             seleccionado.Estante = destino;
             estanteActual = destino;
-            await Guardar(seleccionado);
+
+            var idx = libros.FindIndex(l => l.Id == seleccionado.Id);
+            if (idx >= 0)
+            {
+                libros[idx] = seleccionado;
+            }
         }
     }
 
@@ -282,8 +278,32 @@
     {
         if (seleccionado is not null)
         {
+            var dto = new LibroActualizarDTO
+            {
+                Id = seleccionado.Id,
+                Titulo = seleccionado.Titulo,
+                Autor = seleccionado.Autor,
+                Estante = seleccionado.Estante,
+                Puntuacion = valor,
+                Resena = seleccionado.Resena,
+                PortadaUrl = seleccionado.PortadaUrl,
+                IdExterno = seleccionado.IdExterno
+            };
+
+            var (exito, mensaje) = await Servicio.ActualizarAsync(usuarioId, dto);
+            if (!exito)
+            {
+                errorGeneral = mensaje;
+                return;
+            }
+
             seleccionado.Puntuacion = valor;
-            await Guardar(seleccionado);
+
+            var idx = libros.FindIndex(l => l.Id == seleccionado.Id);
+            if (idx >= 0)
+            {
+                libros[idx] = seleccionado;
+            }
         }
     }
 
@@ -291,8 +311,32 @@
     {
         if (seleccionado is not null)
         {
+            var dto = new LibroActualizarDTO
+            {
+                Id = seleccionado.Id,
+                Titulo = seleccionado.Titulo,
+                Autor = seleccionado.Autor,
+                Estante = seleccionado.Estante,
+                Puntuacion = seleccionado.Puntuacion,
+                Resena = reseña,
+                PortadaUrl = seleccionado.PortadaUrl,
+                IdExterno = seleccionado.IdExterno
+            };
+
+            var (exito, mensaje) = await Servicio.ActualizarAsync(usuarioId, dto);
+            if (!exito)
+            {
+                errorGeneral = mensaje;
+                return;
+            }
+
             seleccionado.Resena = reseña;
-            await Guardar(seleccionado);
+
+            var idx = libros.FindIndex(l => l.Id == seleccionado.Id);
+            if (idx >= 0)
+            {
+                libros[idx] = seleccionado;
+            }
         }
     }
 

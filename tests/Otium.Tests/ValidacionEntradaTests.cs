@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Otium.Models;
+using Otium.Models.DTOs;
 using Otium.Services;
 
 namespace Otium.Tests;
@@ -24,7 +25,7 @@ public sealed class ValidacionEntradaTests
         var usuario = await registro.RegistrarAsync($"validacion-{Guid.NewGuid():N}@example.com", "Password1");
         Assert.True(usuario.Exito);
 
-        var sinTitulo = await libros.AgregarAsync(usuario.Usuario!.Id, new Libro
+        var sinTitulo = await libros.AgregarAsync(usuario.Usuario!.Id, new LibroCrearDTO
         {
             Titulo = "   ",
             Autor = "Autora",
@@ -32,16 +33,6 @@ public sealed class ValidacionEntradaTests
         });
         Assert.False(sinTitulo.Exito);
         Assert.Null(sinTitulo.Libro);
-
-        var puntuacionInvalida = await libros.AgregarAsync(usuario.Usuario.Id, new Libro
-        {
-            Titulo = "Título válido",
-            Autor = "Autora",
-            Estante = Estante.Leyendo,
-            Puntuacion = 6
-        });
-        Assert.False(puntuacionInvalida.Exito);
-        Assert.Null(puntuacionInvalida.Libro);
 
         Assert.Empty(await libros.ObtenerDeUsuarioAsync(usuario.Usuario.Id));
     }
@@ -56,11 +47,21 @@ public sealed class ValidacionEntradaTests
         var usuario = await registro.RegistrarAsync($"validacion-act-{Guid.NewGuid():N}@example.com", "Password1");
         Assert.True(usuario.Exito);
 
-        var libro = new Libro { Titulo = "Original", Autor = "Autora", Estante = Estante.Leyendo };
-        Assert.True((await libros.AgregarAsync(usuario.Usuario!.Id, libro)).Exito);
+        var crear = new LibroCrearDTO { Titulo = "Original", Autor = "Autora", Estante = Estante.Leyendo };
+        var (exito, _, creado) = await libros.AgregarAsync(usuario.Usuario!.Id, crear);
+        Assert.True(exito);
+        Assert.NotNull(creado);
 
-        libro.Resena = new string('x', 4001);
-        var resultado = await libros.ActualizarAsync(usuario.Usuario.Id, libro);
+        var actualizar = new LibroActualizarDTO
+        {
+            Id = creado!.Id,
+            Titulo = "Original",
+            Autor = "Autora",
+            Estante = Estante.Leyendo,
+            Puntuacion = 0,
+            Resena = new string('x', 4001)
+        };
+        var resultado = await libros.ActualizarAsync(usuario.Usuario.Id, actualizar);
 
         Assert.False(resultado.Exito);
         var guardado = Assert.Single(await libros.ObtenerDeUsuarioAsync(usuario.Usuario.Id));
@@ -79,20 +80,25 @@ public sealed class ValidacionEntradaTests
         var usuario = await registro.RegistrarAsync($"validacion-t-{Guid.NewGuid():N}@example.com", "Password1");
         Assert.True(usuario.Exito);
 
-        var libro = new Libro { Titulo = "Libro", Autor = "Autora", Estante = Estante.Leyendo };
-        Assert.True((await libros.AgregarAsync(usuario.Usuario!.Id, libro)).Exito);
+        var (_, _, creado) = await libros.AgregarAsync(usuario.Usuario!.Id, new LibroCrearDTO
+        {
+            Titulo = "Libro",
+            Autor = "Autora",
+            Estante = Estante.Leyendo
+        });
+        Assert.NotNull(creado);
 
-        var invertida = await entradas.AgregarAsync(usuario.Usuario.Id, libro.Id, 50, 10, "Invertida");
+        var invertida = await entradas.AgregarAsync(usuario.Usuario.Id, creado!.Id, 50, 10, "Invertida");
         Assert.False(invertida.Exito);
         Assert.Null(invertida.Entrada);
 
-        var negativa = await entradas.AgregarAsync(usuario.Usuario.Id, libro.Id, -1, 10, "Negativa");
+        var negativa = await entradas.AgregarAsync(usuario.Usuario.Id, creado!.Id, -1, 10, "Negativa");
         Assert.False(negativa.Exito);
 
-        var larga = await entradas.AgregarAsync(usuario.Usuario.Id, libro.Id, 1, 10, new string('x', 2001));
+        var larga = await entradas.AgregarAsync(usuario.Usuario.Id, creado!.Id, 1, 10, new string('x', 2001));
         Assert.False(larga.Exito);
 
-        Assert.Empty(await entradas.ObtenerDeLibroAsync(usuario.Usuario.Id, libro.Id));
+        Assert.Empty(await entradas.ObtenerDeLibroAsync(usuario.Usuario.Id, creado!.Id));
     }
 
     [Fact]

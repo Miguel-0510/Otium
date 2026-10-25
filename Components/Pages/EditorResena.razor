@@ -1,8 +1,9 @@
 @using Otium.Models
+@using Otium.Models.DTOs
 
 <div class="seccion-travesias">
     <button class="boton-travesias" @onclick="ToggleResena">
-        @(MostrarResena ? "Ocultar reseña" : (string.IsNullOrWhiteSpace(Libro.Resena) ? "Escribir reseña" : "Ver reseña"))
+        @(MostrarResena ? "Ocultar reseña" : (string.IsNullOrWhiteSpace(Libro?.Resena) ? "Escribir reseña" : "Ver reseña"))
     </button>
 
     @if (MostrarResena)
@@ -106,7 +107,7 @@
 
 @code {
     [Parameter]
-    public Libro Libro { get; set; } = new();
+    public LibroDTO? Libro { get; set; }
 
     [Parameter]
     public string UsuarioId { get; set; } = "";
@@ -138,19 +139,19 @@
 
     protected override void OnParametersSet()
     {
-        ReseñaTexto = Libro.Resena;
+        ReseñaTexto = Libro?.Resena ?? "";
     }
 
     private void ToggleResena()
     {
         MostrarResena = !MostrarResena;
         if (MostrarResena)
-            ReseñaTexto = Libro.Resena;
+        ReseñaTexto = Libro?.Resena ?? "";
     }
 
     private async Task GuardarReseña()
     {
-        if (!string.IsNullOrWhiteSpace(ReseñaTexto) && ReseñaTexto != Libro.Resena)
+        if (!string.IsNullOrWhiteSpace(ReseñaTexto) && ReseñaTexto != (Libro?.Resena ?? ""))
         {
             await OnGuardarReseña.InvokeAsync(ReseñaTexto);
         }

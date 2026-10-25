@@ -5,6 +5,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using Otium.Models
+@using Otium.Models.DTOs
 @using Otium.Services
 @inject IAmistadService Amistades
 @inject ILibroService Libros
@@ -80,7 +81,7 @@ else
     private bool cargando = true;
     private bool puedeVer;
     private string mensaje = "";
-    private List<Libro> libros = new();
+    private List<LibroDTO> libros = new();
 
     protected override async Task OnParametersSetAsync()
     {
