@@ -66,10 +66,10 @@
         textoBusqueda = TextoInicial;
     }
 
-    private void TeclaBusqueda(KeyboardEventArgs e)
+    private async void TeclaBusqueda(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
-            Buscar();
+            await Buscar();
     }
 
     private async Task Buscar()

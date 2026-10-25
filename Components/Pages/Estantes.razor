@@ -29,13 +29,20 @@
 
 @if (mostrarFormulario)
 {
-    <FormularioLibro Titulo="@nuevoTitulo"
-                     Autor="@nuevoAutor"
-                     Estante="@nuevoEstante"
-                     PortadaUrl="@nuevaPortada"
-                     IdExterno="@nuevoIdExterno"
-                     OnGuardar="OnGuardarLibro"
-                     OnCancelar="CerrarFormulario" />
+    <section class="ficha nuevo">
+        <h2>Nuevo libro</h2>
+
+        <BuscadorLibros TextoInicial="@textoBusqueda"
+                        ResultadoSeleccionado="OnResultadoSeleccionado" />
+
+        <FormularioLibro Titulo="@nuevoTitulo"
+                         Autor="@nuevoAutor"
+                         Estante="@nuevoEstante"
+                         PortadaUrl="@nuevaPortada"
+                         IdExterno="@nuevoIdExterno"
+                         OnGuardar="OnGuardarLibro"
+                         OnCancelar="CerrarFormulario" />
+    </section>
 }
 
 <div class="disposicion">
@@ -53,7 +60,7 @@
 
         <RepisaLibros Libros="libros"
                       EstanteActual="estanteActual"
-                      Vista="vista"
+                      Vista="lomos"
                       LibroSeleccionado="seleccionado"
                       LibroSeleccionadoChanged="OnLibroSeleccionado" />
 
@@ -89,9 +96,9 @@
     private List<Libro> libros = new();
     private Estante estanteActual = Estante.Leido;
     private Libro? seleccionado;
-    private string vista = "lomos";
 
     private bool mostrarFormulario;
+    private string textoBusqueda = "";
     private string nuevoTitulo = "";
     private string nuevoAutor = "";
     private Estante nuevoEstante = Estante.QuieroLeer;
@@ -158,6 +165,15 @@
         estanteActual = datos.Estante;
         await Elegir(creado);
         CerrarFormulario();
+    }
+
+    private void OnResultadoSeleccionado(ResultadoLibro resultado)
+    {
+        nuevoTitulo = resultado.Titulo;
+        nuevoAutor = resultado.Autor;
+        nuevaPortada = resultado.PortadaUrl;
+        nuevoIdExterno = resultado.IdExterno;
+        textoBusqueda = "";
     }
 
     private void CerrarFormulario()

@@ -61,6 +61,18 @@
     border-color: #E6C566;
 }
 
+.lomo span {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: 0.8rem;
+    font-family: var(--serif);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-height: 100%;
+    line-height: 1;
+}
+
 .portadas {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
