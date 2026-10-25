@@ -76,21 +76,19 @@
                               OnPuntuacionCambiada="OnPuntuacionCambiada"
                               OnQuitarLibro="OnQuitarLibro" />
 
-            <div class="acciones-botones">
-                <EditorResena Libro="@seleccionado"
-                              UsuarioId="@usuarioId"
-                              Entradas="entradasLectura"
-                              OnGuardarReseña="OnGuardarReseña"
-                              OnAñadirTravesía="OnAñadirTravesía"
-                              OnQuitarTravesía="OnQuitarTravesía" />
+            @if (seleccionado is Libro libroActual)
+            {
+                <button class="boton-travesias" @onclick="() => IrAGlosario(libroActual.Titulo)">
+                    Buscar palabra desconocida
+                </button>
+            }
 
-                @if (seleccionado is Libro libroActual)
-                {
-                    <button class="boton-travesias" @onclick="() => IrAGlosario(libroActual.Titulo)">
-                        Buscar palabra desconocida
-                    </button>
-                }
-            </div>
+            <EditorResena Libro="@seleccionado"
+                          UsuarioId="@usuarioId"
+                          Entradas="entradasLectura"
+                          OnGuardarReseña="OnGuardarReseña"
+                          OnAñadirTravesía="OnAñadirTravesía"
+                          OnQuitarTravesía="OnQuitarTravesía" />
         }
         else
         {

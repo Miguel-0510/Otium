@@ -1,106 +1,108 @@
 @using Otium.Models
 
-<div class="acciones-botones">
+<div class="seccion-travesias">
     <button class="boton-travesias" @onclick="ToggleResena">
         @(MostrarResena ? "Ocultar reseña" : (string.IsNullOrWhiteSpace(Libro.Resena) ? "Escribir reseña" : "Ver reseña"))
     </button>
 
+    @if (MostrarResena)
+    {
+        <div class="contenido-travesias">
+            <textarea class="bloc-notas" rows="8"
+                      placeholder="Qué te dejó este libro"
+                      @bind="ReseñaTexto"
+                      @bind:after="GuardarReseña"></textarea>
+            <p class="nota">Tu reseña se guarda al salir del cuadro de texto.</p>
+        </div>
+    }
+</div>
+
+<div class="seccion-travesias">
     <button class="boton-travesias" @onclick="ToggleEntradas">
         @(MostrarEntradas ? "Ocultar travesías" : $"Ver travesías ({Entradas.Count})")
     </button>
-</div>
 
-@if (MostrarResena)
-{
-    <div class="contenido-travesias">
-        <textarea class="bloc-notas" rows="8"
-                  placeholder="Qué te dejó este libro"
-                  @bind="ReseñaTexto"
-                  @bind:after="GuardarReseña"></textarea>
-        <p class="nota">Tu reseña se guarda al salir del cuadro de texto.</p>
-    </div>
-}
-
-@if (MostrarEntradas)
-{
-    <div class="contenido-travesias">
-        @if (Entradas.Count == 0)
-        {
-            <p class="info-travesias">
-                Las <strong>travesías</strong> son tus anotaciones de cada sesión de lectura:
-                qué páginas leíste y un resumen de lo que pasó. Crea la primera cuando
-                empieces a leer este libro, y así vas armando tu propio recorrido por él.
-            </p>
-        }
-        else
-        {
-            <ul class="entradas-lectura">
-                @foreach (var entrada in Entradas)
-                {
-                    var expandida = EntradasExpandidas.Contains(entrada.Id);
-                    <li>
-                        <div class="travesia-cabecera">
-                            <button class="travesia-toggle" @onclick="() => ToggleTravesia(entrada.Id)">
-                                <span class="travesia-flecha">@(expandida ? "▾" : "▸")</span>
-                                <strong>Travesía @entrada.Numero</strong>
-                                @if (entrada.PaginaInicio is not null || entrada.PaginaFin is not null)
-                                {
-                                    <span class="entrada-paginas">páginas @entrada.PaginaInicio – @entrada.PaginaFin</span>
-                                }
-                            </button>
-                            <button class="quitar-entrada" title="Quitar esta travesía" @onclick="() => QuitarTravesia(entrada)">✕</button>
-                        </div>
-                        @if (expandida)
-                        {
-                            <div class="travesia-cuerpo">
-                                @if (!string.IsNullOrWhiteSpace(entrada.Resumen))
-                                {
-                                    <p class="entrada-resumen papel-rayado">@entrada.Resumen</p>
-                                }
-                                else
-                                {
-                                    <p class="entrada-resumen papel-rayado vacio-texto">Esta travesía no tiene resumen.</p>
-                                }
-                            </div>
-                        }
-                    </li>
-                }
-            </ul>
-        }
-
-        @if (MostrarFormularioEntrada)
-        {
-            <div class="form-entrada">
-                <div class="campos">
-                    <label>
-                        Desde la página
-                        <input type="number" min="0" @bind="NuevaPaginaInicio" />
-                    </label>
-                    <label>
-                        Hasta la página
-                        <input type="number" min="0" @bind="NuevaPaginaFin" />
-                    </label>
-                </div>
-                <label class="campo-resumen">
-                    Resumen de esta travesía
-                    <textarea class="bloc-notas" rows="8" placeholder="Qué pasó en estas páginas..." @bind="NuevoResumenEntrada"></textarea>
-                </label>
-                <div class="acciones">
-                    @if (!string.IsNullOrEmpty(ErrorEntrada))
+    @if (MostrarEntradas)
+    {
+        <div class="contenido-travesias">
+            @if (Entradas.Count == 0)
+            {
+                <p class="info-travesias">
+                    Las <strong>travesías</strong> son tus anotaciones de cada sesión de lectura:
+                    qué páginas leíste y un resumen de lo que pasó. Crea la primera cuando
+                    empieces a leer este libro, y así vas armando tu propio recorrido por él.
+                </p>
+            }
+            else
+            {
+                <ul class="entradas-lectura">
+                    @foreach (var entrada in Entradas)
                     {
-                        <p class="error">@ErrorEntrada</p>
+                        var expandida = EntradasExpandidas.Contains(entrada.Id);
+                        <li>
+                            <div class="travesia-cabecera">
+                                <button class="travesia-toggle" @onclick="() => ToggleTravesia(entrada.Id)">
+                                    <span class="travesia-flecha">@(expandida ? "▾" : "▸")</span>
+                                    <strong>Travesía @entrada.Numero</strong>
+                                    @if (entrada.PaginaInicio is not null || entrada.PaginaFin is not null)
+                                    {
+                                        <span class="entrada-paginas">páginas @entrada.PaginaInicio – @entrada.PaginaFin</span>
+                                    }
+                                </button>
+                                <button class="quitar-entrada" title="Quitar esta travesía" @onclick="() => QuitarTravesia(entrada)">✕</button>
+                            </div>
+                            @if (expandida)
+                            {
+                                <div class="travesia-cuerpo">
+                                    @if (!string.IsNullOrWhiteSpace(entrada.Resumen))
+                                    {
+                                        <p class="entrada-resumen papel-rayado">@entrada.Resumen</p>
+                                    }
+                                    else
+                                    {
+                                        <p class="entrada-resumen papel-rayado vacio-texto">Esta travesía no tiene resumen.</p>
+                                    }
+                                </div>
+                            }
+                        </li>
                     }
-                    <button class="boton" @onclick="GuardarEntrada">Guardar travesía</button>
-                    <button class="boton secundario" @onclick="CancelarEntrada">Cancelar</button>
+                </ul>
+            }
+
+            @if (MostrarFormularioEntrada)
+            {
+                <div class="form-entrada">
+                    <div class="campos">
+                        <label>
+                            Desde la página
+                            <input type="number" min="0" @bind="NuevaPaginaInicio" />
+                        </label>
+                        <label>
+                            Hasta la página
+                            <input type="number" min="0" @bind="NuevaPaginaFin" />
+                        </label>
+                    </div>
+                    <label class="campo-resumen">
+                        Resumen de esta travesía
+                        <textarea class="bloc-notas" rows="8" placeholder="Qué pasó en estas páginas..." @bind="NuevoResumenEntrada"></textarea>
+                    </label>
+                    <div class="acciones">
+                        @if (!string.IsNullOrEmpty(ErrorEntrada))
+                        {
+                            <p class="error">@ErrorEntrada</p>
+                        }
+                        <button class="boton" @onclick="GuardarEntrada">Guardar travesía</button>
+                        <button class="boton secundario" @onclick="CancelarEntrada">Cancelar</button>
+                    </div>
                 </div>
-            </div>
-        }
-        else
-        {
-            <button class="boton secundario" @onclick="AbrirEntrada">Añadir travesía</button>
-        }
-    </div>
-}
+            }
+            else
+            {
+                <button class="boton secundario" @onclick="AbrirEntrada">Añadir travesía</button>
+            }
+        </div>
+    }
+</div>
 
 @code {
     [Parameter]
