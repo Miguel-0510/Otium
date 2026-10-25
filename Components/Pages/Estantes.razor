@@ -68,9 +68,9 @@
     </section>
 
     <section class="ficha">
-        <FichaDetalleLibro Libro="@seleccionado" UsuarioId="@usuarioId" />
-
         <div class="submarco">
+            <FichaDetalleLibro Libro="@seleccionado" UsuarioId="@usuarioId" />
+
             @if (seleccionado is Libro libro)
             {
                 <h3>Estante</h3>
@@ -98,7 +98,7 @@
 
             @if (seleccionado is Libro libroActual)
             {
-                <button class="boton-travesias" @onclick="() => IrAGlosario(libroActual.Titulo)">
+                <button class="boton-travesias boton-glosario" @onclick="() => IrAGlosario(libroActual.Titulo)">
                     Buscar palabra desconocida
                 </button>
             }
