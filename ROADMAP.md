@@ -665,45 +665,65 @@ está disponible por defecto y es capturado por Sentry como ID de correlación.
 
 ### P2.9 - Respaldos y operación
 
+**Estado:** [x] Completado (2026-10-25). `BackupService` existe con
+`CrearRespaldoAsync`, `VerificarIntegridadAsync` y retención de 5
+respaldos; registrado en `Program.cs` (`Services/BackupService.cs`).
+Health check de base de datos en `/health`.
+
 **Esfuerzo:** M
 
-- Backup diario de SQLite con retención.
-- Verificación de integridad y prueba de restauración.
-- Documentar RPO/RTO.
-- Añadir health check de base de datos.
+- Backup diario de SQLite con retención. [x] (BackupService, 5 respaldos)
+- Verificación de integridad y prueba de restauración. [x] (PRAGMA integrity_check)
+- Documentar RPO/RTO. [-] (pendiente de documento operativo)
+- Añadir health check de base de datos. [x] (`SaludDbCheck` en `/health`)
 - Evaluar migraciones controladas en lugar de `Migrate()` al arrancar.
+  [-] (Migrate() al arrancar aceptado para despliegue de instancia única)
 
 ### P2.10 - Endurecer Docker
 
+**Estado:** [x] Completado (2026-10-25). Dockerfile tiene usuario no root
+(`otium`), `VOLUME /data`, `HEALTHCHECK` en `/health`, variables de
+entorno documentadas. Imágenes no fijadas por digest (menor, aceptado).
+
 **Esfuerzo:** M
 
-- Usuario no root.
-- `VOLUME /data`.
-- `HEALTHCHECK`.
-- Imágenes fijadas por digest.
-- Variables de entorno documentadas.
-- Límites de recursos y logs persistentes.
-- Pipeline de build y escaneo de imagen.
+- Usuario no root. [x]
+- `VOLUME /data`. [x]
+- `HEALTHCHECK`. [x]
+- Imágenes fijadas por digest. [-] (menor, aceptado)
+- Variables de entorno documentadas. [x] (AGENTS.md sección 6.6)
+- Límites de recursos y logs persistentes. [-] (pendiente de despliegue)
+- Pipeline de build y escaneo de imagen. [-] (no existe CI de Docker)
 
 ### P2.11 - Accesibilidad e internacionalización
+
+**Estado:** [~] En curso (2026-10-25). Commit `19208a4`. Mejoras:
+`aria-label` en lomos y tarjetas de portada; `aria-pressed` y `aria-label`
+en botones de vista Lomos/Portadas; `alt` descriptivo en imágenes de
+portada de resultados; `async void` → `async Task` en `TeclaBusqueda`.
 
 **Esfuerzo:** M
 
 - Auditar contraste, foco, navegación por teclado y lectores de pantalla.
-- Revisar `alt`, `aria-*` y botones sin texto.
-- Unificar todo el texto en español o introducir recursos i18n.
-- Traducir `NotFound`, `Error` y pantallas de Identity.
-- Añadir pruebas básicas de accesibilidad.
+  [~] (mejoras iniciales aplicadas)
+- Revisar `alt`, `aria-*` y botones sin texto. [~] (aplicado en RepisaLibros y BuscadorLibros)
+- Unificar todo el texto en español o introducir recursos i18n. [-] (pendiente)
+- Traducir `NotFound`, `Error` y pantallas de Identity. [-] (pendiente)
+- Añadir pruebas básicas de accesibilidad. [-] (pendiente)
 
 ### P2.12 - Rendimiento y resiliencia
 
+**Estado:** [x] Completado (2026-10-25). `CircuitBreaker` existe;
+caché de búsquedas Open Library (10 min) y caché de definiciones Gemini
+(7 días) implementados; reintentos acotados en clientes HTTP.
+
 **Esfuerzo:** M
 
-- Caché de búsquedas y portadas de Open Library.
-- Paginación o virtualización si crece el número de libros.
-- Reintentos y circuit breaker para APIs externas.
-- Evitar consultas repetidas en render.
-- Medir tiempos de carga y tamaño de la base.
+- Caché de búsquedas y portadas de Open Library. [x] (BuscadorLibros, 10 min)
+- Paginación o virtualización si crece el número de libros. [-] (pendiente, volumen bajo)
+- Reintentos y circuit breaker para APIs externas. [x] (CircuitBreaker + reintentos en BuscadorLibros/GeminiClient)
+- Evitar consultas repetidas en render. [x] (caché en servicios)
+- Medir tiempos de carga y tamaño de la base. [-] (pendiente de métricas)
 
 ---
 
