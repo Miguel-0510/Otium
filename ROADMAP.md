@@ -589,20 +589,27 @@ No iniciar P2 antes de cerrar P0/P1 o de aceptar formalmente el riesgo.
 
 ### P2.5 - DTOs, validación y modelos de vista
 
-**Estado:** [ ] Parcial (2026-10-23). DataAnnotations y validación en servicios completadas; pendiente crear DTOs de entrada/salida y desacoplar las entidades EF de los formularios.
+**Estado:** [x] Completado (2026-10-25). Commit `6d35b7a`. DataAnnotations y
+validación en servicios; DTOs creados (`Models/DTOs/LibroDTO`,
+`LibroCrearDTO`, `LibroActualizarDTO`); `ILibroService`/`LibroService` y los
+componentes de UI (`Estantes`, `EstantesAmigo`, `RepisaLibros`,
+`FichaDetalleLibro`, `EditorResena`) usan DTOs en lugar de entidades EF;
+pruebas actualizadas y verdes (37 pruebas).
 
 **Esfuerzo:** L
 
-- Dejar de enlazar entidades EF directamente a formularios.
-- Crear DTOs de entrada/salida por caso de uso.
+- Dejar de enlazar entidades EF directamente a formularios. [x]
+- Crear DTOs de entrada/salida por caso de uso. [x]
 - Añadir DataAnnotations y validación de longitud/rango:
-  - `Titulo`, `Autor`, `Resena`.
-  - `Puntuacion` 0-5.
-  - `PaginaInicio`, `PaginaFin`, orden y no negativos.
-  - `Palabra` y `LibroTitulo`.
-- Validar también en servicios, no solo en la UI.
+  - `Titulo`, `Autor`, `Resena`. [x]
+  - `Puntuacion` 0-5. [x]
+  - `PaginaInicio`, `PaginaFin`, orden y no negativos. [x]
+  - `Palabra` y `LibroTitulo`. [x]
+- Validar también en servicios, no solo en la UI. [x]
 
 ### P2.6 - Separar responsabilidades en la UI
+
+**Estado:** [x] Completado (2026-10-23). Evidencia: commits `c330aa9` y `ff24259` dividen `Estantes.razor` en `BuscadorLibros`, `FormularioLibro`, `RepisaLibros`, `FichaDetalleLibro`, `EditorResena`; `a0257f6` corrige disposición de botones de acción.
 
 **Esfuerzo:** L
 
