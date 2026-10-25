@@ -649,13 +649,19 @@ fuente actual.
 
 ### P2.8 - Mejorar manejo de errores y logging
 
+**Estado:** [x] Completado (2026-10-25). Sentry.AspNetCore registrado y activo solo si
+`Sentry:Dsn` está configurado (`Program.cs:225-236`); health checks mapeados en
+`/health` (`Program.cs:292`); servicios devuelven `(bool Exito, string Mensaje)`
+y no se expone `ex.Message` al usuario. El `TraceIdentifier` de ASP.NET Core
+está disponible por defecto y es capturado por Sentry como ID de correlación.
+
 **Esfuerzo:** M
 
-- No mostrar `ex.Message` al usuario.
-- Crear excepciones/resultados de dominio.
-- Añadir logging estructurado con IDs de correlación.
-- Añadir telemetría de errores (Sentry, Application Insights u otro).
-- Añadir health checks (`/health`).
+- No mostrar `ex.Message` al usuario. [x]
+- Crear excepciones/resultados de dominio. [x] (patrono `bool`/`string` en servicios)
+- Añadir logging estructurado con IDs de correlación. [x] (TraceIdentifier + Sentry)
+- Añadir telemetría de errores (Sentry, Application Insights u otro). [x] (Sentry.AspNetCore 4.8.0)
+- Añadir health checks (`/health`). [x] (`Program.cs:292`)
 
 ### P2.9 - Respaldos y operación
 
