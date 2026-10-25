@@ -84,6 +84,7 @@
         }
 
         buscando = true;
+        StateHasChanged();
         try
         {
             resultados = await Buscador.BuscarAsync(textoBusqueda);
@@ -98,11 +99,13 @@
         finally
         {
             buscando = false;
+            StateHasChanged();
         }
     }
 
     private async Task SeleccionarResultado(ResultadoLibro r)
     {
+        resultados = new();
         await ResultadoSeleccionado.InvokeAsync(r);
     }
 }
