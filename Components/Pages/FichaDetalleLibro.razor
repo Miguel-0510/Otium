@@ -36,8 +36,6 @@
             }
         </div>
 
-        <a class="boton-travesias enlace-glosario" href="@EnlaceGlosario()">Buscar palabra desconocida</a>
-
         <h3>Quitar</h3>
         @if (!ConfirmandoQuitar)
         {
@@ -89,14 +87,6 @@
     private async Task QuitarLibro()
     {
         await OnQuitarLibro.InvokeAsync();
-    }
-
-    private string EnlaceGlosario()
-    {
-        if (Libro is null) return "";
-        var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
-        query["libro"] = Libro.Titulo;
-        return $"glosario?{query}";
     }
 
     private static string Nombre(Estante e) => e switch

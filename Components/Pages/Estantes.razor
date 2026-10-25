@@ -82,6 +82,13 @@
                           OnGuardarReseña="OnGuardarReseña"
                           OnAñadirTravesía="OnAñadirTravesía"
                           OnQuitarTravesía="OnQuitarTravesía" />
+
+            @if (seleccionado is Libro libroActual)
+            {
+                <button class="boton" @onclick="() => IrAGlosario(libroActual.Titulo)">
+                    Buscar palabra desconocida
+                </button>
+            }
         }
         else
         {
@@ -215,6 +222,11 @@
             libros.Remove(seleccionado);
             await Elegir(libros.FirstOrDefault(l => l.Estante == estanteActual));
         }
+    }
+
+    private void IrAGlosario(string titulo)
+    {
+        Navegacion.NavigateTo($"/glosario?libro={System.Web.HttpUtility.UrlEncode(titulo)}");
     }
 
     private async Task Guardar(Libro libro)
