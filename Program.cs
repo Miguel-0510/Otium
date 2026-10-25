@@ -10,6 +10,7 @@ using Otium.Components;
 using Otium.Components.Account;
 using Otium.Data;
 using Otium.Services;
+using Otium.Services.Extensions;
 using Otium.Services.Options;
 using Sentry;
 using System.Net;
@@ -72,13 +73,9 @@ builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.Extern
 builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.TwoFactorUserIdScheme, ConfigurarCookie);
 builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.TwoFactorRememberMeScheme, ConfigurarCookie);
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-
-Action<DbContextOptionsBuilder> opcionesSqlite = options =>
-    options.UseSqlite(connectionString);
-
-builder.Services.AddDbContext<ApplicationDbContext>(opcionesSqlite);
-builder.Services.AddDbContextFactory<ApplicationDbContext>(opcionesSqlite, ServiceLifetime.Scoped);
+builder.Services.AddBaseDeDatos(
+    builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found."));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddScoped<SaludDbCheck>();
