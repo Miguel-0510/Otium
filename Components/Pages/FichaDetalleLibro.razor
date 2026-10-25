@@ -35,20 +35,6 @@
                         @onclick="() => Puntuar(valor)">★</button>
             }
         </div>
-
-        <h3>Quitar</h3>
-        @if (!ConfirmandoQuitar)
-        {
-            <button class="boton secundario" @onclick="() => ConfirmandoQuitar = true">Quitar del diario</button>
-        }
-        else
-        {
-            <p class="error">¿Seguro que quieres quitar este libro? No se puede deshacer.</p>
-            <div class="acciones">
-                <button class="boton peligro" @onclick="QuitarLibro">Sí, quitar</button>
-                <button class="boton secundario" @onclick="() => ConfirmandoQuitar = false">Cancelar</button>
-            </div>
-        }
     }
     else
     {
@@ -69,11 +55,6 @@
     [Parameter]
     public EventCallback<int> OnPuntuacionCambiada { get; set; }
 
-    [Parameter]
-    public EventCallback OnQuitarLibro { get; set; }
-
-    private bool ConfirmandoQuitar { get; set; } = false;
-
     private void CambiarEstante(Estante destino)
     {
         _ = OnEstanteCambiado.InvokeAsync(destino);
@@ -82,11 +63,6 @@
     private void Puntuar(int valor)
     {
         _ = OnPuntuacionCambiada.InvokeAsync(valor);
-    }
-
-    private async Task QuitarLibro()
-    {
-        await OnQuitarLibro.InvokeAsync();
     }
 
     private static string Nombre(Estante e) => e switch

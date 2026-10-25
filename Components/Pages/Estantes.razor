@@ -73,8 +73,7 @@
             <FichaDetalleLibro Libro="@seleccionado"
                               UsuarioId="@usuarioId"
                               OnEstanteCambiado="OnEstanteCambiado"
-                              OnPuntuacionCambiada="OnPuntuacionCambiada"
-                              OnQuitarLibro="OnQuitarLibro" />
+                              OnPuntuacionCambiada="OnPuntuacionCambiada" />
 
             @if (seleccionado is Libro libroActual)
             {
@@ -89,6 +88,20 @@
                           OnGuardarReseña="OnGuardarReseña"
                           OnAñadirTravesía="OnAñadirTravesía"
                           OnQuitarTravesía="OnQuitarTravesía" />
+
+            <h3>Quitar</h3>
+            @if (!confirmandoQuitar)
+            {
+                <button class="boton secundario" @onclick="() => confirmandoQuitar = true">Quitar del diario</button>
+            }
+            else
+            {
+                <p class="error">¿Seguro que quieres quitar este libro? No se puede deshacer.</p>
+                <div class="acciones">
+                    <button class="boton peligro" @onclick="OnQuitarLibro">Sí, quitar</button>
+                    <button class="boton secundario" @onclick="() => confirmandoQuitar = false">Cancelar</button>
+                </div>
+            }
         }
         else
         {
@@ -103,6 +116,7 @@
     private List<Libro> libros = new();
     private Estante estanteActual = Estante.Leido;
     private Libro? seleccionado;
+    private bool confirmandoQuitar = false;
     private string vista = "lomos";
 
     private bool mostrarFormulario;
