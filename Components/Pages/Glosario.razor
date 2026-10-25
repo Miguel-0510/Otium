@@ -63,11 +63,23 @@
                             }
                         </button>
                     </div>
-                    @if (expandida)
-                    {
-                        <p class="glosario-definicion">@p.Definicion</p>
-                        <button class="boton peligro sm quitar-palabra" @onclick="() => Quitar(p)">Quitar palabra</button>
-                    }
+    @if (expandida)
+    {
+        <p class="glosario-definicion">@p.Definicion</p>
+        @if (palabraEnEdicion == p.Id)
+        {
+            <textarea @bind="nuevaDefinicion" class="edicion-definicion" rows="3"></textarea>
+            <div class="acciones-edicion">
+                <button class="boton sm" @onclick="() => GuardarEdicion(p)">Guardar</button>
+                <button class="boton secundario sm" @onclick="CancelarEdicion">Cancelar</button>
+            </div>
+        }
+        else
+        {
+            <button class="boton sm" @onclick="() => Editar(p)">Editar</button>
+            <button class="boton peligro sm quitar-palabra" @onclick="() => Quitar(p)">Quitar palabra</button>
+        }
+    }
                 </li>
             }
         </ul>
@@ -81,6 +93,8 @@
     private string usuarioId = "";
     private List<PalabraGlosario> palabras = new();
     private HashSet<int> expandidas = new();
+    private int? palabraEnEdicion;
+    private string nuevaDefinicion = "";
     private string palabraNueva = "";
     private string libroContexto = "";
     private bool buscando;
@@ -134,6 +148,28 @@
         }
 
         buscando = false;
+    }
+
+    private async Task Editar(PalabraGlosario p)
+    {
+        palabraEnEdicion = p.Id;
+        nuevaDefinicion = p.Definicion;
+    }
+
+    private async Task GuardarEdicion(PalabraGlosario p)
+    {
+        var ok = await Servicio.EditarDefinicionAsync(usuarioId, p.Id, nuevaDefinicion);
+        if (ok)
+        {
+            p.Definicion = nuevaDefinicion;
+        }
+        CancelarEdicion();
+    }
+
+    private void CancelarEdicion()
+    {
+        palabraEnEdicion = null;
+        nuevaDefinicion = "";
     }
 
     private async Task Quitar(PalabraGlosario p)

@@ -9,6 +9,7 @@ public interface IGlosarioService
     Task<List<PalabraGlosario>> ObtenerDeUsuarioAsync(string usuarioId, CancellationToken cancellationToken = default);
     Task<(bool Exito, string Mensaje, PalabraGlosario? Palabra)> BuscarYGuardarAsync(string usuarioId, string palabra, string libroTitulo, CancellationToken cancellationToken = default);
     Task<bool> EliminarAsync(string usuarioId, int palabraId, CancellationToken cancellationToken = default);
+    Task<bool> EditarDefinicionAsync(string usuarioId, int palabraId, string nuevaDefinicion, CancellationToken cancellationToken = default);
     Task EliminarTodosDeUsuarioAsync(string usuarioId, CancellationToken cancellationToken = default);
 }
 
@@ -73,6 +74,12 @@ public class GlosarioService : IGlosarioService
             return (false, "Alcanzaste el límite diario de definiciones. Inténtalo mañana.", null);
         }
 
+        var existente = await ObtenerPalabraExistenteAsync(usuarioId, texto, cancellationToken);
+        if (existente is not null)
+        {
+            return (true, "Ya está en tu glosario.", existente);
+        }
+
         try
         {
             var definicion = await _gemini.DefinirAsync(texto, titulo, cancellationToken);
@@ -128,5 +135,29 @@ public class GlosarioService : IGlosarioService
         await db.PalabrasGlosario
             .Where(p => p.UsuarioId == usuarioId)
             .ExecuteDeleteAsync(cancellationToken);
+    }
+
+    private async Task<PalabraGlosario?> ObtenerPalabraExistenteAsync(string usuarioId, string palabra, CancellationToken cancellationToken)
+    {
+        await using var db = await _fabrica.CreateDbContextAsync(cancellationToken);
+        return await db.PalabrasGlosario
+            .Where(p => p.UsuarioId == usuarioId && EF.Functions.Collate(p.Palabra, "NOCASE") == palabra)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<bool> EditarDefinicionAsync(string usuarioId, int palabraId, string nuevaDefinicion, CancellationToken cancellationToken = default)
+    {
+        var texto = (nuevaDefinicion ?? "").Trim();
+        if (string.IsNullOrEmpty(texto) || texto.Length > 1000)
+        {
+            return false;
+        }
+
+        await using var db = await _fabrica.CreateDbContextAsync(cancellationToken);
+        var filas = await db.PalabrasGlosario
+            .Where(p => p.Id == palabraId && p.UsuarioId == usuarioId)
+            .ExecuteUpdateAsync(p => p.SetProperty(x => x.Definicion, texto), cancellationToken);
+
+        return filas > 0;
     }
 }

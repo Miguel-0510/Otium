@@ -92,3 +92,24 @@ h2 {
     font-size: 0.95rem;
     line-height: 1.6;
 }
+
+.edicion-definicion {
+    width: 100%;
+    margin: 6px 0 8px 22px;
+    padding: 8px 10px;
+    font: inherit;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--tinta);
+    background: var(--crema);
+    border: 1.5px solid var(--borde-control);
+    border-radius: 10px;
+    resize: vertical;
+}
+
+.acciones-edicion {
+    margin-left: 22px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}

@@ -670,13 +670,13 @@ Acciones:
 
 ### P3 - Bajo
 
-- `NotFound.razor` y `Error.razor` siguen en inglés.
+- `NotFound.razor` y `Error.razor` siguen en inglés. [corregido]
 - `MenuUsuario` no muestra "Salir"; el logout está dentro de "Mi cuenta".
-- `CopiarCodigo` no captura errores de `navigator.clipboard` (puede fallar fuera de contexto seguro).
-- `BotonInstalar` no protege la llamada JS de la primera renderización.
+- `CopiarCodigo` no captura errores de `navigator.clipboard` (puede fallar fuera de contexto seguro). [corregido]
+- `BotonInstalar` no protege la llamada JS de la primera renderización. [corregido]
 - Las imágenes de portada usan `alt=""`; correcto si son decorativas, pero la tarjeta debería describir el libro.
 - No hay `robots.txt`, `security.txt`, términos de uso ni página de soporte.
-- El glosario no evita duplicados y no permite editar definiciones.
+- El glosario no evita duplicados y no permite editar definiciones. [corregido]
 - La búsqueda de libros no guarda caché ni permite paginación.
 - No hay auditoría de accesibilidad ni pruebas en móviles reales.
 - No hay telemetría de errores (Sentry, Application Insights, etc.).
