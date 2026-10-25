@@ -52,7 +52,6 @@ public class EmailSender : IEmailSender<ApplicationUser>
         catch (Exception ex)
         {
             _logger.LogError(ex, "No se pudo enviar el correo a {Destinatario}", destinatario);
-            throw;
         }
     }
 }
