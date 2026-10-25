@@ -24,6 +24,7 @@ public class BuscadorLibros : IBuscadorLibros
     private readonly HttpClient _http;
     private readonly IMemoryCache _cache;
     private readonly ILogger<BuscadorLibros> _logger;
+    private readonly CircuitBreaker _circuitBreaker = new();
 
     public BuscadorLibros(HttpClient http, IMemoryCache cache, ILogger<BuscadorLibros> logger)
     {
@@ -49,7 +50,7 @@ public class BuscadorLibros : IBuscadorLibros
         var url = "search.json?limit=8&fields=key,title,author_name,cover_i,first_publish_year&q="
                   + Uri.EscapeDataString(consulta);
 
-        using var respuesta = await EnviarConReintentosAsync(url, cancellationToken);
+        using var respuesta = await _circuitBreaker.EjecutarAsync(_ => EnviarConReintentosAsync(url, cancellationToken), cancellationToken);
 
         if (!respuesta.IsSuccessStatusCode)
         {

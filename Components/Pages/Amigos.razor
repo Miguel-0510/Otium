@@ -8,6 +8,7 @@
 @inject IAmistadService Servicio
 @inject AuthenticationStateProvider ProveedorAuth
 @inject IJSRuntime JS
+@inject ILogger<Amigos> Logger
 
 <PageTitle>Amigos | Otium</PageTitle>
 
@@ -215,8 +216,16 @@
 
     private async Task CopiarCodigo()
     {
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", codigo);
-        copiado = true;
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", codigo);
+            copiado = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "No se pudo copiar el codigo al portapapeles.");
+            copiado = false;
+        }
     }
 
     private async Task Enviar()

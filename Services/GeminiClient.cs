@@ -24,6 +24,7 @@ public class GeminiClient : IGeminiClient
     private readonly IMemoryCache _cache;
     private readonly GeminiOptions _opciones;
     private readonly ILogger<GeminiClient> _logger;
+    private readonly CircuitBreaker _circuitBreaker = new();
 
     public GeminiClient(HttpClient http, IMemoryCache cache, IOptions<GeminiOptions> opciones, ILogger<GeminiClient> logger)
     {
@@ -66,7 +67,7 @@ public class GeminiClient : IGeminiClient
             generationConfig = new { maxOutputTokens = 150, temperature = 0.2 }
         };
 
-        using var respuesta = await EnviarConReintentosAsync(() => CrearSolicitud(url, cuerpo), cancellationToken);
+        using var respuesta = await _circuitBreaker.EjecutarAsync(_ => EnviarConReintentosAsync(() => CrearSolicitud(url, cuerpo), cancellationToken), cancellationToken);
 
         if (!respuesta.IsSuccessStatusCode)
         {

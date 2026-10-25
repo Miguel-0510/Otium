@@ -1,5 +1,6 @@
 ﻿@implements IAsyncDisposable
 @inject IJSRuntime JS
+@inject ILogger<BotonInstalar> Logger
 
 @if (mostrarBoton)
 {
@@ -31,19 +32,26 @@
     {
         if (!primeraVez) return;
 
-        var yaInstalada = await JS.InvokeAsync<bool>("otiumInstalador.yaInstalada");
-        if (yaInstalada) return;
-
-        esIOS = await JS.InvokeAsync<bool>("otiumInstalador.esIOS");
-        if (esIOS)
+        try
         {
-            mostrarBoton = true;
-            StateHasChanged();
-            return;
-        }
+            var yaInstalada = await JS.InvokeAsync<bool>("otiumInstalador.yaInstalada");
+            if (yaInstalada) return;
 
-        referencia = DotNetObjectReference.Create(this);
-        await JS.InvokeVoidAsync("otiumInstalador.registrar", referencia);
+            esIOS = await JS.InvokeAsync<bool>("otiumInstalador.esIOS");
+            if (esIOS)
+            {
+                mostrarBoton = true;
+                StateHasChanged();
+                return;
+            }
+
+            referencia = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("otiumInstalador.registrar", referencia);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error inicializando el instalador de PWA.");
+        }
     }
 
     [JSInvokable]
