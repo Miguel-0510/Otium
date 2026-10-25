@@ -1,24 +1,22 @@
 @using Otium.Models
 
-<section class="ficha">
-    @if (Libro is not null)
-    {
-        <div class="cabecera">
-            @if (!string.IsNullOrEmpty(Libro.PortadaUrl))
-            {
-                <img class="portada" src="@Libro.PortadaUrl" alt="Portada de @Libro.Titulo" />
-            }
-            <div>
-                <h2>@Libro.Titulo</h2>
-                <p class="autor">@Libro.Autor</p>
-            </div>
+@if (Libro is not null)
+{
+    <div class="cabecera">
+        @if (!string.IsNullOrEmpty(Libro.PortadaUrl))
+        {
+            <img class="portada" src="@Libro.PortadaUrl" alt="Portada de @Libro.Titulo" />
+        }
+        <div>
+            <h2>@Libro.Titulo</h2>
+            <p class="autor">@Libro.Autor</p>
         </div>
-    }
-    else
-    {
-        <p class="vacio">Elige un libro de la repisa para puntuarlo o escribir tu reseña.</p>
-    }
-</section>
+    </div>
+}
+else
+{
+    <p class="vacio">Elige un libro de la repisa para puntuarlo o escribir tu reseña.</p>
+}
 
 @code {
     [Parameter]

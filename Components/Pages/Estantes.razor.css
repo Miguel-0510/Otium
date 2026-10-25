@@ -137,6 +137,10 @@
     border-radius: 14px;
 }
 
+.boton-glosario {
+    margin-top: 12px;
+}
+
 .ficha h3 {
     margin: 20px 0 8px;
     font-size: 0.9rem;
