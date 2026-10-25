@@ -367,9 +367,9 @@ La separación actual es **aceptable para beta privada**, no para un diseño por
 | Recuperación de contraseña | Sí | Funciona sin exigir `EmailConfirmed`; enlaces construidos con `Sitio:UrlPublica`; probado con `IEmailSender` falso |
 | Eliminación de cuenta | Sí | Flujo único transaccional con libros, travesías, glosario y amistades |
 | Exportación de datos | Sí | JSON con cuenta, libros, travesías, glosario y amistades |
-| Respaldos | No | No hay implementación en el código actual |
-| Health checks | No | No hay endpoint |
-| Observabilidad | Parcial | Logging básico de framework/Identity |
+| Respaldos | Sí | `BackupService` con retención de 5 archivos; `DOCS/respaldos.md` con RPO/RTO y procedimiento de restauración |
+| Health checks | Sí | Endpoint `/health` con `SaludDbCheck` |
+| Observabilidad | Parcial | Sentry.AspNetCore registrado (solo si `Sentry:Dsn` está configurado); logging básico de framework/Identity |
 | Validación de entrada | Parcial | UI valida poco; servicios no validan |
 | Manejo de errores | Parcial | Algunos errores internos llegan al usuario |
 | Cabeceras de seguridad | Sí | CSP, nosniff, referrer, frame-options; CSP mejorable |
@@ -648,9 +648,9 @@ Acciones:
 
 #### P2-18. Sin respaldos ni recuperación documentada
 
-- El commit `6da7685` menciona respaldo automático, pero el código actual no contiene lógica de backup.
-- Añadir backup diario de `app.db` con retención, verificación y prueba de restauración.
-- Documentar el procedimiento de recuperación.
+**Estado: corregido (2026-10-25).** `BackupService` implementado con `CrearRespaldoAsync()`,
+`VerificarIntegridadAsync()` y retención de 5 archivos; registrado en `Program.cs`.
+Documentación de RPO/RTO y procedimiento de restauración en `DOCS/respaldos.md`.
 
 #### P2-19. Docker y operación
 

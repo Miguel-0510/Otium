@@ -6,6 +6,11 @@ namespace Otium.Services;
 public interface ILibroService
 {
     Task<List<LibroDTO>> ObtenerDeUsuarioAsync(string usuarioId, CancellationToken cancellationToken = default);
+    Task<LibroPaginaDTO> ObtenerDeUsuarioPaginadoAsync(
+        string usuarioId,
+        int pagina = 1,
+        int tamanoPagina = 20,
+        CancellationToken cancellationToken = default);
     Task<(bool Exito, string Mensaje, LibroDTO? Libro)> AgregarAsync(string usuarioId, LibroCrearDTO datos, CancellationToken cancellationToken = default);
     Task<(bool Exito, string Mensaje)> ActualizarAsync(string usuarioId, LibroActualizarDTO datos, CancellationToken cancellationToken = default);
     Task<bool> EliminarAsync(string usuarioId, int libroId, CancellationToken cancellationToken = default);

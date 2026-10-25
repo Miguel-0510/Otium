@@ -1,3 +1,6 @@
+# Imagen de build - SDK de .NET 10.0
+# NOTA: En producción, fijar las imágenes por digest (sha256) para reproducibilidad:
+# FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:XXXX... AS build
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY Otium.csproj ./
@@ -5,6 +8,9 @@ RUN dotnet restore
 COPY . .
 RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
 
+# Imagen de runtime - ASP.NET Core 10.0
+# NOTA: En producción, fijar las imágenes por digest (sha256):
+# FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:XXXX...
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app/publish .
@@ -16,7 +22,7 @@ ENV DataProtection__KeysPath=/data/keys
 
 RUN mkdir -p /data
 
-# Usuario no root para ejecutar la aplicacion.
+# Usuario no root para ejecutar la aplicación.
 RUN groupadd -r otium && useradd -r -g otium -m -d /home/otium otium
 RUN chown -R otium:otium /app /data
 USER otium
