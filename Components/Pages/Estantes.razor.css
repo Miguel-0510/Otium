@@ -137,19 +137,6 @@
     border-radius: 14px;
 }
 
-/* ---------- Submarco de funciones dentro de la ficha ---------- */
-.submarco {
-    margin-top: 14px;
-    padding: 16px 18px;
-    background: var(--crema);
-    border: 1px solid var(--linea);
-    border-radius: 10px;
-}
-
-.boton-glosario {
-    margin-top: 14px;
-}
-
 .ficha h3 {
     margin: 20px 0 8px;
     font-size: 0.9rem;

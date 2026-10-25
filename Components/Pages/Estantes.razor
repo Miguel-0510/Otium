@@ -70,60 +70,58 @@
     <section class="ficha">
         <FichaDetalleLibro Libro="@seleccionado" UsuarioId="@usuarioId" />
 
-        <div class="submarco">
-            @if (seleccionado is Libro libro)
-            {
-                <h3>Estante</h3>
-                <div class="pestanas">
-                    @foreach (var e in Enum.GetValues<Estante>())
-                    {
-                        <button class="pestana pequena @(libro.Estante == e ? "activa" : "")"
-                                @onclick="() => CambiarEstante(e)">
-                            @Nombre(e)
-                        </button>
-                    }
-                </div>
+        @if (seleccionado is Libro libro)
+        {
+            <h3>Estante</h3>
+            <div class="pestanas">
+                @foreach (var e in Enum.GetValues<Estante>())
+                {
+                    <button class="pestana pequena @(libro.Estante == e ? "activa" : "")"
+                            @onclick="() => CambiarEstante(e)">
+                        @Nombre(e)
+                    </button>
+                }
+            </div>
 
-                <h3>Tu puntuación</h3>
-                <div class="estrellas">
-                    @for (var i = 1; i <= 5; i++)
-                    {
-                        var valor = i;
-                        <button class="estrella @(valor <= libro.Puntuacion ? "encendida" : "")"
-                                aria-label="Puntuar con @valor"
-                                @onclick="() => Puntuar(valor)">★</button>
-                    }
-                </div>
-            }
+            <h3>Tu puntuación</h3>
+            <div class="estrellas">
+                @for (var i = 1; i <= 5; i++)
+                {
+                    var valor = i;
+                    <button class="estrella @(valor <= libro.Puntuacion ? "encendida" : "")"
+                            aria-label="Puntuar con @valor"
+                            @onclick="() => Puntuar(valor)">★</button>
+                }
+            </div>
+        }
 
-            @if (seleccionado is Libro libroActual)
-            {
-                <button class="boton-travesias boton-glosario" @onclick="() => IrAGlosario(libroActual.Titulo)">
-                    Buscar palabra desconocida
-                </button>
-            }
+        @if (seleccionado is Libro libroActual)
+        {
+            <button class="boton-travesias boton-glosario" @onclick="() => IrAGlosario(libroActual.Titulo)">
+                Buscar palabra desconocida
+            </button>
+        }
 
-            <EditorResena Libro="@seleccionado"
-                          UsuarioId="@usuarioId"
-                          Entradas="entradasLectura"
-                          OnGuardarReseña="OnGuardarReseña"
-                          OnAñadirTravesía="OnAñadirTravesía"
-                          OnQuitarTravesía="OnQuitarTravesía" />
+        <EditorResena Libro="@seleccionado"
+                      UsuarioId="@usuarioId"
+                      Entradas="entradasLectura"
+                      OnGuardarReseña="OnGuardarReseña"
+                      OnAñadirTravesía="OnAñadirTravesía"
+                      OnQuitarTravesía="OnQuitarTravesía" />
 
-            <h3>Quitar</h3>
-            @if (!confirmandoQuitar)
-            {
-                <button class="boton secundario" @onclick="() => confirmandoQuitar = true">Quitar del diario</button>
-            }
-            else
-            {
-                <p class="error">¿Seguro que quieres quitar este libro? No se puede deshacer.</p>
-                <div class="acciones">
-                    <button class="boton peligro" @onclick="OnQuitarLibro">Sí, quitar</button>
-                    <button class="boton secundario" @onclick="() => confirmandoQuitar = false">Cancelar</button>
-                </div>
-            }
-        </div>
+        <h3>Quitar</h3>
+        @if (!confirmandoQuitar)
+        {
+            <button class="boton secundario" @onclick="() => confirmandoQuitar = true">Quitar del diario</button>
+        }
+        else
+        {
+            <p class="error">¿Seguro que quieres quitar este libro? No se puede deshacer.</p>
+            <div class="acciones">
+                <button class="boton peligro" @onclick="OnQuitarLibro">Sí, quitar</button>
+                <button class="boton secundario" @onclick="() => confirmandoQuitar = false">Cancelar</button>
+            </div>
+        }
     </section>
 
 </div>
