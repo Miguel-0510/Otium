@@ -1,0 +1,5 @@
+Contact: mailto:soporte@otium.example.com
+Contact: https://otium.example.com/soporte
+Expires: 2027-10-24T00:00:00.000Z
+Preferred-Languages: es
+Canonical: https://otium.example.com/.well-known/security.txt

@@ -4,6 +4,13 @@ Todos los cambios notables de este proyecto se documentarán en este archivo.
 
 ## [No publicado] - 2026-10-24
 
+### Telemetría y archivos estáticos
+- Añadido `Sentry.AspNetCore` para telemetría de errores. Solo se activa si `Sentry:Dsn` está configurado (variables de entorno/User Secrets); en desarrollo y tests no envía nada.
+- Añadido `wwwroot/robots.txt` (evita indexar rutas privadas: /Account/, /glosario, /amigos).
+- Añadido `wwwroot/.well-known/security.txt` (contacto de seguridad RFC 9116).
+- Añadida página `/terminos` (Términos de uso).
+- Añadida página `/soporte` (contacto, reportar errores, vulnerabilidades, preguntas frecuentes).
+
 ### P2.8 - Manejo de errores y logging
 - Añadido endpoint `/health` con comprobación de conexión a SQLite (`SaludDbCheck`).
 - Corregido ciclo de vida de `SaludDbCheck` de `Singleton` a `Scoped` (depende de `IDbContextFactory` scoped).

@@ -11,6 +11,7 @@ using Otium.Components.Account;
 using Otium.Data;
 using Otium.Services;
 using Otium.Services.Options;
+using Sentry;
 using System.Net;
 using System.Threading.RateLimiting;
 
@@ -223,6 +224,19 @@ builder.Services.AddHttpClient<IGeminiClient, GeminiClient>(cliente =>
 
 builder.Services.AddScoped<IGlosarioService, GlosarioService>();
 builder.Services.AddScoped<IBackupService, BackupService>();
+
+var sentryDsn = builder.Configuration["Sentry:Dsn"];
+if (!string.IsNullOrWhiteSpace(sentryDsn))
+{
+    builder.Logging.AddSentry(options =>
+    {
+        options.Dsn = sentryDsn;
+        options.Environment = builder.Environment.EnvironmentName;
+        options.TracesSampleRate = builder.Environment.IsDevelopment() ? 1.0 : 0.1;
+        options.SendDefaultPii = false;
+        options.IsEnvironmentUser = true;
+    });
+}
 
 var app = builder.Build();
 

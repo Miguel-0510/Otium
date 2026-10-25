@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Rutas privadas: no indexar
+Disallow: /Account/
+Disallow: /glosario
+Disallow: /amigos
+
+Sitemap: /sitemap.xml

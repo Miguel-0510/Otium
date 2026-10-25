@@ -675,11 +675,11 @@ Acciones:
 - `CopiarCodigo` no captura errores de `navigator.clipboard` (puede fallar fuera de contexto seguro). [corregido]
 - `BotonInstalar` no protege la llamada JS de la primera renderización. [corregido]
 - Las imágenes de portada usan `alt=""`; correcto si son decorativas, pero la tarjeta debería describir el libro.
-- No hay `robots.txt`, `security.txt`, términos de uso ni página de soporte.
+- No hay `robots.txt`, `security.txt`, términos de uso ni página de soporte. [corregido: wwwroot/robots.txt, wwwroot/.well-known/security.txt, /terminos, /soporte]
 - El glosario no evita duplicados y no permite editar definiciones. [corregido]
 - La búsqueda de libros no guarda caché ni permite paginación.
 - No hay auditoría de accesibilidad ni pruebas en móviles reales.
-- No hay telemetría de errores (Sentry, Application Insights, etc.).
+- No hay telemetría de errores (Sentry, Application Insights, etc.). [corregido: Sentry.AspNetCore registrado, solo envía si Sentry:Dsn está configurado]
 
 ---
 

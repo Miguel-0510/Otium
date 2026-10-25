@@ -16,6 +16,9 @@ Aplicación web personal de diario de lectura y gestión de biblioteca. Stack: A
 - PWA instalable con página de aviso sin conexión.
 - Eliminación de cuenta y exportación de datos (JSON).
 - Health check en `/health`.
+- Telemetría de errores con Sentry (solo si `Sentry:Dsn` está configurado).
+- `robots.txt` y `.well-known/security.txt`.
+- Páginas de `/terminos` y `/soporte`.
 
 ## Stack
 
