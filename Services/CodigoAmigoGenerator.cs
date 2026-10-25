@@ -5,7 +5,7 @@ namespace Otium.Services;
 public sealed class CodigoAmigoGenerator : ICodigoAmigoGenerator
 {
     private const string Alfabeto = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    private const int Longitud = 8;
+    private const int Longitud = 6;
 
     public string Generar()
     {

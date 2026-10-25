@@ -32,6 +32,15 @@ public class EmailSender : IEmailSender<ApplicationUser>
 
     private async Task EnviarAsync(string destinatario, string asunto, string cuerpoHtml)
     {
+        if (string.IsNullOrWhiteSpace(_opciones.Host)
+            || string.IsNullOrWhiteSpace(_opciones.Usuario)
+            || string.IsNullOrWhiteSpace(_opciones.Clave)
+            || string.IsNullOrWhiteSpace(_opciones.Remitente))
+        {
+            _logger.LogWarning("Correo no configurado; se omite el envío a {Destinatario}", destinatario);
+            return;
+        }
+
         using var mensaje = new MailMessage();
         mensaje.From = new MailAddress(_opciones.Remitente, "Otium");
         mensaje.To.Add(destinatario);
