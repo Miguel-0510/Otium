@@ -63,6 +63,9 @@
     public string vista { get; set; } = "lomos";
 
     [Parameter]
+    public EventCallback<string> vistaChanged { get; set; }
+
+    [Parameter]
     public Libro? LibroSeleccionado { get; set; }
 
     [Parameter]
@@ -76,11 +79,13 @@
     private void CambiarVistaLomos()
     {
         vista = "lomos";
+        _ = vistaChanged.InvokeAsync("lomos");
     }
 
     private void CambiarVistaPortadas()
     {
         vista = "portadas";
+        _ = vistaChanged.InvokeAsync("portadas");
     }
 
     private static string Iniciales(string titulo)

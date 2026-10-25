@@ -60,7 +60,7 @@
 
         <RepisaLibros Libros="libros"
                       EstanteActual="estanteActual"
-                      Vista="lomos"
+                      @bind-Vista="vista"
                       LibroSeleccionado="seleccionado"
                       LibroSeleccionadoChanged="OnLibroSeleccionado" />
 
@@ -85,7 +85,7 @@
 
             @if (seleccionado is Libro libroActual)
             {
-                <button class="boton" @onclick="() => IrAGlosario(libroActual.Titulo)">
+                <button class="boton-travesias" @onclick="() => IrAGlosario(libroActual.Titulo)">
                     Buscar palabra desconocida
                 </button>
             }
@@ -103,6 +103,7 @@
     private List<Libro> libros = new();
     private Estante estanteActual = Estante.Leido;
     private Libro? seleccionado;
+    private string vista = "lomos";
 
     private bool mostrarFormulario;
     private string textoBusqueda = "";

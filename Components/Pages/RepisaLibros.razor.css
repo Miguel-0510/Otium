@@ -56,6 +56,20 @@
     transition: transform 0.18s;
 }
 
+.lomo:nth-child(4n+2) {
+    width: 52px;
+    background: var(--esmeralda-profundo);
+}
+
+.lomo:nth-child(4n+3) {
+    width: 42px;
+    background: var(--esmeralda-claro);
+}
+
+.lomo:nth-child(4n) {
+    background: var(--esmeralda-profundo);
+}
+
 .lomo.elegido {
     transform: translateY(-12px);
     border-color: #E6C566;
@@ -71,9 +85,6 @@
     text-overflow: ellipsis;
     max-height: 100%;
     line-height: 1;
-    display: block;
-    width: 100%;
-    overflow-wrap: anywhere;
 }
 
 .portadas {
