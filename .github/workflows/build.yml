@@ -20,7 +20,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore Otium.slnx
 
       - name: Build (Release)
-        run: dotnet build Otium.csproj --no-restore -c Release
+        run: dotnet build Otium.slnx -c Release --no-restore
