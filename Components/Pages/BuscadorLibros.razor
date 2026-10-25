@@ -27,7 +27,7 @@
                     <button class="resultado" @onclick="() => SeleccionarResultado(r)">
                         @if (r.PortadaUrl != "")
                         {
-                            <img src="@r.PortadaUrl" alt="" loading="lazy" />
+                            <img src="@r.PortadaUrl" alt="@r.Titulo" loading="lazy" />
                         }
                         else
                         {
@@ -66,7 +66,7 @@
         textoBusqueda = TextoInicial;
     }
 
-    private async void TeclaBusqueda(KeyboardEventArgs e)
+    private async Task TeclaBusqueda(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
             await Buscar();

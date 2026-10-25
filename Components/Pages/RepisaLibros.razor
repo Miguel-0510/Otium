@@ -3,8 +3,14 @@
 
 <div class="repisa-contenedor">
     <div class="cambio-vista">
-        <button class="@(vista == "lomos" ? "activo" : "")" @onclick="CambiarVistaLomos">Lomos</button>
-        <button class="@(vista == "portadas" ? "activo" : "")" @onclick="CambiarVistaPortadas">Portadas</button>
+        <button class="@(vista == "lomos" ? "activo" : "")"
+                @onclick="CambiarVistaLomos"
+                aria-pressed="@(vista == "lomos" ? "true" : "false")"
+                aria-label="Ver lomos">Lomos</button>
+        <button class="@(vista == "portadas" ? "activo" : "")"
+                @onclick="CambiarVistaPortadas"
+                aria-pressed="@(vista == "portadas" ? "true" : "false")"
+                aria-label="Ver portadas">Portadas</button>
     </div>
 
     @if (vista == "lomos")
@@ -13,7 +19,7 @@
             @foreach (var libro in Libros.Where(l => l.Estante == EstanteActual))
             {
                 <button class="lomo @(libro == LibroSeleccionado ? "elegido" : "")"
-                        title="@libro.Titulo"
+                        aria-label="@libro.Titulo"
                         @onclick="() => SeleccionarLibro(libro)">
                     <span>@libro.Titulo</span>
                 </button>
@@ -30,7 +36,9 @@
         <div class="portadas">
             @foreach (var libro in Libros.Where(l => l.Estante == EstanteActual))
             {
-                <button class="tarjeta-libro @(libro == LibroSeleccionado ? "elegido" : "")" @onclick="() => SeleccionarLibro(libro)">
+                <button class="tarjeta-libro @(libro == LibroSeleccionado ? "elegido" : "")"
+                        aria-label="@libro.Titulo"
+                        @onclick="() => SeleccionarLibro(libro)">
                     <span class="caratula">
                         @if (libro.PortadaUrl != "")
                         {
