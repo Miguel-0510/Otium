@@ -251,8 +251,7 @@ app.Use(async (context, next) =>
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
         "font-src 'self' https://fonts.gstatic.com; " +
         "img-src 'self' https: data:; " +
-        "connect-src 'self' wss: https://openlibrary.org https://covers.openlibrary.org; " +
-        "frame-ancestors 'self';");
+        "connect-src 'self' ws: wss: https://openlibrary.org https://covers.openlibrary.org;");
     await next();
 });
 
