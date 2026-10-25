@@ -5,8 +5,9 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY Otium.csproj ./
 RUN dotnet restore
+RUN dotnet nuget locals all --clear
 COPY . .
-RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false /p:PublishReadyToRun=false /p:TieredPGO=false
 
 # Imagen de runtime - ASP.NET Core 10.0
 # NOTA: En producción, fijar las imágenes por digest (sha256):
@@ -19,6 +20,13 @@ ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
 ENV ConnectionStrings__DefaultConnection="Data Source=/data/app.db"
 ENV DataProtection__KeysPath=/data/keys
+
+# Runtime de .NET ultra liviano para entornos con RAM limitada (ej. Render free tier 512 MB).
+ENV DOTNET_GCServer=0
+ENV DOTNET_GCHPT=0
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+ENV GCHeapHardLimit=0x10000000
+ENV DOTNET_EnableDiagnostics=0
 
 RUN mkdir -p /data
 
