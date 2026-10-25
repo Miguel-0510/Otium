@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Otium.Services;
@@ -20,6 +21,7 @@ public sealed class GeminiClientTests
 
         var cliente = new GeminiClient(
             http,
+            new MemoryCache(new MemoryCacheOptions()),
             Options.Create(new GeminiOptions { ApiKey = "clave-de-prueba", Modelo = "gemini-test" }),
             NullLogger<GeminiClient>.Instance);
 
@@ -50,6 +52,7 @@ public sealed class GeminiClientTests
 
         var cliente = new GeminiClient(
             http,
+            new MemoryCache(new MemoryCacheOptions()),
             Options.Create(new GeminiOptions { ApiKey = "", Modelo = "gemini-test" }),
             NullLogger<GeminiClient>.Instance);
 

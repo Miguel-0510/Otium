@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Otium.Services.Options;
 
@@ -17,14 +18,17 @@ public class GeminiClient : IGeminiClient
 {
     private const int MaxIntentos = 3;
     private static readonly TimeSpan EsperaEntreIntentos = TimeSpan.FromMilliseconds(300);
+    private static readonly TimeSpan DuracionCacheDefinicion = TimeSpan.FromDays(7);
 
     private readonly HttpClient _http;
+    private readonly IMemoryCache _cache;
     private readonly GeminiOptions _opciones;
     private readonly ILogger<GeminiClient> _logger;
 
-    public GeminiClient(HttpClient http, IOptions<GeminiOptions> opciones, ILogger<GeminiClient> logger)
+    public GeminiClient(HttpClient http, IMemoryCache cache, IOptions<GeminiOptions> opciones, ILogger<GeminiClient> logger)
     {
         _http = http;
+        _cache = cache;
         _opciones = opciones.Value;
         _logger = logger;
     }
@@ -42,6 +46,12 @@ public class GeminiClient : IGeminiClient
         if (texto.Length == 0)
         {
             return null;
+        }
+
+        var claveCache = $"gemini:{texto.ToLowerInvariant()}:{(libroTitulo ?? "").ToLowerInvariant()}";
+        if (_cache.TryGetValue(claveCache, out string? definicionCacheada) && definicionCacheada is not null)
+        {
+            return definicionCacheada;
         }
 
         var contexto = string.IsNullOrWhiteSpace(libroTitulo) ? "" : $" en el contexto del libro \"{libroTitulo}\"";
@@ -70,7 +80,14 @@ public class GeminiClient : IGeminiClient
         }
 
         var datos = await respuesta.Content.ReadFromJsonAsync<RespuestaGemini>(cancellationToken);
-        return datos?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text?.Trim();
+        var definicion = datos?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(definicion))
+        {
+            _cache.Set(claveCache, definicion, DuracionCacheDefinicion);
+        }
+
+        return definicion;
     }
 
     private HttpRequestMessage CrearSolicitud(string url, object cuerpo)
