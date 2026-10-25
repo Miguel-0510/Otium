@@ -598,67 +598,6 @@ textarea {
     border-radius: 0 8px 8px 0;
 }
 
-.entradas-lectura {
-    list-style: none;
-    margin: 0 0 14px;
-    padding: 0;
-}
-
-.entradas-lectura li {
-    padding: 10px 0;
-    border-top: 1px solid var(--linea);
-}
-
-.entrada-cabecera {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.entrada-paginas {
-    font-size: 0.85rem;
-    color: var(--tinta-suave);
-}
-
-.quitar-entrada {
-    margin-left: auto;
-    padding: 2px 8px;
-    font-size: 0.9rem;
-    color: var(--tinta-suave);
-    background: none;
-    border: 0;
-    cursor: pointer;
-}
-
-.quitar-entrada:hover {
-    color: var(--peligro);
-}
-
-.entrada-resumen {
-    margin-top: 6px;
-    font-size: 0.9rem;
-    line-height: 1.5;
-}
-
-.form-entrada {
-    margin-top: 10px;
-    padding: 14px;
-    background: var(--crema);
-    border: 1px solid var(--linea);
-    border-radius: 10px;
-}
-
-.campo-resumen {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin: 12px 0;
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--tinta-suave);
-}
-
 /* ---------- El "bloc de notas": espacio grande y comodo para escribir ---------- */
 .bloc-notas {
     min-height: 220px;
