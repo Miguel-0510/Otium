@@ -222,6 +222,7 @@ builder.Services.AddHttpClient<IGeminiClient, GeminiClient>(cliente =>
 });
 
 builder.Services.AddScoped<IGlosarioService, GlosarioService>();
+builder.Services.AddScoped<IBackupService, BackupService>();
 
 var app = builder.Build();
 
