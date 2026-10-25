@@ -80,7 +80,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(opcionesSqlite);
 builder.Services.AddDbContextFactory<ApplicationDbContext>(opcionesSqlite, ServiceLifetime.Scoped);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddSingleton<SaludDbCheck>();
+builder.Services.AddScoped<SaludDbCheck>();
 builder.Services.AddHealthChecks()
     .AddCheck<SaludDbCheck>("db");
 
