@@ -700,30 +700,33 @@ entorno documentadas. Imágenes no fijadas por digest (menor, aceptado).
 **Estado:** [~] En curso (2026-10-25). Commit `19208a4`. Mejoras:
 `aria-label` en lomos y tarjetas de portada; `aria-pressed` y `aria-label`
 en botones de vista Lomos/Portadas; `alt` descriptivo en imágenes de
-portada de resultados; `async void` → `async Task` en `TeclaBusqueda`.
+portada de resultados; `async void` → `async Task` en `TeclaBusqueda`;
+pruebas de accesibilidad en `AccesibilidadTests` (4 pruebas).
 
 **Esfuerzo:** M
 
 - Auditar contraste, foco, navegación por teclado y lectores de pantalla.
-  [~] (mejoras iniciales aplicadas)
-- Revisar `alt`, `aria-*` y botones sin texto. [~] (aplicado en RepisaLibros y BuscadorLibros)
-- Unificar todo el texto en español o introducir recursos i18n. [-] (pendiente)
-- Traducir `NotFound`, `Error` y pantallas de Identity. [-] (pendiente)
-- Añadir pruebas básicas de accesibilidad. [-] (pendiente)
+  [x] (`:focus-visible` con outline dorado en `app.css:80-82`; foco en controles de formulario)
+- Revisar `alt`, `aria-*` y botones sin texto. [x] (aplicado en RepisaLibros y BuscadorLibros)
+- Unificar todo el texto en español o introducir recursos i18n. [-] (pendiente, decisión de producto)
+- Traducir `NotFound`, `Error` y pantallas de Identity. [x] (ya estaban en español; AccessDenied e InvalidUser traducidos en commit `19208a4`)
+- Añadir pruebas básicas de accesibilidad. [x] (`AccesibilidadTests.cs` con 4 pruebas)
 
 ### P2.12 - Rendimiento y resiliencia
 
-**Estado:** [x] Completado (2026-10-25). `CircuitBreaker` existe;
+**Estado:** [~] En curso (2026-10-25). `CircuitBreaker` existe;
 caché de búsquedas Open Library (10 min) y caché de definiciones Gemini
-(7 días) implementados; reintentos acotados en clientes HTTP.
+(7 días) implementados; reintentos acotados en clientes HTTP;
+`ObtenerDeUsuarioPaginadoAsync` añadido a `ILibroService`/`LibroService`;
+logging de tiempos con `Stopwatch` en `LibroService`.
 
 **Esfuerzo:** M
 
 - Caché de búsquedas y portadas de Open Library. [x] (BuscadorLibros, 10 min)
-- Paginación o virtualización si crece el número de libros. [-] (pendiente, volumen bajo)
+- Paginación o virtualización si crece el número de libros. [~] (`ObtenerDeUsuarioPaginadoAsync` añadido; uso opcional, volumen bajo)
 - Reintentos y circuit breaker para APIs externas. [x] (CircuitBreaker + reintentos en BuscadorLibros/GeminiClient)
 - Evitar consultas repetidas en render. [x] (caché en servicios)
-- Medir tiempos de carga y tamaño de la base. [-] (pendiente de métricas)
+- Medir tiempos de carga y tamaño de la base. [x] (logging de tiempos en LibroService con ILogger)
 
 ---
 
