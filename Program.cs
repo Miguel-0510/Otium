@@ -18,6 +18,9 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var puerto = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{puerto}");
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -110,22 +113,19 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 
 builder.Services.AddOptions<CorreoOptions>()
     .Bind(builder.Configuration.GetSection(CorreoOptions.Seccion))
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
+    .ValidateDataAnnotations();
 
 builder.Services.AddOptions<GeminiOptions>()
     .Bind(builder.Configuration.GetSection(GeminiOptions.Seccion))
     .Validate(opciones => !string.IsNullOrWhiteSpace(opciones.Modelo),
-        "Gemini:Modelo no puede estar vacío.")
-    .ValidateOnStart();
+        "Gemini:Modelo no puede estar vacío.");
 
 builder.Services.AddOptions<SitioOptions>()
     .Bind(builder.Configuration.GetSection(SitioOptions.Seccion))
     .Validate(opciones => string.IsNullOrWhiteSpace(opciones.UrlPublica)
         || (Uri.TryCreate(opciones.UrlPublica, UriKind.Absolute, out var url)
             && (url.Scheme == Uri.UriSchemeHttp || url.Scheme == Uri.UriSchemeHttps)),
-        "Sitio:UrlPublica debe ser una URL absoluta http o https.")
-    .ValidateOnStart();
+        "Sitio:UrlPublica debe ser una URL absoluta http o https.");
 
 builder.Services.AddSingleton<IEnlacePublicoService, EnlacePublicoService>();
 
