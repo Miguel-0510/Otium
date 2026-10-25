@@ -71,10 +71,12 @@ builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.TwoFac
 builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.TwoFactorRememberMeScheme, ConfigurarCookie);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString));
-builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString), ServiceLifetime.Scoped);
+
+Action<DbContextOptionsBuilder> opcionesSqlite = options =>
+    options.UseSqlite(connectionString);
+
+builder.Services.AddDbContext<ApplicationDbContext>(opcionesSqlite);
+builder.Services.AddDbContextFactory<ApplicationDbContext>(opcionesSqlite, ServiceLifetime.Scoped);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddOptions<ProteccionDatosOptions>()
