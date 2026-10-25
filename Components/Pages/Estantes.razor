@@ -9,7 +9,6 @@
 @using Otium.Services
 @inject ILibroService Servicio
 @inject IEntradaLecturaService ServicioEntradas
-@inject IBuscadorLibros Buscador
 @inject AuthenticationStateProvider ProveedorAuth
 @inject NavigationManager Navegacion
 
@@ -30,89 +29,13 @@
 
 @if (mostrarFormulario)
 {
-    <section class="ficha nuevo">
-        <h2>Nuevo libro</h2>
-
-        <div class="busqueda">
-            <label>
-                Buscar por título o autor
-                <input @bind="textoBusqueda" @bind:event="oninput" @onkeydown="TeclaBusqueda" placeholder="Rayuela Cortázar" />
-            </label>
-            <button class="boton" disabled="@buscando" @onclick="Buscar">
-                @(buscando ? "Buscando..." : "Buscar")
-            </button>
-        </div>
-
-        @if (!string.IsNullOrEmpty(errorBusqueda))
-        {
-            <p class="error">@errorBusqueda</p>
-        }
-
-        @if (resultados.Count > 0)
-        {
-            <ul class="resultados">
-                @foreach (var r in resultados)
-                {
-                    <li>
-                        <button class="resultado" @onclick="() => ElegirResultado(r)">
-                            @if (r.PortadaUrl != "")
-                            {
-                                <img src="@r.PortadaUrl" alt="" loading="lazy" />
-                            }
-                            else
-                            {
-                                <span class="sin-portada">Sin portada</span>
-                            }
-                            <span class="datos">
-                                <strong>@r.Titulo</strong>
-                                <span>@r.Detalle</span>
-                            </span>
-                        </button>
-                    </li>
-                }
-            </ul>
-        }
-
-        <p class="nota">
-            Datos y portadas de <a href="https://openlibrary.org" target="_blank" rel="noopener">Open Library</a>.
-            Si no lo encuentras, escríbelo a mano.
-        </p>
-
-        <div class="campos">
-            <label>
-                Título
-                <input @bind="nuevoTitulo" @bind:event="oninput" placeholder="La casa de los espíritus" />
-            </label>
-            <label>
-                Autor
-                <input @bind="nuevoAutor" @bind:event="oninput" placeholder="Isabel Allende" />
-            </label>
-            <label>
-                Estante
-                <select @bind="nuevoEstante">
-                    @foreach (var e in Enum.GetValues<Estante>())
-                    {
-                        <option value="@e">@Nombre(e)</option>
-                    }
-                </select>
-            </label>
-        </div>
-
-        @if (nuevaPortada != "")
-        {
-            <img class="miniatura" src="@nuevaPortada" alt="Portada elegida" />
-        }
-
-        @if (!string.IsNullOrEmpty(errorFormulario))
-        {
-            <p class="error">@errorFormulario</p>
-        }
-
-        <div class="acciones">
-            <button class="boton" @onclick="Agregar">Guardar libro</button>
-            <button class="boton secundario" @onclick="CerrarFormulario">Cancelar</button>
-        </div>
-    </section>
+    <FormularioLibro Titulo="@nuevoTitulo"
+                     Autor="@nuevoAutor"
+                     Estante="@nuevoEstante"
+                     PortadaUrl="@nuevaPortada"
+                     IdExterno="@nuevoIdExterno"
+                     OnGuardar="OnGuardarLibro"
+                     OnCancelar="CerrarFormulario" />
 }
 
 <div class="disposicion">
@@ -128,55 +51,11 @@
             }
         </div>
 
-        <div class="cambio-vista">
-            <button class="@(vista == "lomos" ? "activo" : "")" @onclick="MostrarLomos">Lomos</button>
-            <button class="@(vista == "portadas" ? "activo" : "")" @onclick="MostrarPortadas">Portadas</button>
-        </div>
-
-        @if (vista == "lomos")
-        {
-            <div class="repisa">
-                @foreach (var libro in libros.Where(l => l.Estante == estanteActual))
-                {
-                    <button class="lomo @(libro == seleccionado ? "elegido" : "")"
-                            title="@libro.Titulo"
-                            @onclick="() => Elegir(libro)">
-                        <span>@libro.Titulo</span>
-                    </button>
-                }
-
-                @if (!libros.Any(l => l.Estante == estanteActual))
-                {
-                    <p class="vacio">Este estante está vacío. Añade un libro para empezar.</p>
-                }
-            </div>
-        }
-        else
-        {
-            <div class="portadas">
-                @foreach (var libro in libros.Where(l => l.Estante == estanteActual))
-                {
-                    <button class="tarjeta-libro @(libro == seleccionado ? "elegido" : "")" @onclick="() => Elegir(libro)">
-                        <span class="caratula">
-                            @if (libro.PortadaUrl != "")
-                            {
-                                <img src="@libro.PortadaUrl" alt="" loading="lazy" @onerror="() => libro.PortadaUrl = string.Empty" />
-                            }
-                            else
-                            {
-                                <span class="sin-portada-grande">@Iniciales(libro.Titulo)</span>
-                            }
-                        </span>
-                        <span class="titulo-tarjeta">@libro.Titulo</span>
-                    </button>
-                }
-
-                @if (!libros.Any(l => l.Estante == estanteActual))
-                {
-                    <p class="vacio">Este estante está vacío. Añade un libro para empezar.</p>
-                }
-            </div>
-        }
+        <RepisaLibros Libros="libros"
+                      EstanteActual="estanteActual"
+                      Vista="vista"
+                      LibroSeleccionado="seleccionado"
+                      LibroSeleccionadoChanged="OnLibroSeleccionado" />
 
         <p class="resumen">@Resumen()</p>
     </section>
@@ -184,158 +63,18 @@
     <section class="ficha">
         @if (seleccionado is Libro actual)
         {
-            <div class="cabecera">
-                @if (actual.PortadaUrl != "")
-                {
-                    <img class="portada" src="@actual.PortadaUrl" alt="Portada de @actual.Titulo" @onerror="() => actual.PortadaUrl = string.Empty" />
-                }
-                <div>
-                    <h2>@actual.Titulo</h2>
-                    <p class="autor">@actual.Autor</p>
-                </div>
-            </div>
+            <FichaDetalleLibro Libro="@seleccionado"
+                              UsuarioId="@usuarioId"
+                              OnEstanteCambiado="OnEstanteCambiado"
+                              OnPuntuacionCambiada="OnPuntuacionCambiada"
+                              OnQuitarLibro="OnQuitarLibro" />
 
-            <h3>Estante</h3>
-            <div class="pestanas">
-                @foreach (var e in Enum.GetValues<Estante>())
-                {
-                    <button class="pestana pequena @(actual.Estante == e ? "activa" : "")"
-                            @onclick="() => Mover(actual, e)">
-                        @Nombre(e)
-                    </button>
-                }
-            </div>
-
-            <h3>Tu puntuación</h3>
-            <div class="estrellas">
-                @for (var i = 1; i <= 5; i++)
-                {
-                    var valor = i;
-                    <button class="estrella @(valor <= actual.Puntuacion ? "encendida" : "")"
-                            aria-label="Puntuar con @valor"
-                            @onclick="() => Puntuar(actual, valor)">★</button>
-                }
-            </div>
-
-            <a class="boton-travesias enlace-glosario" href="@EnlaceGlosario(actual)">Buscar palabra desconocida</a>
-
-            <div class="seccion-travesias">
-                <button class="boton-travesias" @onclick="() => mostrarResena = !mostrarResena">
-                    @(mostrarResena ? "Ocultar reseña" : (string.IsNullOrWhiteSpace(actual.Resena) ? "Escribir reseña" : "Ver reseña"))
-                </button>
-
-                @if (mostrarResena)
-                {
-                    <div class="contenido-travesias">
-                        <textarea class="bloc-notas" rows="8"
-                                  placeholder="Qué te dejó este libro"
-                                  @bind="actual.Resena"
-                                  @bind:after="() => Guardar(actual)"></textarea>
-                        <p class="nota">Tu reseña se guarda al salir del cuadro de texto.</p>
-                    </div>
-                }
-            </div>
-
-            <div class="seccion-travesias">
-                <button class="boton-travesias" @onclick="() => mostrarEntradas = !mostrarEntradas">
-                    @(mostrarEntradas ? "Ocultar travesías" : $"Ver travesías ({entradasLectura.Count})")
-                </button>
-
-                @if (mostrarEntradas)
-                {
-                    <div class="contenido-travesias">
-                        @if (entradasLectura.Count == 0)
-                        {
-                            <p class="info-travesias">
-                                Las <strong>travesías</strong> son tus anotaciones de cada sesión de lectura:
-                                qué páginas leíste y un resumen de lo que pasó. Crea la primera cuando
-                                empieces a leer este libro, y así vas armando tu propio recorrido por él.
-                            </p>
-                        }
-                        else
-                        {
-                            <ul class="entradas-lectura">
-                                @foreach (var entrada in entradasLectura)
-                                {
-                                    var expandida = entradasExpandidas.Contains(entrada.Id);
-                                    <li>
-                                        <div class="travesia-cabecera">
-                                            <button class="travesia-toggle" @onclick="() => AlternarEntrada(entrada.Id)">
-                                                <span class="travesia-flecha">@(expandida ? "▾" : "▸")</span>
-                                                <strong>Travesía @entrada.Numero</strong>
-                                                @if (entrada.PaginaInicio is not null || entrada.PaginaFin is not null)
-                                                {
-                                                    <span class="entrada-paginas">páginas @entrada.PaginaInicio – @entrada.PaginaFin</span>
-                                                }
-                                            </button>
-                                            <button class="quitar-entrada" title="Quitar esta travesía" @onclick="() => QuitarEntrada(entrada)">✕</button>
-                                        </div>
-                                        @if (expandida)
-                                        {
-                                            <div class="travesia-cuerpo">
-                                                @if (!string.IsNullOrWhiteSpace(entrada.Resumen))
-                                                {
-                                                    <p class="entrada-resumen papel-rayado">@entrada.Resumen</p>
-                                                }
-                                                else
-                                                {
-                                                    <p class="entrada-resumen papel-rayado vacio-texto">Esta travesía no tiene resumen.</p>
-                                                }
-                                            </div>
-                                        }
-                                    </li>
-                                }
-                            </ul>
-                        }
-
-                        @if (mostrarFormularioEntrada)
-                        {
-                            <div class="form-entrada">
-                                <div class="campos">
-                                    <label>
-                                        Desde la página
-                                        <input type="number" min="0" @bind="nuevaPaginaInicio" />
-                                    </label>
-                                    <label>
-                                        Hasta la página
-                                        <input type="number" min="0" @bind="nuevaPaginaFin" />
-                                    </label>
-                                </div>
-                                <label class="campo-resumen">
-                                    Resumen de esta travesía
-                                    <textarea class="bloc-notas" rows="8" placeholder="Qué pasó en estas páginas..." @bind="nuevoResumenEntrada"></textarea>
-                                </label>
-                                <div class="acciones">
-                                    @if (!string.IsNullOrEmpty(errorEntrada))
-                                    {
-                                        <p class="error">@errorEntrada</p>
-                                    }
-                                    <button class="boton" @onclick="GuardarEntrada">Guardar travesía</button>
-                                    <button class="boton secundario" @onclick="() => mostrarFormularioEntrada = false">Cancelar</button>
-                                </div>
-                            </div>
-                        }
-                        else
-                        {
-                            <button class="boton secundario" @onclick="() => mostrarFormularioEntrada = true">Añadir travesía</button>
-                        }
-                    </div>
-                }
-            </div>
-
-            <h3>Quitar</h3>
-            @if (!confirmandoQuitar)
-            {
-                <button class="boton secundario" @onclick="() => confirmandoQuitar = true">Quitar del diario</button>
-            }
-            else
-            {
-                <p class="error">¿Seguro que quieres quitar este libro? No se puede deshacer.</p>
-                <div class="acciones">
-                    <button class="boton peligro" @onclick="() => Quitar(actual)">Sí, quitar</button>
-                    <button class="boton secundario" @onclick="() => confirmandoQuitar = false">Cancelar</button>
-                </div>
-            }
+            <EditorResena Libro="@seleccionado"
+                          UsuarioId="@usuarioId"
+                          Entradas="entradasLectura"
+                          OnGuardarReseña="OnGuardarReseña"
+                          OnAñadirTravesía="OnAñadirTravesía"
+                          OnQuitarTravesía="OnQuitarTravesía" />
         }
         else
         {
@@ -350,19 +89,7 @@
     private List<Libro> libros = new();
     private Estante estanteActual = Estante.Leido;
     private Libro? seleccionado;
-    private bool confirmandoQuitar;
     private string vista = "lomos";
-
-    private bool mostrarResena;
-    private bool mostrarEntradas;
-    private List<EntradaLectura> entradasLectura = new();
-    private HashSet<int> entradasExpandidas = new();
-    private bool mostrarFormularioEntrada;
-    private int? nuevaPaginaInicio;
-    private int? nuevaPaginaFin;
-    private string nuevoResumenEntrada = "";
-    private string errorEntrada = "";
-    private string errorGeneral = "";
 
     private bool mostrarFormulario;
     private string nuevoTitulo = "";
@@ -371,11 +98,11 @@
     private string nuevaPortada = "";
     private string nuevoIdExterno = "";
     private string errorFormulario = "";
+    private string errorGeneral = "";
 
-    private string textoBusqueda = "";
-    private List<ResultadoLibro> resultados = new();
-    private bool buscando;
-    private string errorBusqueda = "";
+    private string errorEntrada = "";
+    private HashSet<int> entradasExpandidas = new();
+    private List<EntradaLectura> entradasLectura = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -386,33 +113,14 @@
         await Elegir(libros.FirstOrDefault(l => l.Estante == estanteActual));
     }
 
-    private void MostrarLomos() => vista = "lomos";
-    private void MostrarPortadas() => vista = "portadas";
-
-    private string EnlaceGlosario(Libro libro) =>
-        Navegacion.GetUriWithQueryParameters("glosario", new Dictionary<string, object?> { ["libro"] = libro.Titulo });
-
     private async Task Elegir(Libro? libro)
     {
         seleccionado = libro;
-        confirmandoQuitar = false;
-        mostrarResena = false;
-        mostrarEntradas = false;
-        mostrarFormularioEntrada = false;
-        nuevaPaginaInicio = null;
-        nuevaPaginaFin = null;
-        nuevoResumenEntrada = "";
         entradasExpandidas = new();
 
         entradasLectura = libro is not null
             ? await ServicioEntradas.ObtenerDeLibroAsync(usuarioId, libro.Id)
             : new();
-    }
-
-    private void AlternarEntrada(int entradaId)
-    {
-        if (!entradasExpandidas.Add(entradaId))
-            entradasExpandidas.Remove(entradaId);
     }
 
     private async Task IrAEstante(Estante estante)
@@ -421,132 +129,21 @@
         await Elegir(libros.FirstOrDefault(l => l.Estante == estante));
     }
 
-    private async Task Guardar(Libro libro)
+    private async Task OnLibroSeleccionado(Libro? libro)
     {
-        if (libro.UsuarioId != usuarioId)
-            return;
-
-        var (exito, mensaje) = await Servicio.ActualizarAsync(usuarioId, libro);
-        errorGeneral = exito ? "" : mensaje;
+        await Elegir(libro);
     }
 
-    private async Task Puntuar(Libro libro, int valor)
+    private async Task OnGuardarLibro((string Titulo, string Autor, Estante Estante, string PortadaUrl, string IdExterno) datos)
     {
-        libro.Puntuacion = valor;
-        await Guardar(libro);
-    }
-
-    private async Task Mover(Libro libro, Estante destino)
-    {
-        libro.Estante = destino;
-        estanteActual = destino;
-        await Guardar(libro);
-    }
-
-    private async Task GuardarEntrada()
-    {
-        if (seleccionado is null) return;
-
-        errorEntrada = "";
-
-        var (exito, mensaje, entrada) = await ServicioEntradas.AgregarAsync(
-            usuarioId,
-            seleccionado.Id,
-            nuevaPaginaInicio,
-            nuevaPaginaFin,
-            nuevoResumenEntrada.Trim());
-
-        if (!exito || entrada is null)
-        {
-            errorEntrada = mensaje;
-            return;
-        }
-
-        entradasLectura.Add(entrada);
-
-        nuevaPaginaInicio = null;
-        nuevaPaginaFin = null;
-        nuevoResumenEntrada = "";
-        mostrarFormularioEntrada = false;
-    }
-
-    private async Task QuitarEntrada(EntradaLectura entrada)
-    {
-        errorEntrada = "";
-
-        if (!await ServicioEntradas.EliminarAsync(usuarioId, entrada.Id))
-        {
-            errorEntrada = "No se pudo quitar la travesía.";
-            return;
-        }
-
-        entradasLectura.Remove(entrada);
-        entradasExpandidas.Remove(entrada.Id);
-    }
-
-    private async Task TeclaBusqueda(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-            await Buscar();
-    }
-
-    private async Task Buscar()
-    {
-        errorBusqueda = "";
-        resultados = new();
-
-        if (string.IsNullOrWhiteSpace(textoBusqueda))
-        {
-            errorBusqueda = "Escribe un título o un autor para buscar.";
-            return;
-        }
-
-        buscando = true;
-        try
-        {
-            resultados = await Buscador.BuscarAsync(textoBusqueda);
-
-            if (resultados.Count == 0)
-                errorBusqueda = "No encontré resultados. Prueba con otras palabras o escríbelo a mano.";
-        }
-#pragma warning disable CS0168
-        catch (Exception ex)
-#pragma warning restore CS0168
-        {
-            errorBusqueda = "No pude consultar el buscador. Inténtalo más tarde.";
-        }
-        finally
-        {
-            buscando = false;
-        }
-    }
-
-    private void ElegirResultado(ResultadoLibro r)
-    {
-        nuevoTitulo = r.Titulo;
-        nuevoAutor = r.Autor;
-        nuevaPortada = r.PortadaUrl;
-        nuevoIdExterno = r.IdExterno;
-        resultados = new();
-        errorBusqueda = "";
-    }
-
-    private async Task Agregar()
-    {
-        if (string.IsNullOrWhiteSpace(nuevoTitulo))
-        {
-            errorFormulario = "Escribe el título del libro.";
-            return;
-        }
-
         var nuevo = new Libro
         {
             UsuarioId = usuarioId,
-            Titulo = nuevoTitulo.Trim(),
-            Autor = nuevoAutor.Trim(),
-            Estante = nuevoEstante,
-            PortadaUrl = nuevaPortada,
-            IdExterno = nuevoIdExterno
+            Titulo = datos.Titulo,
+            Autor = datos.Autor,
+            Estante = datos.Estante,
+            PortadaUrl = datos.PortadaUrl,
+            IdExterno = datos.IdExterno
         };
 
         var (exito, mensaje, creado) = await Servicio.AgregarAsync(usuarioId, nuevo);
@@ -558,20 +155,9 @@
         }
 
         libros.Add(creado);
-        estanteActual = nuevoEstante;
+        estanteActual = datos.Estante;
         await Elegir(creado);
         CerrarFormulario();
-    }
-
-    private async Task Quitar(Libro libro)
-    {
-        if (libro.UsuarioId != usuarioId)
-            return;
-
-        await Servicio.EliminarAsync(usuarioId, libro.Id);
-
-        libros.Remove(libro);
-        await Elegir(libros.FirstOrDefault(l => l.Estante == estanteActual));
     }
 
     private void CerrarFormulario()
@@ -583,9 +169,94 @@
         nuevaPortada = "";
         nuevoIdExterno = "";
         errorFormulario = "";
-        textoBusqueda = "";
-        resultados = new();
-        errorBusqueda = "";
+    }
+
+    private async Task OnEstanteCambiado(Estante destino)
+    {
+        if (seleccionado is not null)
+        {
+            seleccionado.Estante = destino;
+            estanteActual = destino;
+            await Guardar(seleccionado);
+        }
+    }
+
+    private async Task OnPuntuacionCambiada(int valor)
+    {
+        if (seleccionado is not null)
+        {
+            seleccionado.Puntuacion = valor;
+            await Guardar(seleccionado);
+        }
+    }
+
+    private async Task OnQuitarLibro()
+    {
+        if (seleccionado is not null && seleccionado.UsuarioId == usuarioId)
+        {
+            await Servicio.EliminarAsync(usuarioId, seleccionado.Id);
+
+            libros.Remove(seleccionado);
+            await Elegir(libros.FirstOrDefault(l => l.Estante == estanteActual));
+        }
+    }
+
+    private async Task Guardar(Libro libro)
+    {
+        if (libro.UsuarioId != usuarioId)
+            return;
+
+        var (exito, mensaje) = await Servicio.ActualizarAsync(usuarioId, libro);
+        errorGeneral = exito ? "" : mensaje;
+    }
+
+    private async Task OnGuardarReseña(string reseña)
+    {
+        if (seleccionado is not null)
+        {
+            seleccionado.Resena = reseña;
+            await Guardar(seleccionado);
+        }
+    }
+
+    private async Task OnAñadirTravesía((int? PaginaInicio, int? PaginaFin, string Resumen) datos)
+    {
+        if (seleccionado is null) return;
+
+        errorEntrada = "";
+
+        var (exito, mensaje, entrada) = await ServicioEntradas.AgregarAsync(
+            usuarioId,
+            seleccionado.Id,
+            datos.PaginaInicio,
+            datos.PaginaFin,
+            datos.Resumen);
+
+        if (!exito || entrada is null)
+        {
+            errorEntrada = mensaje;
+            return;
+        }
+
+        entradasLectura.Add(entrada);
+    }
+
+    private async Task OnQuitarTravesía(int entradaId)
+    {
+        errorEntrada = "";
+
+        if (!await ServicioEntradas.EliminarAsync(usuarioId, entradaId))
+        {
+            errorEntrada = "No se pudo quitar la travesía.";
+            return;
+        }
+
+        var entrada = entradasLectura.FirstOrDefault(e => e.Id == entradaId);
+        if (entrada is not null)
+        {
+            entradasLectura.Remove(entrada);
+            entradasExpandidas.Remove(entradaId);
+        }
     }
 
     private string Resumen()
@@ -598,13 +269,6 @@
 
         var promedio = puntuados.Average(l => l.Puntuacion);
         return $"{leidos.Count} leídos, promedio {promedio:0.0} de 5";
-    }
-
-    private static string Iniciales(string titulo)
-    {
-        var palabras = titulo.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var letras = palabras.Take(2).Select(p => char.ToUpper(p[0]));
-        return string.Concat(letras);
     }
 
     private static string Nombre(Estante e) => e switch

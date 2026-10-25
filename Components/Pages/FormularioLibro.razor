@@ -1,0 +1,103 @@
+@using Otium.Models
+
+<section class="ficha nuevo">
+    <h2>Nuevo libro</h2>
+
+    <div class="campos">
+        <label>
+            Título
+            <input @bind="nuevoTitulo" @bind:event="oninput" placeholder="La casa de los espíritus" />
+        </label>
+        <label>
+            Autor
+            <input @bind="nuevoAutor" @bind:event="oninput" placeholder="Isabel Allende" />
+        </label>
+        <label>
+            Estante
+            <select @bind="nuevoEstante">
+                @foreach (var e in Enum.GetValues<Estante>())
+                {
+                    <option value="@e">@Nombre(e)</option>
+                }
+            </select>
+        </label>
+    </div>
+
+    @if (nuevaPortada != "")
+    {
+        <img class="miniatura" src="@nuevaPortada" alt="Portada elegida" />
+    }
+
+    @if (!string.IsNullOrEmpty(errorFormulario))
+    {
+        <p class="error">@errorFormulario</p>
+    }
+
+    <div class="acciones">
+        <button class="boton" @onclick="Guardar">Guardar libro</button>
+        <button class="boton secundario" @onclick="Cancelar">Cancelar</button>
+    </div>
+</section>
+
+@code {
+    [Parameter]
+    public string Titulo { get; set; } = "";
+
+    [Parameter]
+    public string Autor { get; set; } = "";
+
+    [Parameter]
+    public Estante Estante { get; set; } = Estante.QuieroLeer;
+
+    [Parameter]
+    public string PortadaUrl { get; set; } = "";
+
+    [Parameter]
+    public string IdExterno { get; set; } = "";
+
+    [Parameter]
+    public EventCallback<(string Titulo, string Autor, Estante Estante, string PortadaUrl, string IdExterno)> OnGuardar { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancelar { get; set; }
+
+    private string nuevoTitulo = "";
+    private string nuevoAutor = "";
+    private Estante nuevoEstante = Estante.QuieroLeer;
+    private string nuevaPortada = "";
+    private string nuevoIdExterno = "";
+    private string errorFormulario = "";
+
+    protected override void OnParametersSet()
+    {
+        nuevoTitulo = Titulo;
+        nuevoAutor = Autor;
+        nuevoEstante = Estante;
+        nuevaPortada = PortadaUrl;
+        nuevoIdExterno = IdExterno;
+    }
+
+    private async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(nuevoTitulo))
+        {
+            errorFormulario = "Escribe el título del libro.";
+            return;
+        }
+
+        await OnGuardar.InvokeAsync((nuevoTitulo.Trim(), nuevoAutor.Trim(), nuevoEstante, nuevaPortada, nuevoIdExterno));
+    }
+
+    private async Task Cancelar()
+    {
+        errorFormulario = "";
+        await OnCancelar.InvokeAsync();
+    }
+
+    private static string Nombre(Estante e) => e switch
+    {
+        Estante.Leyendo => "Leyendo",
+        Estante.Leido => "Leídos",
+        _ => "Quiero leer"
+    };
+}

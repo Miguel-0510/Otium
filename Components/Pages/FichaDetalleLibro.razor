@@ -1,0 +1,108 @@
+@using Otium.Models
+
+<section class="ficha">
+    @if (Libro is not null)
+    {
+        <div class="cabecera">
+            @if (!string.IsNullOrEmpty(Libro.PortadaUrl))
+            {
+                <img class="portada" src="@Libro.PortadaUrl" alt="Portada de @Libro.Titulo" />
+            }
+            <div>
+                <h2>@Libro.Titulo</h2>
+                <p class="autor">@Libro.Autor</p>
+            </div>
+        </div>
+
+        <h3>Estante</h3>
+        <div class="pestanas">
+            @foreach (var e in Enum.GetValues<Estante>())
+            {
+                <button class="pestana pequena @(Libro.Estante == e ? "activa" : "")"
+                        @onclick="() => CambiarEstante(e)">
+                    @Nombre(e)
+                </button>
+            }
+        </div>
+
+        <h3>Tu puntuación</h3>
+        <div class="estrellas">
+            @for (var i = 1; i <= 5; i++)
+            {
+                var valor = i;
+                <button class="estrella @(valor <= Libro.Puntuacion ? "encendida" : "")"
+                        aria-label="Puntuar con @valor"
+                        @onclick="() => Puntuar(valor)">★</button>
+            }
+        </div>
+
+        <a class="boton-travesias enlace-glosario" href="@EnlaceGlosario()">Buscar palabra desconocida</a>
+
+        <h3>Quitar</h3>
+        @if (!ConfirmandoQuitar)
+        {
+            <button class="boton secundario" @onclick="() => ConfirmandoQuitar = true">Quitar del diario</button>
+        }
+        else
+        {
+            <p class="error">¿Seguro que quieres quitar este libro? No se puede deshacer.</p>
+            <div class="acciones">
+                <button class="boton peligro" @onclick="QuitarLibro">Sí, quitar</button>
+                <button class="boton secundario" @onclick="() => ConfirmandoQuitar = false">Cancelar</button>
+            </div>
+        }
+    }
+    else
+    {
+        <p class="vacio">Elige un libro de la repisa para puntuarlo o escribir tu reseña.</p>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public Libro? Libro { get; set; }
+
+    [Parameter]
+    public string UsuarioId { get; set; } = "";
+
+    [Parameter]
+    public EventCallback<Estante> OnEstanteCambiado { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnPuntuacionCambiada { get; set; }
+
+    [Parameter]
+    public EventCallback OnQuitarLibro { get; set; }
+
+    private bool ConfirmandoQuitar { get; set; } = false;
+
+    private void CambiarEstante(Estante destino)
+    {
+        _ = OnEstanteCambiado.InvokeAsync(destino);
+    }
+
+    private void Puntuar(int valor)
+    {
+        _ = OnPuntuacionCambiada.InvokeAsync(valor);
+    }
+
+    private async Task QuitarLibro()
+    {
+        await OnQuitarLibro.InvokeAsync();
+    }
+
+    private string EnlaceGlosario()
+    {
+        if (Libro is null) return "";
+        var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
+        query["libro"] = Libro.Titulo;
+        return $"glosario?{query}";
+    }
+
+    private static string Nombre(Estante e) => e switch
+    {
+        Estante.Leyendo => "Leyendo",
+        Estante.Leido => "Leídos",
+        _ => "Quiero leer"
+    };
+}

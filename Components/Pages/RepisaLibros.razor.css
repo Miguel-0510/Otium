@@ -1,0 +1,121 @@
+.repisa-contenedor {
+    margin-top: 10px;
+}
+
+.cambio-vista {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.cambio-vista button {
+    padding: 5px 12px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--enlace);
+    background: transparent;
+    border: 1.5px solid var(--linea);
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.cambio-vista button.activo {
+    color: var(--texto-boton);
+    background: var(--esmeralda);
+    border-color: var(--esmeralda);
+}
+
+.repisa {
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+    min-height: 224px;
+    padding: 24px 22px 0;
+    background: var(--tarjeta);
+    border: 1px solid var(--linea);
+    border-bottom: 14px solid var(--dorado);
+    border-radius: 14px 14px 0 0;
+    overflow-x: auto;
+}
+
+.lomo {
+    flex: none;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 152px;
+    padding: 26px 0;
+    color: var(--texto-boton);
+    background: var(--esmeralda);
+    border: 1px solid var(--dorado-claro);
+    border-bottom: 0;
+    border-radius: 4px 4px 0 0;
+    cursor: pointer;
+    transition: transform 0.18s;
+}
+
+.lomo.elegido {
+    transform: translateY(-12px);
+    border-color: #E6C566;
+}
+
+.portadas {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    gap: 14px;
+    padding: 4px 2px 16px;
+}
+
+.tarjeta-libro {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0;
+    text-align: left;
+    color: var(--tinta);
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.tarjeta-libro .caratula {
+    aspect-ratio: 2 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: var(--esmeralda);
+    border: 2px solid transparent;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(30, 43, 38, 0.18);
+}
+
+.tarjeta-libro img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.tarjeta-libro .sin-portada-grande {
+    padding: 8px;
+    font-family: var(--serif);
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--dorado-claro);
+    text-align: center;
+}
+
+.tarjeta-libro.elegido .caratula {
+    border-color: var(--dorado);
+}
+
+.tarjeta-libro .titulo-tarjeta {
+    font-size: 0.82rem;
+    line-height: 1.3;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}

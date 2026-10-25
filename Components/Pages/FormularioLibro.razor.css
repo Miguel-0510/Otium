@@ -1,0 +1,6 @@
+.miniatura {
+    width: 56px;
+    margin-bottom: 8px;
+    border: 2px solid var(--dorado);
+    border-radius: 4px;
+}

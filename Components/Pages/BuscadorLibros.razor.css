@@ -1,0 +1,79 @@
+section.ficha + section.ficha {
+    margin-top: 20px;
+}
+
+.buscador-libros .busqueda {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    margin-top: 12px;
+}
+
+.buscador-libros .busqueda label {
+    flex: 1;
+}
+
+.buscador-libros .resultados {
+    display: grid;
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.buscador-libros .resultado {
+    width: 100%;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 8px;
+    font: inherit;
+    text-align: left;
+    color: var(--tinta);
+    background: var(--crema);
+    border: 1.5px solid var(--linea);
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.buscador-libros .resultado:hover {
+    border-color: var(--dorado);
+}
+
+.buscador-libros .resultado img,
+.buscador-libros .sin-portada {
+    flex: none;
+    width: 44px;
+    height: 64px;
+    border-radius: 3px;
+}
+
+.buscador-libros .resultado img {
+    object-fit: cover;
+}
+
+.buscador-libros .sin-portada {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    text-align: center;
+    color: var(--enlace);
+    background: var(--tinte);
+}
+
+.buscador-libros .datos {
+    display: flex;
+    flex-direction: column;
+}
+
+.buscador-libros .datos span {
+    font-size: 0.85rem;
+    color: var(--tinta-suave);
+}
+
+.buscador-libros .nota {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: var(--tinta-suave);
+}

@@ -1,0 +1,43 @@
+.cabecera {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.portada {
+    flex: none;
+    width: 84px;
+    border: 2px solid var(--dorado);
+    border-radius: 4px;
+}
+
+.estrellas {
+    display: flex;
+    gap: 2px;
+}
+
+.estrella {
+    padding: 2px 4px;
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--linea);
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.estrella.encendida {
+    color: var(--dorado);
+}
+
+.estrella:hover {
+    color: var(--dorado-claro);
+}
+
+.enlace-glosario {
+    display: block;
+    width: 100%;
+    margin: 20px 0 0;
+    text-align: center;
+    text-decoration: none;
+}

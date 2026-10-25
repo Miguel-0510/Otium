@@ -1,0 +1,108 @@
+@using Otium.Models
+@using Otium.Services
+@inject IBuscadorLibros Buscador
+
+<div class="buscador-libros">
+    <div class="busqueda">
+        <label>
+            Buscar por título o autor
+            <input @bind="textoBusqueda" @bind:event="oninput" @onkeydown="TeclaBusqueda" placeholder="Rayuela Cortázar" />
+        </label>
+        <button class="boton" disabled="@buscando" @onclick="Buscar">
+            @(buscando ? "Buscando..." : "Buscar")
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorBusqueda))
+    {
+        <p class="error">@errorBusqueda</p>
+    }
+
+    @if (resultados.Count > 0)
+    {
+        <ul class="resultados">
+            @foreach (var r in resultados)
+            {
+                <li>
+                    <button class="resultado" @onclick="() => SeleccionarResultado(r)">
+                        @if (r.PortadaUrl != "")
+                        {
+                            <img src="@r.PortadaUrl" alt="" loading="lazy" />
+                        }
+                        else
+                        {
+                            <span class="sin-portada">Sin portada</span>
+                        }
+                        <span class="datos">
+                            <strong>@r.Titulo</strong>
+                            <span>@r.Detalle</span>
+                        </span>
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+
+    <p class="nota">
+        Datos y portadas de <a href="https://openlibrary.org" target="_blank" rel="noopener">Open Library</a>.
+        Si no lo encuentras, escríbelo a mano.
+    </p>
+</div>
+
+@code {
+    [Parameter]
+    public string TextoInicial { get; set; } = "";
+
+    [Parameter]
+    public EventCallback<ResultadoLibro> ResultadoSeleccionado { get; set; }
+
+    private string textoBusqueda = "";
+    private List<ResultadoLibro> resultados = new();
+    private bool buscando;
+    private string errorBusqueda = "";
+
+    protected override void OnInitialized()
+    {
+        textoBusqueda = TextoInicial;
+    }
+
+    private void TeclaBusqueda(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            Buscar();
+    }
+
+    private async Task Buscar()
+    {
+        errorBusqueda = "";
+        resultados = new();
+
+        if (string.IsNullOrWhiteSpace(textoBusqueda))
+        {
+            errorBusqueda = "Escribe un título o un autor para buscar.";
+            return;
+        }
+
+        buscando = true;
+        try
+        {
+            resultados = await Buscador.BuscarAsync(textoBusqueda);
+
+            if (resultados.Count == 0)
+                errorBusqueda = "No encontré resultados. Prueba con otras palabras o escríbelo a mano.";
+        }
+        catch
+        {
+            errorBusqueda = "No pude consultar el buscador. Inténtalo más tarde.";
+        }
+        finally
+        {
+            buscando = false;
+        }
+    }
+
+    private async Task SeleccionarResultado(ResultadoLibro r)
+    {
+        await ResultadoSeleccionado.InvokeAsync(r);
+    }
+}

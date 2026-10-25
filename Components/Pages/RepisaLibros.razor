@@ -1,0 +1,93 @@
+@using Otium.Models
+
+<div class="repisa-contenedor">
+    <div class="cambio-vista">
+        <button class="@(vista == "lomos" ? "activo" : "")" @onclick="CambiarVistaLomos">Lomos</button>
+        <button class="@(vista == "portadas" ? "activo" : "")" @onclick="CambiarVistaPortadas">Portadas</button>
+    </div>
+
+    @if (vista == "lomos")
+    {
+        <div class="repisa">
+            @foreach (var libro in Libros.Where(l => l.Estante == EstanteActual))
+            {
+                <button class="lomo @(libro == LibroSeleccionado ? "elegido" : "")"
+                        title="@libro.Titulo"
+                        @onclick="() => SeleccionarLibro(libro)">
+                    <span>@libro.Titulo</span>
+                </button>
+            }
+
+            @if (!Libros.Any(l => l.Estante == EstanteActual))
+            {
+                <p class="vacio">Este estante está vacío. Añade un libro para empezar.</p>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="portadas">
+            @foreach (var libro in Libros.Where(l => l.Estante == EstanteActual))
+            {
+                <button class="tarjeta-libro @(libro == LibroSeleccionado ? "elegido" : "")" @onclick="() => SeleccionarLibro(libro)">
+                    <span class="caratula">
+                        @if (libro.PortadaUrl != "")
+                        {
+                            <img src="@libro.PortadaUrl" alt="" loading="lazy" />
+                        }
+                        else
+                        {
+                            <span class="sin-portada-grande">@Iniciales(libro.Titulo)</span>
+                        }
+                    </span>
+                    <span class="titulo-tarjeta">@libro.Titulo</span>
+                </button>
+            }
+
+            @if (!Libros.Any(l => l.Estante == EstanteActual))
+            {
+                <p class="vacio">Este estante está vacío. Añade un libro para empezar.</p>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public List<Libro> Libros { get; set; } = new();
+
+    [Parameter]
+    public Estante EstanteActual { get; set; } = Estante.Leido;
+
+    [Parameter]
+    public string vista { get; set; } = "lomos";
+
+    [Parameter]
+    public Libro? LibroSeleccionado { get; set; }
+
+    [Parameter]
+    public EventCallback<Libro?> LibroSeleccionadoChanged { get; set; }
+
+    private async Task SeleccionarLibro(Libro libro)
+    {
+        await LibroSeleccionadoChanged.InvokeAsync(libro);
+    }
+
+    private void CambiarVistaLomos()
+    {
+        vista = "lomos";
+    }
+
+    private void CambiarVistaPortadas()
+    {
+        vista = "portadas";
+    }
+
+    private static string Iniciales(string titulo)
+    {
+        if (string.IsNullOrWhiteSpace(titulo)) return "?";
+        var palabras = titulo.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var letras = palabras.Take(2).Select(p => char.ToUpper(p[0]));
+        return string.Concat(letras);
+    }
+}
