@@ -78,7 +78,8 @@ builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.TwoFac
 
 builder.Services.AddBaseDeDatos(
     builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found."));
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found."),
+    builder.Configuration);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddScoped<SaludDbCheck>();
