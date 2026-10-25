@@ -68,12 +68,33 @@
     </section>
 
     <section class="ficha">
-        @if (seleccionado is Libro actual)
-        {
-            <FichaDetalleLibro Libro="@seleccionado"
-                              UsuarioId="@usuarioId"
-                              OnEstanteCambiado="OnEstanteCambiado"
-                              OnPuntuacionCambiada="OnPuntuacionCambiada" />
+        <FichaDetalleLibro Libro="@seleccionado" UsuarioId="@usuarioId" />
+
+        <div class="submarco">
+            @if (seleccionado is Libro libro)
+            {
+                <h3>Estante</h3>
+                <div class="pestanas">
+                    @foreach (var e in Enum.GetValues<Estante>())
+                    {
+                        <button class="pestana pequena @(libro.Estante == e ? "activa" : "")"
+                                @onclick="() => CambiarEstante(e)">
+                            @Nombre(e)
+                        </button>
+                    }
+                </div>
+
+                <h3>Tu puntuación</h3>
+                <div class="estrellas">
+                    @for (var i = 1; i <= 5; i++)
+                    {
+                        var valor = i;
+                        <button class="estrella @(valor <= libro.Puntuacion ? "encendida" : "")"
+                                aria-label="Puntuar con @valor"
+                                @onclick="() => Puntuar(valor)">★</button>
+                    }
+                </div>
+            }
 
             @if (seleccionado is Libro libroActual)
             {
@@ -102,11 +123,7 @@
                     <button class="boton secundario" @onclick="() => confirmandoQuitar = false">Cancelar</button>
                 </div>
             }
-        }
-        else
-        {
-            <p class="vacio">Elige un libro de la repisa para puntuarlo o escribir tu reseña.</p>
-        }
+        </div>
     </section>
 
 </div>
@@ -251,6 +268,25 @@
 
         var (exito, mensaje) = await Servicio.ActualizarAsync(usuarioId, libro);
         errorGeneral = exito ? "" : mensaje;
+    }
+
+    private async Task CambiarEstante(Estante destino)
+    {
+        if (seleccionado is not null)
+        {
+            seleccionado.Estante = destino;
+            estanteActual = destino;
+            await Guardar(seleccionado);
+        }
+    }
+
+    private async Task Puntuar(int valor)
+    {
+        if (seleccionado is not null)
+        {
+            seleccionado.Puntuacion = valor;
+            await Guardar(seleccionado);
+        }
     }
 
     private async Task OnGuardarReseña(string reseña)
