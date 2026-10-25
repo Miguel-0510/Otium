@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Otium.Components;
 using Otium.Components.Account;
 using Otium.Data;
@@ -78,6 +79,10 @@ Action<DbContextOptionsBuilder> opcionesSqlite = options =>
 builder.Services.AddDbContext<ApplicationDbContext>(opcionesSqlite);
 builder.Services.AddDbContextFactory<ApplicationDbContext>(opcionesSqlite, ServiceLifetime.Scoped);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddSingleton<SaludDbCheck>();
+builder.Services.AddHealthChecks()
+    .AddCheck<SaludDbCheck>("db");
 
 builder.Services.AddOptions<ProteccionDatosOptions>()
     .Bind(builder.Configuration.GetSection(ProteccionDatosOptions.Seccion));
@@ -272,6 +277,27 @@ app.MapRazorComponents<App>()
 
 app.MapAdditionalIdentityEndpoints();
 
+app.MapHealthChecks("/health");
+
 app.Run();
 
 public partial class Program { }
+
+sealed class SaludDbCheck : IHealthCheck
+{
+    private readonly IDbContextFactory<ApplicationDbContext> _fabrica;
+
+    public SaludDbCheck(IDbContextFactory<ApplicationDbContext> fabrica)
+    {
+        _fabrica = fabrica;
+    }
+
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext contexto, CancellationToken token)
+    {
+        using var db = _fabrica.CreateDbContext();
+        var conectado = await db.Database.CanConnectAsync(token);
+        return conectado
+            ? HealthCheckResult.Healthy("SQLite conectado.")
+            : HealthCheckResult.Unhealthy("SQLite sin conexion.");
+    }
+}
