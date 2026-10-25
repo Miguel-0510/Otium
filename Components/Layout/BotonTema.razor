@@ -1,5 +1,6 @@
 ﻿@inject IJSRuntime JS
 @inject NavigationManager Nav
+@inject ILogger<BotonTema> Logger
 @implements IDisposable
 
 <button class="boton-tema" @onclick="Alternar" title="Cambiar tema" aria-label="Cambiar tema claro u oscuro">
@@ -43,7 +44,14 @@
 
     private async void AlCambiarDePagina(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
-        await SincronizarAsync();
+        try
+        {
+            await SincronizarAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error sincronizando el tema al cambiar de pagina.");
+        }
     }
 
     private async Task SincronizarAsync()
@@ -54,8 +62,9 @@
             esOscuro = tema == "dark";
             StateHasChanged();
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.LogWarning(ex, "Error obteniendo el tema desde JavaScript.");
         }
     }
 
@@ -66,8 +75,9 @@
             var nuevo = await JS.InvokeAsync<string>("otiumTema.alternar");
             esOscuro = nuevo == "dark";
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.LogWarning(ex, "Error alternando el tema.");
         }
     }
 
