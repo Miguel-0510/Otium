@@ -27,8 +27,14 @@ RUN groupadd -r otium && useradd -r -g otium -m -d /home/otium otium
 RUN chown -R otium:otium /app /data
 USER otium
 
+# Cambiar a usuario root para instalar curl (necesita permisos de escritura en /var/lib/apt/lists).
+USER root
+
 # Curl para el healthcheck; se limpian las listas de apt en la misma capa.
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
+# Volver al usuario no root para ejecutar la aplicación.
+USER otium
 
 VOLUME /data
 
