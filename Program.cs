@@ -150,6 +150,18 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 
 builder.Services.AddOptions<SmtpOptions>()
     .Bind(builder.Configuration.GetSection(SmtpOptions.Seccion))
+    .PostConfigure(opciones =>
+    {
+        // Las variables de entorno copiadas desde paneles suelen arrastrar espacios
+        // o saltos de línea; Brevo rechaza el AUTH si el usuario o la clave no coinciden.
+        opciones.Host = (opciones.Host ?? "").Trim();
+        opciones.Username = (opciones.Username ?? "").Trim();
+        opciones.Password = (opciones.Password ?? "").Trim();
+        opciones.SenderEmail = (opciones.SenderEmail ?? "").Trim();
+        opciones.SenderName = string.IsNullOrWhiteSpace(opciones.SenderName)
+            ? "Otium"
+            : opciones.SenderName.Trim();
+    })
     .ValidateDataAnnotations();
 
 builder.Services.AddOptions<GeminiOptions>()

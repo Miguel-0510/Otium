@@ -50,12 +50,12 @@ public sealed class SmtpEnvioCorreo : IEnvioCorreo
 
         _logger.LogInformation(
             "Iniciando envío SMTP con MailKit a {Destinatario} por {Host}:{Puerto} " +
-            "(seguridad={Seguridad}, usuario longitud {LongitudUsuario}, remitente {Remitente}).",
+            "(seguridad={Seguridad}, usuario {Usuario}, remitente {Remitente}).",
             destinatario,
             _opciones.Host,
             _opciones.Port,
             opcionesSeguridad,
-            _opciones.Username.Length,
+            EnmascararUsuario(_opciones.Username),
             _opciones.SenderEmail);
 
         try
@@ -137,11 +137,14 @@ public sealed class SmtpEnvioCorreo : IEnvioCorreo
             _logger.LogError(
                 ex,
                 "Brevo rechazó la autenticación SMTP al enviar a {Destinatario} mediante {Host}:{Puerto}. " +
-                "Mensaje del servidor: {Detalle}. Causa probable: {Causa}.",
+                "Mensaje del servidor: {Detalle}. Usuario: {Usuario}; longitud de la clave configurada: {LongitudClave}. " +
+                "Causa probable: {Causa}.",
                 destinatario,
                 _opciones.Host,
                 _opciones.Port,
                 ex.Message,
+                EnmascararUsuario(_opciones.Username),
+                _opciones.Password.Length,
                 Clasificar(ex));
             return false;
         }
@@ -367,6 +370,21 @@ public sealed class SmtpEnvioCorreo : IEnvioCorreo
             "conexión reiniciada por el servidor SMTP.",
         _ => $"error de socket {ex.SocketErrorCode} (código nativo {ex.NativeErrorCode})."
     };
+
+    internal static string EnmascararUsuario(string usuario)
+    {
+        var arroba = usuario.IndexOf('@');
+        if (arroba <= 0)
+        {
+            return $"*** (longitud {usuario.Length})";
+        }
+
+        var local = usuario[..arroba];
+        var dominio = usuario[arroba..];
+        var visible = local.Length <= 3 ? local[..1] : local[..3];
+
+        return $"{visible}***{dominio} (longitud {usuario.Length})";
+    }
 
     private static T? Buscar<T>(Exception? ex) where T : Exception
     {

@@ -71,8 +71,12 @@ public static class DiagnosticoConfiguracion
     {
         var host = (opciones?.Host ?? configuracion["Smtp:Host"] ?? "smtp-relay.brevo.com").Trim();
         var puerto = opciones?.Port ?? LeerPuerto(configuracion["Smtp:Port"]);
-        var usuario = (opciones?.Username ?? configuracion["Smtp:Username"] ?? "").Trim();
-        var clave = (opciones?.Password ?? configuracion["Smtp:Password"] ?? "").Trim();
+        var usuarioConfigurado = configuracion["Smtp:Username"] ?? opciones?.Username ?? "";
+        var claveConfigurada = configuracion["Smtp:Password"] ?? opciones?.Password ?? "";
+        var usuario = usuarioConfigurado.Trim();
+        var clave = claveConfigurada.Trim();
+        var usuarioRecortado = usuarioConfigurado.Length != usuario.Length;
+        var claveRecortada = claveConfigurada.Length != clave.Length;
         var remitente = (opciones?.SenderEmail ?? configuracion["Smtp:SenderEmail"] ?? "").Trim();
         var nombre = (opciones?.SenderName ?? configuracion["Smtp:SenderName"] ?? "").Trim();
         var puertoConfigurado = !string.IsNullOrWhiteSpace(configuracion["Smtp:Port"]);
@@ -83,11 +87,25 @@ public static class DiagnosticoConfiguracion
             "Password configurada={PasswordConfigurada} (longitud {LongitudPassword}).",
             host,
             puerto,
-            usuario,
+            SmtpEnvioCorreo.EnmascararUsuario(usuario),
             remitente,
             nombre,
             !string.IsNullOrWhiteSpace(clave),
             clave.Length);
+
+        if (usuarioRecortado)
+        {
+            logger.LogWarning(
+                "Smtp:Username tenía espacios o saltos de línea al inicio/fin; se recortaron. " +
+                "Revisa la variable Smtp__Username en el entorno de despliegue.");
+        }
+
+        if (claveRecortada)
+        {
+            logger.LogWarning(
+                "Smtp:Password tenía espacios o saltos de línea al inicio/fin; se recortaron. " +
+                "Revisa la variable Smtp__Password en el entorno de despliegue.");
+        }
 
         var faltantes = new List<string>();
         if (string.IsNullOrWhiteSpace(host))
