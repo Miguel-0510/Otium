@@ -109,7 +109,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error al iniciar sesión para {Email}", Input.Email);
+            Logger.LogError(ex, "Error al iniciar sesión para {Email}: {TipoExcepcion}", Input.Email, ex.GetType().FullName);
             errorMessage = "Ocurrió un error al iniciar sesión. Inténtalo de nuevo más tarde.";
         }
     }

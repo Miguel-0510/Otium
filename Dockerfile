@@ -16,6 +16,8 @@ ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 ENV DOTNET_EnableDiagnostics=0
 ENV PORT=8080
 
+RUN mkdir -p /var/data /var/data/keys && chmod 777 /var/data /var/data/keys
+
 EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "Otium.dll"]
