@@ -99,9 +99,17 @@ var dataProtection = builder.Configuration
 
 if (!string.IsNullOrWhiteSpace(dataProtection.KeysPath))
 {
-    builder.Services.AddDataProtection()
-        .PersistKeysToFileSystem(new DirectoryInfo(dataProtection.KeysPath))
-        .SetApplicationName(dataProtection.ApplicationName);
+    try
+    {
+        Directory.CreateDirectory(dataProtection.KeysPath);
+        builder.Services.AddDataProtection()
+            .PersistKeysToFileSystem(new DirectoryInfo(dataProtection.KeysPath))
+            .SetApplicationName(dataProtection.ApplicationName);
+    }
+    catch
+    {
+        // Data Protection usará almacenamiento en memoria si falla la persistencia en archivos.
+    }
 }
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
@@ -249,7 +257,7 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     try
     {
-        db.Database.Migrate();
+        await db.Database.MigrateAsync();
     }
     catch (Exception ex)
     {
