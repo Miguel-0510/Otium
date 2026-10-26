@@ -102,7 +102,7 @@ var dataProtection = builder.Configuration
 var proteccionDatos = builder.Services.AddDataProtection()
     .SetApplicationName(dataProtection.ApplicationName);
 
-var clavesPersistentes = false;
+var proteccionDatosEnBaseDatos = false;
 if (!string.IsNullOrWhiteSpace(dataProtection.KeysPath))
 {
     try
@@ -119,7 +119,6 @@ if (!string.IsNullOrWhiteSpace(dataProtection.KeysPath))
         }
 
         proteccionDatos.PersistKeysToFileSystem(directorio);
-        clavesPersistentes = true;
     }
     catch (Exception ex)
     {
@@ -128,6 +127,13 @@ if (!string.IsNullOrWhiteSpace(dataProtection.KeysPath))
         throw new InvalidOperationException(
             $"No se pudo preparar Data Protection en '{dataProtection.KeysPath}'.", ex);
     }
+}
+else
+{
+    // Render free no ofrece discos persistentes. Guardar el llavero en la base de datos
+    // evita invalidar sesiones y enlaces de recuperación en cada reinicio o despliegue.
+    proteccionDatos.PersistKeysToDbContext<ApplicationDbContext>();
+    proteccionDatosEnBaseDatos = true;
 }
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
@@ -331,11 +337,11 @@ app.UseForwardedHeaders();
 
 await BaseDatosInicializador.InicializarAsync(app.Services, proveedorBaseDatos, app.Logger);
 
-if (!clavesPersistentes && !app.Environment.IsDevelopment())
+if (proteccionDatosEnBaseDatos)
 {
-    app.Logger.LogWarning(
-        "Data Protection no tiene una ruta persistente (DataProtection:KeysPath). " +
-        "Las sesiones se invalidarán cada vez que se reinicie o redespliegue el contenedor.");
+    app.Logger.LogInformation(
+        "Data Protection persiste las claves en la base de datos ({Proveedor}).",
+        proveedorBaseDatos);
 }
 
 if (app.Environment.IsDevelopment())

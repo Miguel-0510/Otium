@@ -7,12 +7,13 @@ Todos los cambios notables de este proyecto se documentarán en este archivo.
 ### Despliegue en Render
 - Servicio de correo unificado en SMTP de Brevo (`SmtpEnvioCorreo`) tras la abstracción `IEnvioCorreo`. Se eliminó la integración previa de correo por HTTP.
 - `EmailSender` conserva las plantillas y delega el envío en el transporte SMTP.
-- El transporte SMTP usa STARTTLS en `smtp-relay.brevo.com:587`, timeout, cancelación y captura de errores sin bloquear la petición.
+- El transporte SMTP usa MailKit con STARTTLS en `smtp-relay.brevo.com` (587/2525) o SSL en 465, autenticación explícita, timeout, cancelación y captura de errores sin bloquear la petición. Corrige `5.7.0 Please authenticate first` de `System.Net.Mail.SmtpClient`.
+- Data Protection persiste las claves en la tabla `DataProtectionKeys` de la base de datos cuando no se configura `DataProtection:KeysPath`; las sesiones y los enlaces de recuperación sobreviven a reinicios y despliegues en Render. Migración `AgregarClavesProteccionDatos` y creación idempotente para PostgreSQL.
 - Gemini normaliza la API key (espacios) y acepta `GEMINI_API_KEY` como alias.
 - Añadido `DiagnosticoConfiguracion`: al arrancar registra presencia y longitud de las claves, los valores de `Smtp:Host`, `Port`, `Username` y `SenderEmail`, y advierte de campos vacíos o inválidos sin exponer secretos.
 - Añadida verificación de DI al arrancar para `IGeminiClient`, `IEnvioCorreo` e `IEmailSender<ApplicationUser>`.
 - Gemini reintenta `429` y trata los timeouts como error controlado en el glosario. Los errores HTTP registran `StatusCode` y `ResponseBody`; los fallos de red, timeout y JSON inválido quedan detallados en el log.
-- `SmtpEnvioCorreo` registra el mensaje exacto de Brevo y clasifica `SmtpException`, `SocketException`, fallos de autenticación, remitente rechazado y bloqueo del puerto SMTP saliente.
+- `SmtpEnvioCorreo` registra el mensaje exacto de Brevo y clasifica `SmtpCommandException`, `SmtpProtocolException`, `AuthenticationException`, `SslHandshakeException`, `SocketException`, fallos de autenticación, remitente/destinatario rechazado y bloqueo del puerto SMTP saliente.
 - Eliminado `.github/workflows/docker.yml`.
 
 ### Telemetría y archivos estáticos

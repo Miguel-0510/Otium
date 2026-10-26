@@ -13,7 +13,7 @@ Documentación operativa del servicio de respaldo de la base de datos SQLite
 ## Alcance
 
 Se respalda únicamente la base de datos SQLite (`app.db`). No se respaldan:
-- Claves de Data Protection (`DataProtection__KeysPath`).
+- Claves de Data Protection en filesystem (`DataProtection__KeysPath`), si se configuran. Sin esa ruta, las claves viven en la tabla `DataProtectionKeys` y quedan cubiertas por el respaldo de la base de datos.
 - Archivos de configuración (`appsettings.json`, variables de entorno).
 - Secretos (User Secrets, variables de entorno, claves de API).
 

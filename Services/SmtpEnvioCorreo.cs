@@ -1,8 +1,8 @@
-using System.Net;
-using System.Net.Mail;
 using System.Net.Sockets;
-using System.Security.Authentication;
+using MailKit.Net.Smtp;
+using MailKit.Security;
 using Microsoft.Extensions.Options;
+using MimeKit;
 using Otium.Services.Options;
 
 namespace Otium.Services;
@@ -44,34 +44,30 @@ public sealed class SmtpEnvioCorreo : IEnvioCorreo
             return false;
         }
 
+        var opcionesSeguridad = _opciones.Port == 465
+            ? SecureSocketOptions.SslOnConnect
+            : SecureSocketOptions.StartTls;
+
         _logger.LogInformation(
-            "Iniciando envío SMTP a {Destinatario} por {Host}:{Puerto} " +
-            "(STARTTLS={StartTls}, usuario longitud {LongitudUsuario}, remitente {Remitente}).",
+            "Iniciando envío SMTP con MailKit a {Destinatario} por {Host}:{Puerto} " +
+            "(seguridad={Seguridad}, usuario longitud {LongitudUsuario}, remitente {Remitente}).",
             destinatario,
             _opciones.Host,
             _opciones.Port,
-            true,
+            opcionesSeguridad,
             _opciones.Username.Length,
             _opciones.SenderEmail);
 
         try
         {
-            using var mensaje = new MailMessage
+            var mensaje = new MimeMessage();
+            mensaje.From.Add(new MailboxAddress(_opciones.SenderName, _opciones.SenderEmail));
+            mensaje.To.Add(MailboxAddress.Parse(destinatario));
+            mensaje.Subject = asunto;
+            mensaje.Body = new TextPart("html")
             {
-                From = new MailAddress(_opciones.SenderEmail, _opciones.SenderName),
-                Subject = asunto,
-                Body = cuerpoHtml,
-                IsBodyHtml = true
-            };
-            mensaje.To.Add(destinatario);
-
-            using var cliente = new SmtpClient(_opciones.Host, _opciones.Port)
-            {
-                DeliveryMethod = SmtpDeliveryMethod.Network,
-                UseDefaultCredentials = false,
-                Credentials = new NetworkCredential(_opciones.Username, _opciones.Password),
-                EnableSsl = true,
-                Timeout = TimeoutMilisegundos
+                Text = cuerpoHtml,
+                ContentType = { Charset = "utf-8" }
             };
 
             using var tiempoLimite = new CancellationTokenSource(TimeoutMilisegundos);
@@ -79,7 +75,43 @@ public sealed class SmtpEnvioCorreo : IEnvioCorreo
                 cancellationToken,
                 tiempoLimite.Token);
 
-            await cliente.SendMailAsync(mensaje, tokenVinculado.Token);
+            using var cliente = new SmtpClient
+            {
+                Timeout = TimeoutMilisegundos
+            };
+
+            await cliente.ConnectAsync(
+                _opciones.Host,
+                _opciones.Port,
+                opcionesSeguridad,
+                tokenVinculado.Token);
+            await cliente.AuthenticateAsync(
+                _opciones.Username,
+                _opciones.Password,
+                tokenVinculado.Token);
+            await cliente.SendAsync(mensaje, tokenVinculado.Token);
+
+            try
+            {
+                using var cierre = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                await cliente.DisconnectAsync(quit: true, cierre.Token);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "El correo se envió a {Destinatario}, pero no se pudo cerrar la conexión SMTP " +
+                    "con {Host}:{Puerto} limpiamente.",
+                    destinatario,
+                    _opciones.Host,
+                    _opciones.Port);
+            }
+
+            _logger.LogInformation(
+                "Correo SMTP enviado a {Destinatario} mediante {Host}:{Puerto}.",
+                destinatario,
+                _opciones.Host,
+                _opciones.Port);
             return true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -100,51 +132,6 @@ public sealed class SmtpEnvioCorreo : IEnvioCorreo
                 Clasificar(ex));
             return false;
         }
-        catch (SmtpFailedRecipientsException ex)
-        {
-            _logger.LogError(
-                ex,
-                "Brevo rechazó uno o varios destinatarios al enviar a {Destinatario} mediante {Host}:{Puerto}. " +
-                "SmtpStatusCode: {Estado}. Detalle del servidor: {Detalle}. Causa probable: {Causa}.",
-                destinatario,
-                _opciones.Host,
-                _opciones.Port,
-                ex.StatusCode,
-                ex.Message,
-                Clasificar(ex));
-            return false;
-        }
-        catch (SmtpFailedRecipientException ex)
-        {
-            _logger.LogError(
-                ex,
-                "Brevo rechazó el destinatario {Rechazado} al enviar a {Destinatario} mediante {Host}:{Puerto}. " +
-                "SmtpStatusCode: {Estado}. Detalle del servidor: {Detalle}. Causa probable: {Causa}.",
-                ex.FailedRecipient,
-                destinatario,
-                _opciones.Host,
-                _opciones.Port,
-                ex.StatusCode,
-                ex.Message,
-                Clasificar(ex));
-            return false;
-        }
-        catch (SmtpException ex)
-        {
-            _logger.LogError(
-                ex,
-                "Brevo SMTP devolvió un error al enviar a {Destinatario} mediante {Host}:{Puerto}. " +
-                "SmtpStatusCode: {Estado}. Mensaje del servidor: {Detalle}. Causa probable: {Causa}. " +
-                "Excepción interna: {Interno}.",
-                destinatario,
-                _opciones.Host,
-                _opciones.Port,
-                ex.StatusCode,
-                ex.Message,
-                Clasificar(ex),
-                DescribirCadena(ex));
-            return false;
-        }
         catch (AuthenticationException ex)
         {
             _logger.LogError(
@@ -156,6 +143,53 @@ public sealed class SmtpEnvioCorreo : IEnvioCorreo
                 _opciones.Port,
                 ex.Message,
                 Clasificar(ex));
+            return false;
+        }
+        catch (SmtpCommandException ex)
+        {
+            _logger.LogError(
+                ex,
+                "Brevo SMTP devolvió un error al enviar a {Destinatario} mediante {Host}:{Puerto}. " +
+                "SmtpStatusCode: {Estado}; SmtpErrorCode: {CodigoError}; " +
+                "buzón rechazado: {Buzon}. Mensaje del servidor: {Detalle}. Causa probable: {Causa}. " +
+                "Excepción interna: {Interno}.",
+                destinatario,
+                _opciones.Host,
+                _opciones.Port,
+                ex.StatusCode,
+                ex.ErrorCode,
+                ex.Mailbox?.Address ?? "ninguno",
+                ex.Message,
+                Clasificar(ex),
+                DescribirCadena(ex));
+            return false;
+        }
+        catch (SmtpProtocolException ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error de protocolo SMTP con {Host}:{Puerto} al enviar a {Destinatario}. " +
+                "Mensaje: {Detalle}. Causa probable: {Causa}. Excepción interna: {Interno}.",
+                _opciones.Host,
+                _opciones.Port,
+                destinatario,
+                ex.Message,
+                Clasificar(ex),
+                DescribirCadena(ex));
+            return false;
+        }
+        catch (SslHandshakeException ex)
+        {
+            _logger.LogError(
+                ex,
+                "Falló el handshake TLS con {Host}:{Puerto} al enviar a {Destinatario}. " +
+                "Mensaje: {Detalle}. Causa probable: {Causa}. Excepción interna: {Interno}.",
+                _opciones.Host,
+                _opciones.Port,
+                destinatario,
+                ex.Message,
+                Clasificar(ex),
+                DescribirCadena(ex));
             return false;
         }
         catch (SocketException ex)
@@ -247,20 +281,52 @@ public sealed class SmtpEnvioCorreo : IEnvioCorreo
                    "(usa la clave SMTP de Brevo, no la contraseña de la cuenta).";
         }
 
+        if (Buscar<SmtpCommandException>(ex) is { } comando)
+        {
+            switch (comando.StatusCode)
+            {
+                case SmtpStatusCode.AuthenticationRequired:
+                case SmtpStatusCode.AuthenticationMechanismTooWeak:
+                case SmtpStatusCode.AuthenticationInvalidCredentials:
+                case SmtpStatusCode.EncryptionRequiredForAuthenticationMechanism:
+                    return "autenticación rechazada: revisa Smtp:Username y Smtp:Password " +
+                           "(usa la clave SMTP de Brevo, no la contraseña de la cuenta).";
+                case SmtpStatusCode.MailboxUnavailable:
+                case SmtpStatusCode.MailboxNameNotAllowed:
+                case SmtpStatusCode.UserNotLocalTryAlternatePath:
+                case SmtpStatusCode.ExceededStorageAllocation:
+                    return "destinatario rechazado: verifica que el correo exista y que no tenga " +
+                           "la bandeja llena.";
+                case SmtpStatusCode.ServiceNotAvailable:
+                case SmtpStatusCode.MailboxBusy:
+                case SmtpStatusCode.ErrorInProcessing:
+                case SmtpStatusCode.InsufficientStorage:
+                    return "el servidor SMTP no está disponible temporalmente; reintenta más tarde.";
+            }
+        }
+
+        if (Buscar<SslHandshakeException>(ex) is not null)
+        {
+            return "problema de TLS: el certificado del servidor no es válido o el puerto " +
+                   "no ofrece STARTTLS/SSL.";
+        }
+
+        if (Buscar<SmtpProtocolException>(ex) is not null)
+        {
+            return "el servidor SMTP no respetó el protocolo esperado; revisa el puerto y " +
+                   "el modo de seguridad (STARTTLS en 587/2525, SSL en 465).";
+        }
+
         var mensajes = new List<string>();
         for (var actual = ex; actual is not null; actual = actual.InnerException)
         {
             mensajes.Add(actual.Message);
-
-            if (actual is SmtpFailedRecipientException rechazo)
-            {
-                mensajes.Add($"rechazo del destinatario {rechazo.FailedRecipient}");
-            }
         }
 
         var texto = string.Join(" | ", mensajes).ToLowerInvariant();
 
-        if (texto.Contains("authentication") || texto.Contains("535") || texto.Contains("5.7.8")
+        if (texto.Contains("authentication") || texto.Contains("authenticate")
+            || texto.Contains("535") || texto.Contains("5.7.8")
             || texto.Contains("credentials") || texto.Contains("username and password"))
         {
             return "autenticación rechazada: revisa Smtp:Username y Smtp:Password " +
@@ -275,7 +341,8 @@ public sealed class SmtpEnvioCorreo : IEnvioCorreo
 
         if (texto.Contains("ssl") || texto.Contains("tls") || texto.Contains("secure connection"))
         {
-            return "problema de TLS/STARTTLS: confirma el puerto 587 y EnableSsl=true.";
+            return "problema de TLS/STARTTLS: confirma el puerto y el modo de seguridad " +
+                   "(STARTTLS en 587/2525, SSL en 465).";
         }
 
         if (texto.Contains("timed out") || texto.Contains("timeout") || texto.Contains("connection refused"))

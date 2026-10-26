@@ -60,15 +60,15 @@ dotnet ef database update
 Las claves se leen de variables de entorno / User Secrets / `appsettings.Development.json` (ignorada por Git):
 
 - `ConnectionStrings:DefaultConnection` — SQLite
-- `DataProtection:KeysPath` — persistencia de claves de Data Protection
-- `Smtp:Host` / `Smtp:Port` — relé SMTP de Brevo (`smtp-relay.brevo.com:587`)
+- `DataProtection:KeysPath` — persistencia opcional de claves en filesystem; sin ella se usa la tabla `DataProtectionKeys` de la base de datos
+- `Smtp:Host` / `Smtp:Port` — relé SMTP de Brevo (`smtp-relay.brevo.com`, `587`/`2525` con STARTTLS, `465` con SSL)
 - `Smtp:Username` / `Smtp:Password` — credenciales SMTP de Brevo
 - `Smtp:SenderEmail` / `Smtp:SenderName` — remitente verificado y nombre visible
 - `Gemini:ApiKey` / `Gemini:Modelo` — Gemini
 - `Sitio:UrlPublica` — URL pública para enlaces de recuperación
 - `Seguridad:PermitirHttp` — permite HTTP en modo Production (Tailscale)
 
-El correo se envía siempre por el relé SMTP de Brevo con STARTTLS. Configura `Smtp:SenderEmail` con un remitente verificado en Brevo.
+El correo se envía por el relé SMTP de Brevo con MailKit (STARTTLS en `587`/`2525`, SSL en `465`). Configura `Smtp:SenderEmail` con un remitente verificado en Brevo. En Render free, usa `Smtp__Port=2525` porque los puertos `25`, `465` y `587` están bloqueados.
 
 Nunca commitear secretos ni archivos `.db`.
 

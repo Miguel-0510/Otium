@@ -142,9 +142,9 @@ Claves usadas:
 | Clave | Uso | Dónde |
 |---|---|---|
 | `ConnectionStrings:DefaultConnection` | SQLite | `appsettings.json` |
-| `DataProtection:KeysPath` | Persistencia de claves | Entorno/Docker |
+| `DataProtection:KeysPath` | Persistencia de claves en filesystem (opcional; sin ella se usa la base de datos) | Entorno/Docker |
 | `Smtp:Host` | Servidor SMTP de Brevo (`smtp-relay.brevo.com`) | `appsettings.json` |
-| `Smtp:Port` | Puerto SMTP (`587`, STARTTLS) | `appsettings.json` |
+| `Smtp:Port` | Puerto SMTP (`587`/`2525` STARTTLS, `465` SSL) | `appsettings.json` |
 | `Smtp:Username` | Usuario SMTP de Brevo | `appsettings.json` |
 | `Smtp:Password` | Contraseña SMTP de Brevo | User Secrets/entorno (`Smtp__Password`) |
 | `Smtp:SenderEmail` | Remitente verificado en Brevo | `appsettings.json` |
@@ -154,7 +154,7 @@ Claves usadas:
 | `Sitio:UrlPublica` | URL externa para enlaces de correo | Configuración local/entorno |
 | `Invitacion:Codigo` | Legado; ya no se usa en el fuente actual | `appsettings.Development.json` |
 
-El correo se envía siempre por el relé SMTP de Brevo (`smtp-relay.brevo.com:587`) con STARTTLS. `Smtp:SenderEmail` debe ser un remitente verificado en Brevo. `GEMINI_API_KEY` se acepta como alias de entorno para Gemini.
+El correo se envía por el relé SMTP de Brevo (`smtp-relay.brevo.com`, `587`/`2525` con STARTTLS, `465` con SSL) mediante MailKit. `Smtp:SenderEmail` debe ser un remitente verificado en Brevo. `GEMINI_API_KEY` se acepta como alias de entorno para Gemini.
 
 Reglas:
 
@@ -169,8 +169,8 @@ dotnet user-secrets set "Smtp:Password" "<valor>"
 ```
 
 - En producción usar variables de entorno o un gestor de secretos, nunca el archivo del repositorio.
-- `DataProtection:KeysPath` debe existir y tener permisos restringidos. Sin esa configuración se usan claves efímeras y se invalidan sesiones/tokens al reiniciar.
-- `Gemini:ApiKey` se envía actualmente en la query string (`GlosarioService.cs:57`); cambiarlo a cabecera `x-goog-api-key` para no exponerlo en logs, trazas ni mensajes de excepción.
+- Si se define `DataProtection:KeysPath`, debe existir y tener permisos restringidos. Si no se define, las claves se guardan en la tabla `DataProtectionKeys` de la base de datos, de modo que sobreviven a reinicios y despliegues.
+- `Gemini:ApiKey` se envía en la cabecera `x-goog-api-key` y no se devuelve en los mensajes de error.
 
 ---
 
@@ -183,7 +183,7 @@ dotnet user-secrets set "Smtp:Password" "<valor>"
 1. Registra Razor Components interactivos por servidor.
 2. Configura autenticación, Identity, cookies y revalidación de seguridad.
 3. Registra `ApplicationDbContext` y `IDbContextFactory<ApplicationDbContext>` con SQLite.
-4. Configura Data Protection si existe `DataProtection:KeysPath`.
+4. Configura Data Protection en filesystem si existe `DataProtection:KeysPath`; si no, persiste el llavero en la base de datos (`DataProtectionKeys`).
 5. Registra servicios de libros, amigos, travesías, glosario, Open Library y correo.
 6. Aplica migraciones al iniciar.
 7. Configura HSTS, manejo de errores, cabeceras de seguridad, redirección HTTPS y antiforgery.
@@ -241,7 +241,7 @@ Relaciones relevantes en `Data/ApplicationDbContext.cs`:
 
 - **Open Library:** búsqueda de 8 resultados por título/autor; portadas desde `covers.openlibrary.org`.
 - **Gemini:** definiciones breves; modelo por defecto `gemini-flash-lite-latest`; la API key se envía en `x-goog-api-key`.
-- **Brevo SMTP:** envío de enlaces de confirmación y recuperación por el relé `smtp-relay.brevo.com:587` con STARTTLS.
+- **Brevo SMTP:** envío de enlaces de confirmación y recuperación por el relé `smtp-relay.brevo.com` (STARTTLS en `587`/`2525`, SSL en `465`) con MailKit.
 - **PWA:** el service worker solo guarda la página de aviso sin conexión. La app requiere conexión, por diseño.
 
 ### 6.6 Despliegue dual: Tailscale local y VPS Oracle
@@ -260,7 +260,7 @@ Reglas de compatibilidad:
 - `UseHttpsRedirection`, `UseHsts` y cookies `Secure` solo se activan cuando `exigirHttps` es verdadero: `Production` y `Seguridad:PermitirHttp=false`.
 - En local sobre Tailscale se puede ejecutar en `Development` (recomendado) o en `Production` con `Seguridad__PermitirHttp=true`; en este último caso las cookies usan `SameAsRequest`.
 - En el VPS, Kestrel no debe escuchar en `0.0.0.0`; el proxy inverso termina TLS y reenvía a loopback.
-- Las claves de Data Protection y la base de datos deben vivir fuera de la carpeta de publicación (`DataProtection__KeysPath` y `ConnectionStrings__DefaultConnection`).
+- Las claves de Data Protection (filesystem o tabla `DataProtectionKeys`) y la base de datos deben vivir fuera de la carpeta de publicación (`DataProtection__KeysPath` si se usa y `ConnectionStrings__DefaultConnection`).
 - El CSP ya declara `wss:`; el proxy debe permitir WebSocket para Blazor Server.
 
 Ejemplo de variables en el VPS:
@@ -281,7 +281,7 @@ Sitio__UrlPublica=https://otium.example.com
 - El proveedor se detecta por la forma de la cadena (URL de Postgres, `Host=`/`Server=`/`Username=`) o por `Database__Provider=PostgreSql|Sqlite`.
 - Las migraciones de `Data/Migrations` son de SQLite y **no son portables** a PostgreSQL. En PostgreSQL el esquema se crea desde el modelo con `EnsureCreatedAsync` (`Data/BaseDatosInicializador.cs`). Si en el futuro cambia el modelo en producción, hay que crear migraciones específicas de Npgsql en un ensamblado aparte y cambiar la estrategia.
 - El arranque reintenta 5 veces con espera exponencial y, si no puede preparar el esquema, **detiene la aplicación** en lugar de servir errores 500.
-- `DataProtection__KeysPath` debe apuntar a un volumen persistente (en Render, un Disk montado en `/var/data` y `DataProtection__KeysPath=/var/data/keys`). Sin eso, las claves viven en el contenedor y las sesiones se pierden en cada reinicio; la aplicación lo registra como warning.
+- Data Protection persiste las claves en la tabla `DataProtectionKeys` de la base de datos cuando no se define `DataProtection__KeysPath`; esto funciona en Render free y evita invalidar sesiones y enlaces de recuperación en cada reinicio. Si se usa un Disk, configurar `DataProtection__KeysPath=/var/data/keys`. La tabla se crea de forma idempotente al arrancar (`Data/BaseDatosInicializador.cs`).
 - Si el proxy de Render no está en `Proxy__KnownProxies`, `ForwardedHeaders` no confía en `X-Forwarded-Proto`. Configurar el proxy o `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` para que `exigirHttps`, HSTS y las cookies `Secure` funcionen con TLS terminado en el borde.
 
 ---
@@ -338,7 +338,7 @@ OSI es un modelo de comunicaciones de red, no una arquitectura de software. No e
 |---|---|---|
 | 7 Aplicación | HTTP/HTTPS, Blazor SignalR, Open Library, Gemini, SMTP | Correcto en salidas; entrada publicada sin TLS |
 | 6 Presentación | HTML, CSS, JS, JSON, UTF-8 | Correcto |
-| 5 Sesión | Cookies de Identity, circuito SignalR, Data Protection | Correcto con salvedades de claves |
+| 5 Sesión | Cookies de Identity, circuito SignalR, Data Protection | Correcto: llavero persistido en base de datos o filesystem |
 | 4 Transporte | TCP | Correcto |
 | 3 Red | IP, proxy inverso | No documentado; depende del despliegue |
 | 2/1 Enlace/Físico | Infraestructura | Fuera del alcance del código |
@@ -346,7 +346,7 @@ OSI es un modelo de comunicaciones de red, no una arquitectura de software. No e
 Hallazgos de red:
 
 - Las APIs externas usan HTTPS.
-- SMTP usa STARTTLS en el puerto 587 (`EnableSsl = true`).
+- SMTP usa MailKit con STARTTLS en `587`/`2525` y SSL en `465`.
 - La publicación actual escucha HTTP en `http://localhost:5000` y el Dockerfile expone HTTP en `8080`.
 - `UseHttpsRedirection()` y `UseHsts()` existen, pero sin un puerto HTTPS o proxy TLS delante no protegen nada.
 - Las cookies de autenticación deben ir con `Secure` en producción; eso exige HTTPS real.
@@ -653,13 +653,14 @@ Acciones:
 
 #### P2-17. `EmailSender` frágil
 
-**Estado: parcialmente corregido (2026-10-25).** `EmailSender` delega en `IEnvioCorreo`; el único transporte es SMTP de Brevo con opciones tipadas y validadas. Tiene timeout, cancelación y manejo de errores sin romper la petición. El arranque registra si el correo está configurado. Sigue pendiente valorar una cola/outbox.
+**Estado: parcialmente corregido (2026-10-25).** `EmailSender` delega en `IEnvioCorreo`; el único transporte es SMTP de Brevo con opciones tipadas y validadas. Usa MailKit (`SmtpClient` propio), autentica explícitamente con AUTH tras STARTTLS, tiene timeout, cancelación y manejo de errores sin romper la petición. El arranque registra si el correo está configurado. Sigue pendiente valorar una cola/outbox.
 
 - ~~`Services/EmailSender.cs:33-37` usa `int.Parse` y claves opcionales sin validación.~~
 - ~~Si falta `Smtp:Host`, `Smtp:Username` o `Smtp:Password`, falla en tiempo de ejecución.~~
-- `SmtpClient` es una API heredada; valorar MailKit.
+- ~~`SmtpClient` es una API heredada; valorar MailKit.~~ Migrado a MailKit `4.18.2`: `System.Net.Mail.SmtpClient` no autenticaba de forma fiable contra Brevo (`5.7.0 Please authenticate first`).
 - Enviar correo dentro de la petición puede aumentar la latencia; valorar cola/outbox.
 - ~~No hay reintentos, cancelación ni verificación de configuración al arrancar.~~
+- Render free bloquea los puertos SMTP `25`, `465` y `587`; usar `Smtp__Port=2525` (Brevo) o la API HTTP de Brevo.
 
 #### P2-18. Sin respaldos ni recuperación documentada
 

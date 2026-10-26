@@ -1,17 +1,19 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Otium.Models;
 
 namespace Otium.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-    : IdentityDbContext<ApplicationUser>(options)
+    : IdentityDbContext<ApplicationUser>(options), IDataProtectionKeyContext
 {
     public DbSet<Libro> Libros => Set<Libro>();
     public DbSet<Amistad> Amistades => Set<Amistad>();
     public DbSet<EntradaLectura> EntradasLectura => Set<EntradaLectura>();
     public DbSet<PalabraGlosario> PalabrasGlosario => Set<PalabraGlosario>();
     public DbSet<Bloqueo> Bloqueos => Set<Bloqueo>();
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
