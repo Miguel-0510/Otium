@@ -4,11 +4,7 @@ WORKDIR /src
 COPY ["Otium.csproj", "./"]
 RUN dotnet restore "Otium.csproj" --disable-parallel
 COPY . .
-RUN dotnet publish "Otium.csproj" -c Release -o /app/publish \
-    /p:UseAppHost=false \
-    /p:PublishReadyToRun=false \
-    /p:TieredPGO=false \
-    /p:OptimizationPreference=Size
+RUN dotnet publish "Otium.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # Imagen de runtime - ASP.NET Core 10.0
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
