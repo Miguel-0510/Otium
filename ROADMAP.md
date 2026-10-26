@@ -253,11 +253,11 @@ dotnet test
 ```powershell
 dotnet user-secrets init
 dotnet user-secrets set "Gemini:ApiKey" "<nueva-key>"
-dotnet user-secrets set "Correo:Host" "<host>"
-dotnet user-secrets set "Correo:Puerto" "587"
-dotnet user-secrets set "Correo:Usuario" "<usuario>"
-dotnet user-secrets set "Correo:Clave" "<nueva-clave>"
-dotnet user-secrets set "Correo:Remitente" "<remitente>"
+dotnet user-secrets set "Smtp:Host" "smtp-relay.brevo.com"
+dotnet user-secrets set "Smtp:Port" "587"
+dotnet user-secrets set "Smtp:Username" "<usuario>"
+dotnet user-secrets set "Smtp:Password" "<nueva-clave>"
+dotnet user-secrets set "Smtp:SenderEmail" "<remitente>"
 ```
 
 3. Dejar `appsettings.Development.json` sin secretos o eliminarlo del disco si no se necesita.
@@ -266,7 +266,7 @@ dotnet user-secrets set "Correo:Remitente" "<remitente>"
 
 ```powershell
 git log --all -p -- appsettings.Development.json
-git grep -n -I -E "ApiKey|Correo:Clave|Secret|PrivateKey" $(git rev-list --all)
+git grep -n -I -E "ApiKey|Smtp:Password|Secret|PrivateKey" $(git rev-list --all)
 ```
 
 Si alguna credencial aparece en el historial, rotarla y evaluar limpieza del historial.

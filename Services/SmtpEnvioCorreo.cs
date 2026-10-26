@@ -9,10 +9,10 @@ public sealed class SmtpEnvioCorreo : IEnvioCorreo
 {
     private const int TimeoutMilisegundos = 15_000;
 
-    private readonly CorreoOptions _opciones;
+    private readonly SmtpOptions _opciones;
     private readonly ILogger<SmtpEnvioCorreo> _logger;
 
-    public SmtpEnvioCorreo(IOptions<CorreoOptions> opciones, ILogger<SmtpEnvioCorreo> logger)
+    public SmtpEnvioCorreo(IOptions<SmtpOptions> opciones, ILogger<SmtpEnvioCorreo> logger)
     {
         _opciones = opciones.Value;
         _logger = logger;
@@ -20,9 +20,9 @@ public sealed class SmtpEnvioCorreo : IEnvioCorreo
 
     public bool EstaConfigurado =>
         !string.IsNullOrWhiteSpace(_opciones.Host)
-        && !string.IsNullOrWhiteSpace(_opciones.Usuario)
-        && !string.IsNullOrWhiteSpace(_opciones.Clave)
-        && !string.IsNullOrWhiteSpace(_opciones.Remitente);
+        && !string.IsNullOrWhiteSpace(_opciones.Username)
+        && !string.IsNullOrWhiteSpace(_opciones.Password)
+        && !string.IsNullOrWhiteSpace(_opciones.SenderEmail);
 
     public async Task<bool> EnviarAsync(
         string destinatario,
@@ -34,27 +34,31 @@ public sealed class SmtpEnvioCorreo : IEnvioCorreo
         {
             _logger.LogWarning(
                 "SMTP no está configurado; se omite el envío a {Destinatario}. " +
-                "Configura Correo:Host, Correo:Usuario, Correo:Clave y Correo:Remitente.",
+                "Configura Smtp:Host, Smtp:Username, Smtp:Password y Smtp:SenderEmail.",
                 destinatario);
             return false;
         }
 
-        using var mensaje = new MailMessage();
-        mensaje.From = new MailAddress(_opciones.Remitente, "Otium");
-        mensaje.To.Add(destinatario);
-        mensaje.Subject = asunto;
-        mensaje.Body = cuerpoHtml;
-        mensaje.IsBodyHtml = true;
-
-        using var cliente = new SmtpClient(_opciones.Host, _opciones.Puerto)
-        {
-            Credentials = new NetworkCredential(_opciones.Usuario, _opciones.Clave),
-            EnableSsl = true,
-            Timeout = TimeoutMilisegundos
-        };
-
         try
         {
+            using var mensaje = new MailMessage
+            {
+                From = new MailAddress(_opciones.SenderEmail, _opciones.SenderName),
+                Subject = asunto,
+                Body = cuerpoHtml,
+                IsBodyHtml = true
+            };
+            mensaje.To.Add(destinatario);
+
+            using var cliente = new SmtpClient(_opciones.Host, _opciones.Port)
+            {
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                UseDefaultCredentials = false,
+                Credentials = new NetworkCredential(_opciones.Username, _opciones.Password),
+                EnableSsl = true,
+                Timeout = TimeoutMilisegundos
+            };
+
             await cliente.SendMailAsync(mensaje, cancellationToken);
             return true;
         }
@@ -62,17 +66,25 @@ public sealed class SmtpEnvioCorreo : IEnvioCorreo
         {
             throw;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             _logger.LogError(
-                "El envío SMTP a {Destinatario} superó el tiempo límite de {Timeout} ms.",
+                ex,
+                "El envío SMTP a {Destinatario} mediante {Host}:{Puerto} superó el tiempo límite de {Timeout} ms.",
                 destinatario,
+                _opciones.Host,
+                _opciones.Port,
                 TimeoutMilisegundos);
             return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "No se pudo enviar el correo SMTP a {Destinatario}", destinatario);
+            _logger.LogError(
+                ex,
+                "No se pudo enviar el correo SMTP a {Destinatario} mediante {Host}:{Puerto}.",
+                destinatario,
+                _opciones.Host,
+                _opciones.Port);
             return false;
         }
     }

@@ -5,10 +5,10 @@ Todos los cambios notables de este proyecto se documentarán en este archivo.
 ## [No publicado] - 2026-10-25
 
 ### Despliegue en Render
-- Añadido transporte de correo con Resend (`ResendEnvioCorreo`) y abstracción `IEnvioCorreo`; SMTP queda como alternativa. Se usa Resend cuando `Resend:ApiKey` está configurada.
-- `EmailSender` conserva las plantillas y delega el envío en el transporte seleccionado.
-- Resend y SMTP tienen timeout y capturan errores de red/HTTP sin bloquear la petición.
-- Gemini y Resend normalizan la API key (espacios) y aceptan `GEMINI_API_KEY` / `RESEND_API_KEY` como alias.
+- Servicio de correo unificado en SMTP de Brevo (`SmtpEnvioCorreo`) tras la abstracción `IEnvioCorreo`. Se eliminó la integración previa de correo por HTTP.
+- `EmailSender` conserva las plantillas y delega el envío en el transporte SMTP.
+- El transporte SMTP usa STARTTLS en `smtp-relay.brevo.com:587`, timeout, cancelación y captura de errores sin bloquear la petición.
+- Gemini normaliza la API key (espacios) y acepta `GEMINI_API_KEY` como alias.
 - Añadido log de arranque que indica si Gemini y el correo están configurados, sin exponer secretos.
 - Gemini reintenta `429` y trata los timeouts como error controlado en el glosario.
 - Eliminado `.github/workflows/docker.yml`.

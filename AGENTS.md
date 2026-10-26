@@ -41,7 +41,7 @@ La interfaz y el dominio están en español. Quedan pantallas heredadas de la pl
 | Autenticación | ASP.NET Core Identity + cookies |
 | Base de datos | SQLite + EF Core |
 | Paquetes EF/Identity | `10.0.12` |
-| APIs externas | Open Library (HTTPS), Google Gemini (HTTPS), Resend (HTTPS), SMTP (SSL) |
+| APIs externas | Open Library (HTTPS), Google Gemini (HTTPS), Brevo SMTP (STARTTLS) |
 | PWA | `manifest.json`, `sw.js`, `instalar.js` |
 | Puerto local publicado | `http://localhost:5000` |
 | Puerto de desarrollo | `http://localhost:5235`, `https://localhost:7111` |
@@ -126,8 +126,7 @@ Services/
   GeminiClient.cs                 Cliente Gemini: prompt, HTTP y parseo
   BuscadorLibros.cs               Cliente Open Library con caché y reintentos
   EmailSender.cs                  Plantillas y envío (delega en IEnvioCorreo)
-  ResendEnvioCorreo.cs            Transporte HTTP de Resend
-  SmtpEnvioCorreo.cs              Transporte SMTP
+  SmtpEnvioCorreo.cs              Transporte SMTP de Brevo
 wwwroot/
   app.css, tema.js                Estilos y tema
   manifest.json, sw.js            PWA
@@ -144,21 +143,18 @@ Claves usadas:
 |---|---|---|
 | `ConnectionStrings:DefaultConnection` | SQLite | `appsettings.json` |
 | `DataProtection:KeysPath` | Persistencia de claves | Entorno/Docker |
-| `Resend:ApiKey` | API key de Resend | Entorno (`Resend__ApiKey`) |
-| `Resend:Remitente` | Remitente verificado en Resend | Entorno (`Resend__Remitente`) |
-| `Resend:UrlApi` | Base de la API de Resend | Opcional (`https://api.resend.com/`) |
-| `Correo:Host` | Servidor SMTP (alternativa a Resend) | Configuración local/entorno |
-| `Correo:Puerto` | Puerto SMTP | Configuración local/entorno |
-| `Correo:Usuario` | Usuario SMTP | Configuración local/entorno |
-| `Correo:Clave` | Contraseña SMTP | Configuración local/entorno |
-| `Correo:Remitente` | Remitente | Configuración local/entorno |
+| `Smtp:Host` | Servidor SMTP de Brevo (`smtp-relay.brevo.com`) | `appsettings.json` |
+| `Smtp:Port` | Puerto SMTP (`587`, STARTTLS) | `appsettings.json` |
+| `Smtp:Username` | Usuario SMTP de Brevo | `appsettings.json` |
+| `Smtp:Password` | Contraseña SMTP de Brevo | User Secrets/entorno (`Smtp__Password`) |
+| `Smtp:SenderEmail` | Remitente verificado en Brevo | `appsettings.json` |
+| `Smtp:SenderName` | Nombre visible del remitente | `appsettings.json` |
 | `Gemini:ApiKey` | API key de Gemini | Configuración local/entorno |
 | `Gemini:Modelo` | Modelo Gemini | Opcional |
 | `Sitio:UrlPublica` | URL externa para enlaces de correo | Configuración local/entorno |
 | `Invitacion:Codigo` | Legado; ya no se usa en el fuente actual | `appsettings.Development.json` |
 
-Si `Resend:ApiKey` está definida se usa Resend; en caso contrario se usa SMTP. También se aceptan `RESEND_API_KEY` y `GEMINI_API_KEY` como alias de entorno.
-En producción configura `Resend__Remitente` con un remitente de un dominio verificado en Resend. Si se omite, se usa `onboarding@resend.dev`, que solo permite enviar al correo del propietario de la cuenta.
+El correo se envía siempre por el relé SMTP de Brevo (`smtp-relay.brevo.com:587`) con STARTTLS. `Smtp:SenderEmail` debe ser un remitente verificado en Brevo. `GEMINI_API_KEY` se acepta como alias de entorno para Gemini.
 
 Reglas:
 
@@ -169,7 +165,7 @@ Reglas:
 ```powershell
 dotnet user-secrets init
 dotnet user-secrets set "Gemini:ApiKey" "<valor>"
-dotnet user-secrets set "Correo:Clave" "<valor>"
+dotnet user-secrets set "Smtp:Password" "<valor>"
 ```
 
 - En producción usar variables de entorno o un gestor de secretos, nunca el archivo del repositorio.
@@ -200,7 +196,7 @@ dotnet user-secrets set "Correo:Clave" "<valor>"
 | Presentación | Componentes Razor, CSS aislado, JS mínimo | Existe, pero `Estantes.razor` concentra demasiada lógica |
 | Aplicación | `Services/*` | Parcial; mezcla casos de uso, persistencia y configuración |
 | Dominio | `Models/*` | Entidades anémicas, sin reglas de negocio |
-| Infraestructura | EF Core, SQLite, Resend, SMTP, HttpClient | Existe |
+| Infraestructura | EF Core, SQLite, SMTP (Brevo), HttpClient | Existe |
 | Contratos | Interfaces de servicios | Parcial; `IBuscadorLibros` e `IGeminiClient` existen; faltan DTOs de entrada/salida |
 
 Flujo típico de una página Blazor:
@@ -245,8 +241,7 @@ Relaciones relevantes en `Data/ApplicationDbContext.cs`:
 
 - **Open Library:** búsqueda de 8 resultados por título/autor; portadas desde `covers.openlibrary.org`.
 - **Gemini:** definiciones breves; modelo por defecto `gemini-flash-lite-latest`; la API key se envía en `x-goog-api-key`.
-- **Resend:** envío de enlaces de confirmación y recuperación por HTTPS; se selecciona si existe `Resend:ApiKey`.
-- **SMTP:** alternativa a Resend para envío de enlaces.
+- **Brevo SMTP:** envío de enlaces de confirmación y recuperación por el relé `smtp-relay.brevo.com:587` con STARTTLS.
 - **PWA:** el service worker solo guarda la página de aviso sin conexión. La app requiere conexión, por diseño.
 
 ### 6.6 Despliegue dual: Tailscale local y VPS Oracle
@@ -351,7 +346,7 @@ OSI es un modelo de comunicaciones de red, no una arquitectura de software. No e
 Hallazgos de red:
 
 - Las APIs externas usan HTTPS.
-- SMTP usa SSL (`EnableSsl = true`).
+- SMTP usa STARTTLS en el puerto 587 (`EnableSsl = true`).
 - La publicación actual escucha HTTP en `http://localhost:5000` y el Dockerfile expone HTTP en `8080`.
 - `UseHttpsRedirection()` y `UseHsts()` existen, pero sin un puerto HTTPS o proxy TLS delante no protegen nada.
 - Las cookies de autenticación deben ir con `Secure` en producción; eso exige HTTPS real.
@@ -658,10 +653,10 @@ Acciones:
 
 #### P2-17. `EmailSender` frágil
 
-**Estado: parcialmente corregido (2026-10-25).** `EmailSender` delega en `IEnvioCorreo`; Resend es el transporte principal y SMTP la alternativa. Ambos tienen timeout, cancelación y manejo de errores sin romper la petición. El arranque registra si el correo está configurado. Sigue pendiente valorar una cola/outbox y MailKit para SMTP.
+**Estado: parcialmente corregido (2026-10-25).** `EmailSender` delega en `IEnvioCorreo`; el único transporte es SMTP de Brevo con opciones tipadas y validadas. Tiene timeout, cancelación y manejo de errores sin romper la petición. El arranque registra si el correo está configurado. Sigue pendiente valorar una cola/outbox.
 
 - ~~`Services/EmailSender.cs:33-37` usa `int.Parse` y claves opcionales sin validación.~~
-- ~~Si falta `Correo:Host`, `Correo:Usuario` o `Correo:Clave`, falla en tiempo de ejecución.~~
+- ~~Si falta `Smtp:Host`, `Smtp:Username` o `Smtp:Password`, falla en tiempo de ejecución.~~
 - `SmtpClient` es una API heredada; valorar MailKit.
 - Enviar correo dentro de la petición puede aumentar la latencia; valorar cola/outbox.
 - ~~No hay reintentos, cancelación ni verificación de configuración al arrancar.~~

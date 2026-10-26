@@ -19,15 +19,14 @@ public sealed class OtiumWebAppFactory : WebApplicationFactory<Program>
     public OtiumWebAppFactory()
     {
         Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", $"DataSource={_rutaBaseDatos};Cache=Shared");
-        Environment.SetEnvironmentVariable("Correo__Host", "localhost");
-        Environment.SetEnvironmentVariable("Correo__Puerto", "2525");
-        Environment.SetEnvironmentVariable("Correo__Usuario", "pruebas");
-        Environment.SetEnvironmentVariable("Correo__Clave", "pruebas");
-        Environment.SetEnvironmentVariable("Correo__Remitente", "pruebas@example.com");
+        Environment.SetEnvironmentVariable("Smtp__Host", "localhost");
+        Environment.SetEnvironmentVariable("Smtp__Port", "2525");
+        Environment.SetEnvironmentVariable("Smtp__Username", "pruebas");
+        Environment.SetEnvironmentVariable("Smtp__Password", "pruebas");
+        Environment.SetEnvironmentVariable("Smtp__SenderEmail", "pruebas@example.com");
+        Environment.SetEnvironmentVariable("Smtp__SenderName", "Otium");
         Environment.SetEnvironmentVariable("Gemini__ApiKey", "");
         Environment.SetEnvironmentVariable("Gemini__Modelo", "gemini-flash-lite-latest");
-        Environment.SetEnvironmentVariable("Resend__ApiKey", "");
-        Environment.SetEnvironmentVariable("RESEND_API_KEY", "");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
