@@ -28,7 +28,7 @@ Aplicación web personal de diario de lectura y gestión de biblioteca. Stack: A
 | UI | Blazor Web App, `InteractiveServer` |
 | Autenticación | ASP.NET Core Identity + cookies |
 | Base de datos | SQLite + EF Core |
-| APIs externas | Open Library, Google Gemini, Brevo SMTP |
+| APIs externas | Open Library, Google Gemini, Brevo HTTP API |
 | PWA | `manifest.json`, `sw.js`, `instalar.js` |
 
 ## Comandos
@@ -59,16 +59,18 @@ dotnet ef database update
 
 Las claves se leen de variables de entorno / User Secrets / `appsettings.Development.json` (ignorada por Git):
 
-- `ConnectionStrings:DefaultConnection` — SQLite
-- `DataProtection:KeysPath` — persistencia opcional de claves en filesystem; sin ella se usa la tabla `DataProtectionKeys` de la base de datos
-- `Smtp:Host` / `Smtp:Port` — relé SMTP de Brevo (`smtp-relay.brevo.com`, `587`/`2525` con STARTTLS, `465` con SSL)
-- `Smtp:Username` / `Smtp:Password` — credenciales SMTP de Brevo
-- `Smtp:SenderEmail` / `Smtp:SenderName` — remitente verificado y nombre visible
-- `Gemini:ApiKey` / `Gemini:Modelo` — Gemini
-- `Sitio:UrlPublica` — URL pública para enlaces de recuperación
-- `Seguridad:PermitirHttp` — permite HTTP en modo Production (Tailscale)
+- `ConnectionStrings:DefaultConnection` - SQLite o PostgreSQL.
+- `DataProtection:KeysPath` - persistencia opcional de claves en filesystem; sin ella se usa la tabla `DataProtectionKeys` de la base de datos.
+- `Brevo:ApiKey` - API key v3 de Brevo (empieza por `xkeysib-`; **no** es la SMTP key).
+- `Brevo:SenderEmail` / `Brevo:SenderName` - remitente verificado y nombre visible.
+- `Brevo:Endpoint` - endpoint HTTP; por defecto `https://api.brevo.com/v3/smtp/email`.
+- `Gemini:ApiKey` / `Gemini:Modelo` - Gemini.
+- `Sitio:UrlPublica` - URL pública para enlaces de recuperación.
+- `Seguridad:PermitirHttp` - permite HTTP en modo Production (Tailscale).
 
-El correo se envía por el relé SMTP de Brevo con MailKit (STARTTLS en `587`/`2525`, SSL en `465`). Configura `Smtp:SenderEmail` con un remitente verificado en Brevo. En Render free, usa `Smtp__Port=2525` porque los puertos `25`, `465` y `587` están bloqueados.
+El correo se envía con un `POST` a la API HTTP de Brevo. Configura `Brevo:SenderEmail` con un remitente verificado en Brevo y `Brevo:ApiKey` con una API key v3. En Render, define `Brevo__ApiKey`, `Brevo__SenderEmail`, `Brevo__SenderName` y `Brevo__Endpoint`.
+
+La aplicación acepta `Smtp:Password`, `Smtp:SenderEmail` y `Smtp:SenderName` como respaldo temporal de configuración, pero el valor de `Smtp:Password` debe ser una **API key v3 de Brevo**, no una SMTP key. Lo recomendable es migrar a las claves `Brevo:*`.
 
 Nunca commitear secretos ni archivos `.db`.
 
@@ -76,5 +78,6 @@ Nunca commitear secretos ni archivos `.db`.
 
 - **Local/Tailscale:** ejecutar en `Development` o `Production` con `Seguridad__PermitirHttp=true`. Kestrel escucha en todas las interfaces.
 - **VPS Oracle:** `Production`, Kestrel en `http://127.0.0.1:5000`, proxy inverso (Caddy/Nginx) con TLS, `Seguridad__PermitirHttp=false`, `Proxy__KnownProxies__0=127.0.0.1`.
+- **Render:** `Production`; usar HTTPS, `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`, PostgreSQL y `Brevo__ApiKey`. No se necesitan puertos SMTP.
 
-El proyecto no está listo para lanzamiento público hasta completar los hallazgos P2 (CI, respaldos automáticos, validación de entrada, endeurecimiento operativo) descritos en `AGENTS.md`.
+El proyecto no está listo para lanzamiento público hasta completar los hallazgos P2 (CI, respaldos automáticos, validación de entrada, endurecimiento operativo) descritos en `AGENTS.md`.

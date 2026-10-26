@@ -148,21 +148,42 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddDefaultTokenProviders()
     .AddErrorDescriber<DescriptorErroresEs>();
 
-builder.Services.AddOptions<SmtpOptions>()
-    .Bind(builder.Configuration.GetSection(SmtpOptions.Seccion))
+builder.Services.AddOptions<BrevoOptions>()
+    .Bind(builder.Configuration.GetSection(BrevoOptions.Seccion))
     .PostConfigure(opciones =>
     {
-        // Las variables de entorno copiadas desde paneles suelen arrastrar espacios
-        // o saltos de línea; Brevo rechaza el AUTH si el usuario o la clave no coinciden.
-        opciones.Host = (opciones.Host ?? "").Trim();
-        opciones.Username = (opciones.Username ?? "").Trim();
-        opciones.Password = (opciones.Password ?? "").Trim();
+        opciones.ApiKey = (opciones.ApiKey ?? "").Trim();
+
+        if (string.IsNullOrWhiteSpace(opciones.ApiKey))
+        {
+            opciones.ApiKey = (builder.Configuration["BREVO_API_KEY"] ?? "").Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(opciones.ApiKey))
+        {
+            opciones.ApiKey = (builder.Configuration["Smtp:Password"] ?? "").Trim();
+        }
+
         opciones.SenderEmail = (opciones.SenderEmail ?? "").Trim();
+
+        if (string.IsNullOrWhiteSpace(opciones.SenderEmail))
+        {
+            opciones.SenderEmail = (builder.Configuration["Smtp:SenderEmail"]
+                ?? "otium.lectura@gmail.com").Trim();
+        }
+
         opciones.SenderName = string.IsNullOrWhiteSpace(opciones.SenderName)
-            ? "Otium"
+            ? (builder.Configuration["Smtp:SenderName"] ?? "Otium").Trim()
             : opciones.SenderName.Trim();
+
+        opciones.Endpoint = string.IsNullOrWhiteSpace(opciones.Endpoint)
+            ? "https://api.brevo.com/v3/smtp/email"
+            : opciones.Endpoint.Trim();
     })
-    .ValidateDataAnnotations();
+    .ValidateDataAnnotations()
+    .Validate(opciones => Uri.TryCreate(opciones.Endpoint, UriKind.Absolute, out var endpoint)
+        && endpoint.Scheme == Uri.UriSchemeHttps,
+        "Brevo:Endpoint debe ser una URL HTTPS.");
 
 builder.Services.AddOptions<GeminiOptions>()
     .Bind(builder.Configuration.GetSection(GeminiOptions.Seccion))
@@ -261,7 +282,11 @@ builder.Services.AddScoped<IRegistroService, RegistroService>();
 builder.Services.AddScoped<IRecuperacionContrasenaService, RecuperacionContrasenaService>();
 builder.Services.AddScoped<IEliminacionCuentaService, EliminacionCuentaService>();
 builder.Services.AddScoped<IExportacionDatosService, ExportacionDatosService>();
-builder.Services.AddScoped<IEnvioCorreo, SmtpEnvioCorreo>();
+builder.Services.AddHttpClient<IEnvioCorreo, BrevoEnvioCorreo>(cliente =>
+{
+    cliente.Timeout = TimeSpan.FromSeconds(15);
+    cliente.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
 builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
 
 builder.Services.AddHttpClient<IBuscadorLibros, BuscadorLibros>(cliente =>
@@ -300,7 +325,7 @@ if (!string.IsNullOrWhiteSpace(sentryDsn))
 var app = builder.Build();
 
 GeminiOptions? opcionesGemini = null;
-SmtpOptions? opcionesSmtp = null;
+BrevoOptions? opcionesBrevo = null;
 
 try
 {
@@ -313,14 +338,14 @@ catch (Exception ex) when (ex is OptionsValidationException or InvalidOperationE
 
 try
 {
-    opcionesSmtp = app.Services.GetRequiredService<IOptions<SmtpOptions>>().Value;
+    opcionesBrevo = app.Services.GetRequiredService<IOptions<BrevoOptions>>().Value;
 }
 catch (Exception ex) when (ex is OptionsValidationException or InvalidOperationException)
 {
-    app.Logger.LogError(ex, "La configuración de Brevo SMTP no es válida.");
+    app.Logger.LogError(ex, "La configuración de Brevo HTTP no es válida.");
 }
 
-DiagnosticoConfiguracion.Registrar(app.Configuration, app.Logger, opcionesGemini, opcionesSmtp);
+DiagnosticoConfiguracion.Registrar(app.Configuration, app.Logger, opcionesGemini, opcionesBrevo);
 
 using (var ambito = app.Services.CreateScope())
 {

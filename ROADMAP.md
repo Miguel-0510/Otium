@@ -247,17 +247,16 @@ dotnet test
 
 **Pasos:**
 
-1. Rotar las credenciales de Gemini y SMTP si el archivo se compartió, se subió o estuvo accesible fuera del equipo.
+1. Rotar las credenciales de Gemini y Brevo si el archivo se compartió, se subió o estuvo accesible fuera del equipo.
 2. Mover las credenciales a User Secrets en desarrollo:
 
 ```powershell
 dotnet user-secrets init
 dotnet user-secrets set "Gemini:ApiKey" "<nueva-key>"
-dotnet user-secrets set "Smtp:Host" "smtp-relay.brevo.com"
-dotnet user-secrets set "Smtp:Port" "587"
-dotnet user-secrets set "Smtp:Username" "<usuario>"
-dotnet user-secrets set "Smtp:Password" "<nueva-clave>"
-dotnet user-secrets set "Smtp:SenderEmail" "<remitente>"
+dotnet user-secrets set "Brevo:ApiKey" "<nueva-api-key-v3>"
+dotnet user-secrets set "Brevo:SenderEmail" "<remitente>"
+dotnet user-secrets set "Brevo:SenderName" "Otium"
+dotnet user-secrets set "Brevo:Endpoint" "https://api.brevo.com/v3/smtp/email"
 ```
 
 3. Dejar `appsettings.Development.json` sin secretos o eliminarlo del disco si no se necesita.
@@ -266,7 +265,7 @@ dotnet user-secrets set "Smtp:SenderEmail" "<remitente>"
 
 ```powershell
 git log --all -p -- appsettings.Development.json
-git grep -n -I -E "ApiKey|Smtp:Password|Secret|PrivateKey" $(git rev-list --all)
+git grep -n -I -E "ApiKey|Brevo:ApiKey|Secret|PrivateKey" $(git rev-list --all)
 ```
 
 Si alguna credencial aparece en el historial, rotarla y evaluar limpieza del historial.

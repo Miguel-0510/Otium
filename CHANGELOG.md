@@ -2,6 +2,15 @@
 
 Todos los cambios notables de este proyecto se documentarán en este archivo.
 
+## [No publicado] - 2026-10-26
+
+### Correo por API HTTP de Brevo
+- Sustituido MailKit/SMTP por `BrevoEnvioCorreo`, que usa `POST https://api.brevo.com/v3/smtp/email`.
+- La petición envía `sender`, `to`, `subject` y `htmlContent`; autentica con la cabecera `api-key`.
+- Se capturan el código HTTP y el mensaje de Brevo para registrarlos en logs.
+- Nueva configuración `Brevo:ApiKey`, `Brevo:SenderEmail`, `Brevo:SenderName`, `Brevo:Endpoint`; se elimina la dependencia de MailKit.
+- `Brevo:ApiKey` debe ser una API key v3 (`xkeysib-`), no una SMTP key. Se mantiene un respaldo temporal desde `Smtp:Password`.
+
 ## [No publicado] - 2026-10-25
 
 ### Despliegue en Render

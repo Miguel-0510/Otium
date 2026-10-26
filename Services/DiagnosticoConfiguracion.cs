@@ -8,10 +8,10 @@ public static class DiagnosticoConfiguracion
         IConfiguration configuracion,
         ILogger logger,
         GeminiOptions? gemini,
-        SmtpOptions? smtp)
+        BrevoOptions? brevo)
     {
         RegistrarGemini(configuracion, logger, gemini);
-        RegistrarSmtp(configuracion, logger, smtp);
+        RegistrarBrevo(configuracion, logger, brevo);
     }
 
     private static void RegistrarGemini(IConfiguration configuracion, ILogger logger, GeminiOptions? opciones)
@@ -67,115 +67,105 @@ public static class DiagnosticoConfiguracion
         }
     }
 
-    private static void RegistrarSmtp(IConfiguration configuracion, ILogger logger, SmtpOptions? opciones)
+    private static void RegistrarBrevo(IConfiguration configuracion, ILogger logger, BrevoOptions? opciones)
     {
-        var host = (opciones?.Host ?? configuracion["Smtp:Host"] ?? "smtp-relay.brevo.com").Trim();
-        var puerto = opciones?.Port ?? LeerPuerto(configuracion["Smtp:Port"]);
-        var usuarioConfigurado = configuracion["Smtp:Username"] ?? opciones?.Username ?? "";
-        var claveConfigurada = configuracion["Smtp:Password"] ?? opciones?.Password ?? "";
-        var usuario = usuarioConfigurado.Trim();
-        var clave = claveConfigurada.Trim();
-        var usuarioRecortado = usuarioConfigurado.Length != usuario.Length;
-        var claveRecortada = claveConfigurada.Length != clave.Length;
-        var remitente = (opciones?.SenderEmail ?? configuracion["Smtp:SenderEmail"] ?? "").Trim();
-        var nombre = (opciones?.SenderName ?? configuracion["Smtp:SenderName"] ?? "").Trim();
-        var puertoConfigurado = !string.IsNullOrWhiteSpace(configuracion["Smtp:Port"]);
+        var claveConfiguracion = configuracion["Brevo:ApiKey"];
+        var claveEntorno = Environment.GetEnvironmentVariable("BREVO_API_KEY");
+        var claveSmtp = configuracion["Smtp:Password"];
+
+        var clave = (opciones?.ApiKey
+            ?? claveConfiguracion
+            ?? claveEntorno
+            ?? claveSmtp
+            ?? "").Trim();
+
+        var origen = !string.IsNullOrWhiteSpace(claveConfiguracion)
+            ? "Brevo:ApiKey"
+            : !string.IsNullOrWhiteSpace(claveEntorno)
+                ? "BREVO_API_KEY"
+                : !string.IsNullOrWhiteSpace(claveSmtp)
+                    ? "Smtp:Password (legado)"
+                    : "ninguna";
+
+        var tipoClave = ClasificarClave(clave);
+        var remitente = (opciones?.SenderEmail
+            ?? configuracion["Brevo:SenderEmail"]
+            ?? configuracion["Smtp:SenderEmail"]
+            ?? "otium.lectura@gmail.com").Trim();
+        var nombre = string.IsNullOrWhiteSpace(opciones?.SenderName)
+            ? (configuracion["Brevo:SenderName"] ?? configuracion["Smtp:SenderName"] ?? "Otium").Trim()
+            : opciones!.SenderName.Trim();
+        var endpoint = (opciones?.Endpoint
+            ?? configuracion["Brevo:Endpoint"]
+            ?? "https://api.brevo.com/v3/smtp/email").Trim();
 
         logger.LogInformation(
-            "Diagnóstico Brevo SMTP: Host='{Host}', Puerto={Puerto}, Username='{Username}', " +
-            "SenderEmail='{SenderEmail}', SenderName='{SenderName}', " +
-            "Password configurada={PasswordConfigurada} (longitud {LongitudPassword}).",
-            host,
-            puerto,
-            SmtpEnvioCorreo.EnmascararUsuario(usuario),
+            "Diagnóstico Brevo HTTP: Endpoint='{Endpoint}', SenderEmail='{SenderEmail}', " +
+            "SenderName='{SenderName}', ApiKey configurada={ApiKeyConfigurada} " +
+            "(longitud {LongitudApiKey}, tipo={TipoApiKey}, origen='{Origen}').",
+            endpoint,
             remitente,
             nombre,
-            !string.IsNullOrWhiteSpace(clave),
-            clave.Length);
+            clave.Length > 0,
+            clave.Length,
+            tipoClave,
+            origen);
 
-        if (usuarioRecortado)
+        if (clave.Length == 0)
         {
             logger.LogWarning(
-                "Smtp:Username tenía espacios o saltos de línea al inicio/fin; se recortaron. " +
-                "Revisa la variable Smtp__Username en el entorno de despliegue.");
+                "Brevo HTTP no tiene API key configurada. Define Brevo:ApiKey " +
+                "(variable de entorno Brevo__ApiKey) con una API key v3 de Brevo " +
+                "(empieza por xkeysib-); el correo no se enviará.");
         }
-
-        if (claveRecortada)
+        else if (tipoClave == "SMTP")
         {
             logger.LogWarning(
-                "Smtp:Password tenía espacios o saltos de línea al inicio/fin; se recortaron. " +
-                "Revisa la variable Smtp__Password en el entorno de despliegue.");
+                "La clave configurada parece una SMTP key (xsmtpsib-). La API REST de Brevo " +
+                "requiere una API key v3 (xkeysib-); genera una en SMTP & API → API Keys & MCP.");
+        }
+        else if (tipoClave == "desconocida")
+        {
+            logger.LogWarning(
+                "No se pudo identificar el tipo de la API key de Brevo por su prefijo. " +
+                "Si el envío devuelve HTTP 401, usa una API key v3 (xkeysib-).");
         }
 
-        var faltantes = new List<string>();
-        if (string.IsNullOrWhiteSpace(host))
+        if (origen.StartsWith("Smtp:Password", StringComparison.Ordinal))
         {
-            faltantes.Add("Smtp:Host");
-        }
-
-        if (string.IsNullOrWhiteSpace(usuario))
-        {
-            faltantes.Add("Smtp:Username");
-        }
-
-        if (string.IsNullOrWhiteSpace(clave))
-        {
-            faltantes.Add("Smtp:Password");
+            logger.LogWarning(
+                "Brevo:ApiKey no está configurada; se usa Smtp:Password como respaldo. " +
+                "Ese valor debe ser una API key v3 de Brevo, no una clave SMTP.");
         }
 
         if (string.IsNullOrWhiteSpace(remitente))
         {
-            faltantes.Add("Smtp:SenderEmail");
+            logger.LogWarning(
+                "Brevo:SenderEmail está vacío. Configura un remitente verificado en Brevo.");
         }
 
-        if (faltantes.Count > 0)
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri)
+            || uri.Scheme != Uri.UriSchemeHttps)
         {
             logger.LogWarning(
-                "Brevo SMTP está incompleto. Faltan o están vacíos: {Claves}. " +
-                "Configúralos como variables de entorno (por ejemplo Smtp__Password) " +
-                "para que la recuperación de contraseña pueda enviar correos.",
-                string.Join(", ", faltantes));
-            return;
+                "Brevo:Endpoint='{Endpoint}' no es una URL HTTPS válida. " +
+                "Se espera https://api.brevo.com/v3/smtp/email.",
+                endpoint);
         }
-
-        if (!puertoConfigurado)
-        {
-            logger.LogWarning(
-                "Smtp:Port no está configurado; se usará el valor por defecto {Puerto}. " +
-                "Brevo usa 587 con STARTTLS.",
-                puerto);
-        }
-        else if (!int.TryParse(configuracion["Smtp:Port"], out _))
-        {
-            logger.LogWarning(
-                "Smtp:Port='{Valor}' no es un número válido; se usará {Puerto}.",
-                configuracion["Smtp:Port"],
-                puerto);
-        }
-
-        if (puerto is < 1 or > 65535)
-        {
-            logger.LogWarning(
-                "Smtp:Port={Puerto} está fuera del rango válido (1-65535). " +
-                "Brevo usa 587 con STARTTLS.",
-                puerto);
-        }
-
-        if (puerto != 587 && puerto != 465 && puerto != 2525)
-        {
-            logger.LogWarning(
-                "Smtp:Port={Puerto} no es un puerto habitual de Brevo. " +
-                "Los valores esperados son 587 (STARTTLS), 465 (SSL) o 2525.",
-                puerto);
-        }
-
-        logger.LogInformation(
-            "Brevo SMTP configurado. Se usará {Host}:{Puerto} con STARTTLS y remitente {Remitente}.",
-            host,
-            puerto,
-            remitente);
     }
 
-    private static int LeerPuerto(string? valor) =>
-        int.TryParse(valor, out var puerto) ? puerto : 587;
+    private static string ClasificarClave(string clave)
+    {
+        if (clave.StartsWith("xkeysib-", StringComparison.OrdinalIgnoreCase))
+        {
+            return "API v3";
+        }
+
+        if (clave.StartsWith("xsmtpsib-", StringComparison.OrdinalIgnoreCase))
+        {
+            return "SMTP";
+        }
+
+        return clave.Length == 0 ? "ninguna" : "desconocida";
+    }
 }

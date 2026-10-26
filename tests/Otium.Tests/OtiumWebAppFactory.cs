@@ -19,12 +19,10 @@ public sealed class OtiumWebAppFactory : WebApplicationFactory<Program>
     public OtiumWebAppFactory()
     {
         Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", $"DataSource={_rutaBaseDatos};Cache=Shared");
-        Environment.SetEnvironmentVariable("Smtp__Host", "localhost");
-        Environment.SetEnvironmentVariable("Smtp__Port", "2525");
-        Environment.SetEnvironmentVariable("Smtp__Username", "pruebas");
-        Environment.SetEnvironmentVariable("Smtp__Password", "pruebas");
-        Environment.SetEnvironmentVariable("Smtp__SenderEmail", "pruebas@example.com");
-        Environment.SetEnvironmentVariable("Smtp__SenderName", "Otium");
+        Environment.SetEnvironmentVariable("Brevo__ApiKey", "xkeysib-pruebas");
+        Environment.SetEnvironmentVariable("Brevo__SenderEmail", "pruebas@example.com");
+        Environment.SetEnvironmentVariable("Brevo__SenderName", "Otium");
+        Environment.SetEnvironmentVariable("Brevo__Endpoint", "https://api.brevo.com/v3/smtp/email");
         Environment.SetEnvironmentVariable("Gemini__ApiKey", "");
         Environment.SetEnvironmentVariable("Gemini__Modelo", "gemini-flash-lite-latest");
     }

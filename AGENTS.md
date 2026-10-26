@@ -41,7 +41,7 @@ La interfaz y el dominio están en español. Quedan pantallas heredadas de la pl
 | Autenticación | ASP.NET Core Identity + cookies |
 | Base de datos | SQLite + EF Core |
 | Paquetes EF/Identity | `10.0.12` |
-| APIs externas | Open Library (HTTPS), Google Gemini (HTTPS), Brevo SMTP (STARTTLS) |
+| APIs externas | Open Library (HTTPS), Google Gemini (HTTPS), Brevo HTTP API (HTTPS) |
 | PWA | `manifest.json`, `sw.js`, `instalar.js` |
 | Puerto local publicado | `http://localhost:5000` |
 | Puerto de desarrollo | `http://localhost:5235`, `https://localhost:7111` |
@@ -126,7 +126,7 @@ Services/
   GeminiClient.cs                 Cliente Gemini: prompt, HTTP y parseo
   BuscadorLibros.cs               Cliente Open Library con caché y reintentos
   EmailSender.cs                  Plantillas y envío (delega en IEnvioCorreo)
-  SmtpEnvioCorreo.cs              Transporte SMTP de Brevo
+  BrevoEnvioCorreo.cs             Transporte HTTP de Brevo
 wwwroot/
   app.css, tema.js                Estilos y tema
   manifest.json, sw.js            PWA
@@ -137,24 +137,26 @@ wwwroot/
 
 ## 5. Configuración y secretos
 
+> **Correo (2026-10-26):** el transporte SMTP/MailKit fue reemplazado por la API HTTP de Brevo.
+> Configura `Brevo:ApiKey` (API key v3 `xkeysib-`), `Brevo:SenderEmail`, `Brevo:SenderName` y
+> `Brevo:Endpoint`. Las claves `Smtp:*` solo se aceptan como respaldo temporal; `Smtp:Password` debe contener una API key v3, no una SMTP key.
+
 Claves usadas:
 
 | Clave | Uso | Dónde |
 |---|---|---|
 | `ConnectionStrings:DefaultConnection` | SQLite | `appsettings.json` |
 | `DataProtection:KeysPath` | Persistencia de claves en filesystem (opcional; sin ella se usa la base de datos) | Entorno/Docker |
-| `Smtp:Host` | Servidor SMTP de Brevo (`smtp-relay.brevo.com`) | `appsettings.json` |
-| `Smtp:Port` | Puerto SMTP (`587`/`2525` STARTTLS, `465` SSL) | `appsettings.json` |
-| `Smtp:Username` | Usuario SMTP de Brevo | `appsettings.json` |
-| `Smtp:Password` | Contraseña SMTP de Brevo | User Secrets/entorno (`Smtp__Password`) |
-| `Smtp:SenderEmail` | Remitente verificado en Brevo | `appsettings.json` |
-| `Smtp:SenderName` | Nombre visible del remitente | `appsettings.json` |
+| `Brevo:ApiKey` | API key v3 de Brevo (`xkeysib-`) | User Secrets/entorno (`Brevo__ApiKey`) |
+| `Brevo:SenderEmail` | Remitente verificado en Brevo | `appsettings.json` |
+| `Brevo:SenderName` | Nombre visible del remitente | `appsettings.json` |
+| `Brevo:Endpoint` | Endpoint HTTP de Brevo | `appsettings.json` |
 | `Gemini:ApiKey` | API key de Gemini | Configuración local/entorno |
 | `Gemini:Modelo` | Modelo Gemini | Opcional |
 | `Sitio:UrlPublica` | URL externa para enlaces de correo | Configuración local/entorno |
 | `Invitacion:Codigo` | Legado; ya no se usa en el fuente actual | `appsettings.Development.json` |
 
-El correo se envía por el relé SMTP de Brevo (`smtp-relay.brevo.com`, `587`/`2525` con STARTTLS, `465` con SSL) mediante MailKit. `Smtp:SenderEmail` debe ser un remitente verificado en Brevo. `GEMINI_API_KEY` se acepta como alias de entorno para Gemini.
+El correo se envía con la API HTTP de Brevo (`https://api.brevo.com/v3/smtp/email`) mediante `BrevoEnvioCorreo`. `Brevo:SenderEmail` debe ser un remitente verificado en Brevo y `Brevo:ApiKey` una API key v3 (`xkeysib-`). Las claves `Smtp:*` son legado; `Smtp:Password` solo se usa como respaldo y debe contener una API key v3. `GEMINI_API_KEY` se acepta como alias de entorno para Gemini.
 
 Reglas:
 
@@ -165,7 +167,7 @@ Reglas:
 ```powershell
 dotnet user-secrets init
 dotnet user-secrets set "Gemini:ApiKey" "<valor>"
-dotnet user-secrets set "Smtp:Password" "<valor>"
+dotnet user-secrets set "Brevo:ApiKey" "<valor>"
 ```
 
 - En producción usar variables de entorno o un gestor de secretos, nunca el archivo del repositorio.
@@ -241,7 +243,7 @@ Relaciones relevantes en `Data/ApplicationDbContext.cs`:
 
 - **Open Library:** búsqueda de 8 resultados por título/autor; portadas desde `covers.openlibrary.org`.
 - **Gemini:** definiciones breves; modelo por defecto `gemini-flash-lite-latest`; la API key se envía en `x-goog-api-key`.
-- **Brevo SMTP:** envío de enlaces de confirmación y recuperación por el relé `smtp-relay.brevo.com` (STARTTLS en `587`/`2525`, SSL en `465`) con MailKit.
+- **Brevo HTTP API:** envío de enlaces de recuperación con `POST https://api.brevo.com/v3/smtp/email`, autenticación `api-key` y cuerpo JSON (`sender`, `to`, `subject`, `htmlContent`).
 - **PWA:** el service worker solo guarda la página de aviso sin conexión. La app requiere conexión, por diseño.
 
 ### 6.6 Despliegue dual: Tailscale local y VPS Oracle
@@ -346,7 +348,7 @@ OSI es un modelo de comunicaciones de red, no una arquitectura de software. No e
 Hallazgos de red:
 
 - Las APIs externas usan HTTPS.
-- SMTP usa MailKit con STARTTLS en `587`/`2525` y SSL en `465`.
+- El correo usa la API HTTP de Brevo sobre HTTPS; no hay puertos SMTP salientes.
 - La publicación actual escucha HTTP en `http://localhost:5000` y el Dockerfile expone HTTP en `8080`.
 - `UseHttpsRedirection()` y `UseHsts()` existen, pero sin un puerto HTTPS o proxy TLS delante no protegen nada.
 - Las cookies de autenticación deben ir con `Secure` en producción; eso exige HTTPS real.
@@ -653,14 +655,17 @@ Acciones:
 
 #### P2-17. `EmailSender` frágil
 
-**Estado: parcialmente corregido (2026-10-25).** `EmailSender` delega en `IEnvioCorreo`; el único transporte es SMTP de Brevo con opciones tipadas y validadas. Usa MailKit (`SmtpClient` propio), autentica explícitamente con AUTH tras STARTTLS, tiene timeout, cancelación y manejo de errores sin romper la petición. El arranque registra si el correo está configurado. Sigue pendiente valorar una cola/outbox.
+**Estado: corregido (2026-10-26).** `EmailSender` delega en `IEnvioCorreo`; el transporte es la API HTTP de Brevo (`BrevoEnvioCorreo`) con opciones tipadas y validadas. Usa `POST` con cabecera `api-key`, timeout de 15 s, cancelación y captura de código/mensaje HTTP sin romper la petición. El arranque registra si el correo está configurado. Sigue pendiente valorar una cola/outbox.
 
 - ~~`Services/EmailSender.cs:33-37` usa `int.Parse` y claves opcionales sin validación.~~
 - ~~Si falta `Smtp:Host`, `Smtp:Username` o `Smtp:Password`, falla en tiempo de ejecución.~~
-- ~~`SmtpClient` es una API heredada; valorar MailKit.~~ Migrado a MailKit `4.18.2`: `System.Net.Mail.SmtpClient` no autenticaba de forma fiable contra Brevo (`5.7.0 Please authenticate first`).
+- ~~`SmtpClient` es una API heredada; valorar MailKit.~~ Superado: MailKit/SMTP se sustituyó por la API HTTP de Brevo.
 - Enviar correo dentro de la petición puede aumentar la latencia; valorar cola/outbox.
 - ~~No hay reintentos, cancelación ni verificación de configuración al arrancar.~~
-- Render free bloquea los puertos SMTP `25`, `465` y `587`; usar `Smtp__Port=2525` (Brevo) o la API HTTP de Brevo.
+- ~~Render free bloquea los puertos SMTP `25`, `465` y `587`; usar `Smtp__Port=2525` (Brevo) o la API HTTP de Brevo.~~ Resuelto al migrar a la API HTTP de Brevo.
+
+> **Actualizado (2026-10-26):** el transporte de correo es ahora la API HTTP de Brevo
+> (`BrevoEnvioCorreo`); MailKit/SMTP quedó eliminado. Ver `README.md`.
 
 #### P2-18. Sin respaldos ni recuperación documentada
 
@@ -683,6 +688,9 @@ Documentación de RPO/RTO y procedimiento de restauración en `DOCS/respaldos.md
 - ~~El `User-Agent` de Open Library usa un correo de ejemplo.~~ Ahora usa `Otium/1.0`.
 - ~~Si Open Library falla, la UI muestra el error crudo.~~ El cliente lanza un mensaje amigable.
 - Añadir timeout, reintentos acotados, caché y mensajes amigables.
+
+> **Actualizado (2026-10-26):** Render free bloquea los puertos SMTP salientes. El correo usa
+> ahora la API HTTP de Brevo; ya no se requiere `Smtp__Port` ni MailKit.
 
 ### P3 - Bajo
 
