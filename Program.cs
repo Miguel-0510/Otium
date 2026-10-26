@@ -76,8 +76,9 @@ builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.Extern
 builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.TwoFactorUserIdScheme, ConfigurarCookie);
 builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.TwoFactorRememberMeScheme, ConfigurarCookie);
 
-builder.Services.AddBaseDeDatos(
+var proveedorBaseDatos = builder.Services.AddBaseDeDatos(
     builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? builder.Configuration["DATABASE_URL"]
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found."),
     builder.Configuration);
 
@@ -97,18 +98,34 @@ var dataProtection = builder.Configuration
     .GetSection(ProteccionDatosOptions.Seccion)
     .Get<ProteccionDatosOptions>() ?? new ProteccionDatosOptions();
 
+var proteccionDatos = builder.Services.AddDataProtection()
+    .SetApplicationName(dataProtection.ApplicationName);
+
+var clavesPersistentes = false;
 if (!string.IsNullOrWhiteSpace(dataProtection.KeysPath))
 {
     try
     {
-        Directory.CreateDirectory(dataProtection.KeysPath);
-        builder.Services.AddDataProtection()
-            .PersistKeysToFileSystem(new DirectoryInfo(dataProtection.KeysPath))
-            .SetApplicationName(dataProtection.ApplicationName);
+        var directorio = new DirectoryInfo(dataProtection.KeysPath);
+        directorio.Create();
+
+        // Comprueba que el directorio es escribible: si el volumen es de solo lectura,
+        // la generación de claves fallaría en la primera petición con un error 500.
+        var prueba = Path.Combine(directorio.FullName, $".probe-{Guid.NewGuid():N}");
+        using (var flujo = new FileStream(prueba, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose))
+        {
+            flujo.WriteByte(0);
+        }
+
+        proteccionDatos.PersistKeysToFileSystem(directorio);
+        clavesPersistentes = true;
     }
-    catch
+    catch (Exception ex)
     {
-        // Data Protection usará almacenamiento en memoria si falla la persistencia en archivos.
+        // Una ruta configurada que no se puede usar invalidaría las sesiones en cada
+        // reinicio sin que nadie se entere: es preferible fallar al arrancar.
+        throw new InvalidOperationException(
+            $"No se pudo preparar Data Protection en '{dataProtection.KeysPath}'.", ex);
     }
 }
 
@@ -252,18 +269,13 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 
-using (var scope = app.Services.CreateScope())
+await BaseDatosInicializador.InicializarAsync(app.Services, proveedorBaseDatos, app.Logger);
+
+if (!clavesPersistentes && !app.Environment.IsDevelopment())
 {
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    try
-    {
-        await db.Database.MigrateAsync();
-    }
-    catch (Exception ex)
-    {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "No se pudieron aplicar las migraciones al arranque. La aplicación continuará sin ellas.");
-    }
+    app.Logger.LogWarning(
+        "Data Protection no tiene una ruta persistente (DataProtection:KeysPath). " +
+        "Las sesiones se invalidarán cada vez que se reinicie o redespliegue el contenedor.");
 }
 
 if (app.Environment.IsDevelopment())
@@ -330,7 +342,7 @@ sealed class SaludDbCheck : IHealthCheck
         using var db = _fabrica.CreateDbContext();
         var conectado = await db.Database.CanConnectAsync(token);
         return conectado
-            ? HealthCheckResult.Healthy("SQLite conectado.")
-            : HealthCheckResult.Unhealthy("SQLite sin conexion.");
+            ? HealthCheckResult.Healthy("Base de datos conectada.")
+            : HealthCheckResult.Unhealthy("Base de datos sin conexión.");
     }
 }

@@ -271,6 +271,15 @@ Proxy__KnownProxies__0=127.0.0.1
 Sitio__UrlPublica=https://otium.example.com
 ```
 
+### 6.7 Render + PostgreSQL
+
+- `ConnectionStrings__DefaultConnection` acepta tanto el formato ADO.NET como la URL de Render (`postgresql://usuario:clave@host:puerto/base`). `ConfiguracionBaseDatos` la normaliza a ADO.NET con `SslMode=Require`; si la URL trae `?sslmode=...`, ese valor prevalece.
+- El proveedor se detecta por la forma de la cadena (URL de Postgres, `Host=`/`Server=`/`Username=`) o por `Database__Provider=PostgreSql|Sqlite`.
+- Las migraciones de `Data/Migrations` son de SQLite y **no son portables** a PostgreSQL. En PostgreSQL el esquema se crea desde el modelo con `EnsureCreatedAsync` (`Data/BaseDatosInicializador.cs`). Si en el futuro cambia el modelo en producción, hay que crear migraciones específicas de Npgsql en un ensamblado aparte y cambiar la estrategia.
+- El arranque reintenta 5 veces con espera exponencial y, si no puede preparar el esquema, **detiene la aplicación** en lugar de servir errores 500.
+- `DataProtection__KeysPath` debe apuntar a un volumen persistente (en Render, un Disk montado en `/var/data` y `DataProtection__KeysPath=/var/data/keys`). Sin eso, las claves viven en el contenedor y las sesiones se pierden en cada reinicio; la aplicación lo registra como warning.
+- Si el proxy de Render no está en `Proxy__KnownProxies`, `ForwardedHeaders` no confía en `X-Forwarded-Proto`. Configurar el proxy o `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` para que `exigirHttps`, HSTS y las cookies `Secure` funcionen con TLS terminado en el borde.
+
 ---
 
 ## 7. Convenciones para agentes

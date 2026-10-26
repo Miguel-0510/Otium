@@ -7,35 +7,23 @@ namespace Otium.Services.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddBaseDeDatos(
+    public static ProveedorBaseDatos AddBaseDeDatos(
         this IServiceCollection servicios,
         string cadenaConexion,
         IConfiguration configuracion)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(cadenaConexion);
+        var configuracionBaseDatos = ConfiguracionBaseDatos.Crear(cadenaConexion, configuracion);
 
-        var esPostgreSql = string.Equals(configuracion["ASPNETCORE_ENVIRONMENT"], "Production", StringComparison.OrdinalIgnoreCase)
-            || cadenaConexion.Contains("Host=", StringComparison.OrdinalIgnoreCase)
-            || cadenaConexion.Contains("Server=", StringComparison.OrdinalIgnoreCase)
-            || cadenaConexion.Contains("User ID=", StringComparison.OrdinalIgnoreCase);
-
-        if (esPostgreSql)
+        Action<DbContextOptionsBuilder> opciones = configuracionBaseDatos.Proveedor switch
         {
-            Action<DbContextOptionsBuilder> opcionesPostgres = options =>
-                options.UseNpgsql(cadenaConexion);
+            ProveedorBaseDatos.PostgreSql => builder => builder
+                .UseNpgsql(configuracionBaseDatos.CadenaConexion, npgsql => npgsql.EnableRetryOnFailure()),
+            _ => builder => builder.UseSqlite(configuracionBaseDatos.CadenaConexion)
+        };
 
-            servicios.AddDbContext<ApplicationDbContext>(opcionesPostgres);
-            servicios.AddDbContextFactory<ApplicationDbContext>(opcionesPostgres, ServiceLifetime.Scoped);
-        }
-        else
-        {
-            Action<DbContextOptionsBuilder> opcionesSqlite = options =>
-                options.UseSqlite(cadenaConexion);
+        servicios.AddDbContext<ApplicationDbContext>(opciones);
+        servicios.AddDbContextFactory<ApplicationDbContext>(opciones, ServiceLifetime.Scoped);
 
-            servicios.AddDbContext<ApplicationDbContext>(opcionesSqlite);
-            servicios.AddDbContextFactory<ApplicationDbContext>(opcionesSqlite, ServiceLifetime.Scoped);
-        }
-
-        return servicios;
+        return configuracionBaseDatos.Proveedor;
     }
 }

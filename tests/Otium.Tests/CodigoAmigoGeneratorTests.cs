@@ -5,13 +5,13 @@ namespace Otium.Tests;
 public sealed class CodigoAmigoGeneratorTests
 {
     [Fact]
-    public void Generar_devuelve_ocho_caracteres_alfanumericos()
+    public void Generar_devuelve_seis_caracteres_alfanumericos()
     {
         var generador = new CodigoAmigoGenerator();
 
         var codigo = generador.Generar();
 
-        Assert.Equal(8, codigo.Length);
+        Assert.Equal(6, codigo.Length);
         Assert.All(codigo, c => Assert.Contains(c, "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"));
     }
 

@@ -29,8 +29,8 @@ public sealed class RegistroTests
         Assert.False(string.IsNullOrWhiteSpace(primero.Usuario!.CodigoAmigo));
         Assert.False(string.IsNullOrWhiteSpace(segundo.Usuario!.CodigoAmigo));
         Assert.NotEqual(primero.Usuario.CodigoAmigo, segundo.Usuario.CodigoAmigo);
-        Assert.Equal(8, primero.Usuario.CodigoAmigo.Length);
-        Assert.Equal(8, segundo.Usuario.CodigoAmigo.Length);
+        Assert.Equal(6, primero.Usuario.CodigoAmigo.Length);
+        Assert.Equal(6, segundo.Usuario.CodigoAmigo.Length);
     }
 
     [Fact]
