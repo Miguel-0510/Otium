@@ -145,8 +145,10 @@ public class GlosarioService : IGlosarioService
     private async Task<PalabraGlosario?> ObtenerPalabraExistenteAsync(string usuarioId, string palabra, CancellationToken cancellationToken)
     {
         await using var db = await _fabrica.CreateDbContextAsync(cancellationToken);
+        var normalizada = palabra.ToLowerInvariant();
+
         return await db.PalabrasGlosario
-            .Where(p => p.UsuarioId == usuarioId && EF.Functions.Collate(p.Palabra, "NOCASE") == palabra)
+            .Where(p => p.UsuarioId == usuarioId && p.Palabra.ToLower() == normalizada)
             .FirstOrDefaultAsync(cancellationToken);
     }
 

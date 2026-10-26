@@ -48,6 +48,31 @@ public sealed class GlosarioServiceTests
         Assert.Empty(await servicio.ObtenerDeUsuarioAsync(usuario.Usuario.Id));
     }
 
+    [Fact]
+    public async Task No_duplica_palabras_ignorando_mayusculas()
+    {
+        await using var scope = _fabrica.Services.CreateAsyncScope();
+        var registro = scope.ServiceProvider.GetRequiredService<IRegistroService>();
+        var fabricaDb = scope.ServiceProvider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        var limites = scope.ServiceProvider.GetRequiredService<ILimiteIntentosService>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<GlosarioService>>();
+
+        var usuario = await registro.RegistrarAsync($"glosario-duplicado-{Guid.NewGuid():N}@example.com", "Password1");
+        Assert.True(usuario.Exito);
+
+        var gemini = new GeminiFalso("Definición de prueba.");
+        var servicio = new GlosarioService(fabricaDb, gemini, limites, logger);
+
+        var primero = await servicio.BuscarYGuardarAsync(usuario.Usuario!.Id, "Efímero", "");
+        var segundo = await servicio.BuscarYGuardarAsync(usuario.Usuario.Id, "efímero", "");
+
+        Assert.True(primero.Exito, primero.Mensaje);
+        Assert.True(segundo.Exito, segundo.Mensaje);
+        Assert.Equal("Ya está en tu glosario.", segundo.Mensaje);
+        Assert.Equal(1, gemini.Llamadas);
+        Assert.Single(await servicio.ObtenerDeUsuarioAsync(usuario.Usuario.Id));
+    }
+
     private sealed class GeminiFalso : IGeminiClient
     {
         private readonly string _definicion;
@@ -59,7 +84,12 @@ public sealed class GlosarioServiceTests
 
         public bool EstaConfigurado => true;
 
-        public Task<string?> DefinirAsync(string palabra, string libroTitulo, CancellationToken cancellationToken = default) =>
-            Task.FromResult<string?>(_definicion);
+        public int Llamadas { get; private set; }
+
+        public Task<string?> DefinirAsync(string palabra, string libroTitulo, CancellationToken cancellationToken = default)
+        {
+            Llamadas++;
+            return Task.FromResult<string?>(_definicion);
+        }
     }
 }
