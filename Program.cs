@@ -277,15 +277,7 @@ else
 
 if (exigirHttps)
 {
-    try
-    {
-        app.UseHsts();
-    }
-    catch (Exception ex)
-    {
-        var logger = app.Services.GetRequiredService<ILogger<Program>>();
-        logger.LogWarning(ex, "No se pudo configurar HSTS. La aplicación continuará sin él.");
-    }
+    app.UseHsts();
 }
 
 app.Use(async (context, next) =>
@@ -305,15 +297,7 @@ app.Use(async (context, next) =>
 
 if (exigirHttps)
 {
-    try
-    {
-        app.UseHttpsRedirection();
-    }
-    catch (Exception ex)
-    {
-        var logger = app.Services.GetRequiredService<ILogger<Program>>();
-        logger.LogWarning(ex, "No se pudo configurar la redirección HTTPS. La aplicación continuará sin ella.");
-    }
+    app.UseHttpsRedirection();
 }
 
 app.UseRateLimiter();
