@@ -80,7 +80,11 @@ builder.Services.AddBaseDeDatos(
     builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found."),
     builder.Configuration);
-builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+}
 
 builder.Services.AddScoped<SaludDbCheck>();
 builder.Services.AddHealthChecks()
@@ -243,7 +247,15 @@ app.UseForwardedHeaders();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.Migrate();
+    try
+    {
+        db.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "No se pudieron aplicar las migraciones al arranque. La aplicación continuará sin ellas.");
+    }
 }
 
 if (app.Environment.IsDevelopment())
