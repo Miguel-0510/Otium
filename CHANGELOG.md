@@ -9,8 +9,10 @@ Todos los cambios notables de este proyecto se documentarán en este archivo.
 - `EmailSender` conserva las plantillas y delega el envío en el transporte SMTP.
 - El transporte SMTP usa STARTTLS en `smtp-relay.brevo.com:587`, timeout, cancelación y captura de errores sin bloquear la petición.
 - Gemini normaliza la API key (espacios) y acepta `GEMINI_API_KEY` como alias.
-- Añadido log de arranque que indica si Gemini y el correo están configurados, sin exponer secretos.
-- Gemini reintenta `429` y trata los timeouts como error controlado en el glosario.
+- Añadido `DiagnosticoConfiguracion`: al arrancar registra presencia y longitud de las claves, los valores de `Smtp:Host`, `Port`, `Username` y `SenderEmail`, y advierte de campos vacíos o inválidos sin exponer secretos.
+- Añadida verificación de DI al arrancar para `IGeminiClient`, `IEnvioCorreo` e `IEmailSender<ApplicationUser>`.
+- Gemini reintenta `429` y trata los timeouts como error controlado en el glosario. Los errores HTTP registran `StatusCode` y `ResponseBody`; los fallos de red, timeout y JSON inválido quedan detallados en el log.
+- `SmtpEnvioCorreo` registra el mensaje exacto de Brevo y clasifica `SmtpException`, `SocketException`, fallos de autenticación, remitente rechazado y bloqueo del puerto SMTP saliente.
 - Eliminado `.github/workflows/docker.yml`.
 
 ### Telemetría y archivos estáticos

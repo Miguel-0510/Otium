@@ -61,6 +61,53 @@ public sealed class GeminiClientTests
         Assert.Equal(0, handler.Llamadas);
     }
 
+    [Fact]
+    public async Task Registra_estado_y_cuerpo_cuando_gemini_devuelve_error()
+    {
+        const string cuerpoError = """{"error":{"code":403,"message":"API key not valid"}}""";
+        using var handler = new GeminiErrorFalso(HttpStatusCode.Forbidden, cuerpoError);
+        using var http = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://generativelanguage.googleapis.com/")
+        };
+
+        const string clave = "clave-secreta-de-prueba";
+        var logger = new LoggerCapturador<GeminiClient>();
+
+        var cliente = new GeminiClient(
+            http,
+            new MemoryCache(new MemoryCacheOptions()),
+            Options.Create(new GeminiOptions { ApiKey = clave, Modelo = "gemini-test" }),
+            logger);
+
+        var definicion = await cliente.DefinirAsync("efímero", "");
+
+        Assert.Null(definicion);
+        Assert.Contains("403", logger.Texto, StringComparison.Ordinal);
+        Assert.Contains("API key not valid", logger.Texto, StringComparison.Ordinal);
+        Assert.DoesNotContain(clave, logger.Texto, StringComparison.Ordinal);
+    }
+
+    private sealed class GeminiErrorFalso : HttpMessageHandler
+    {
+        private readonly HttpStatusCode _estado;
+        private readonly string _cuerpo;
+
+        public GeminiErrorFalso(HttpStatusCode estado, string cuerpo)
+        {
+            _estado = estado;
+            _cuerpo = cuerpo;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(_estado)
+            {
+                Content = new StringContent(_cuerpo, Encoding.UTF8, "application/json")
+            });
+    }
+
     private sealed class GeminiFalso : HttpMessageHandler
     {
         private readonly string _definicion;

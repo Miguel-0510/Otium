@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 using Otium.Components;
 using Otium.Components.Account;
 using Otium.Data;
@@ -280,40 +281,50 @@ if (!string.IsNullOrWhiteSpace(sentryDsn))
 
 var app = builder.Build();
 
-var geminiConfigurado = !string.IsNullOrWhiteSpace(app.Configuration["Gemini:ApiKey"])
-    || !string.IsNullOrWhiteSpace(app.Configuration["GEMINI_API_KEY"]);
-if (geminiConfigurado)
+GeminiOptions? opcionesGemini = null;
+SmtpOptions? opcionesSmtp = null;
+
+try
 {
-    var modeloGemini = app.Configuration["Gemini:Modelo"];
-    app.Logger.LogInformation(
-        "Gemini configurado con el modelo {Modelo}.",
-        string.IsNullOrWhiteSpace(modeloGemini) ? "gemini-flash-lite-latest" : modeloGemini);
+    opcionesGemini = app.Services.GetRequiredService<IOptions<GeminiOptions>>().Value;
 }
-else
+catch (Exception ex) when (ex is OptionsValidationException or InvalidOperationException)
 {
-    app.Logger.LogWarning(
-        "Gemini no está configurado (Gemini:ApiKey/Gemini__ApiKey). " +
-        "El glosario inteligente quedará deshabilitado.");
+    app.Logger.LogError(ex, "La configuración de Gemini no es válida.");
 }
 
-var smtpConfigurado = !string.IsNullOrWhiteSpace(app.Configuration["Smtp:Host"])
-    && !string.IsNullOrWhiteSpace(app.Configuration["Smtp:Username"])
-    && !string.IsNullOrWhiteSpace(app.Configuration["Smtp:Password"])
-    && !string.IsNullOrWhiteSpace(app.Configuration["Smtp:SenderEmail"]);
-
-if (smtpConfigurado)
+try
 {
-    app.Logger.LogInformation(
-        "Servicio de correo listo mediante Brevo SMTP ({Host}:{Puerto}). Remitente: {Remitente}.",
-        app.Configuration["Smtp:Host"],
-        app.Configuration["Smtp:Port"] ?? "587",
-        app.Configuration["Smtp:SenderEmail"]);
+    opcionesSmtp = app.Services.GetRequiredService<IOptions<SmtpOptions>>().Value;
 }
-else
+catch (Exception ex) when (ex is OptionsValidationException or InvalidOperationException)
 {
-    app.Logger.LogWarning(
-        "Brevo SMTP no está configurado (Smtp:Host/Username/Password/SenderEmail). " +
-        "La recuperación de contraseña no enviará mensajes.");
+    app.Logger.LogError(ex, "La configuración de Brevo SMTP no es válida.");
+}
+
+DiagnosticoConfiguracion.Registrar(app.Configuration, app.Logger, opcionesGemini, opcionesSmtp);
+
+using (var ambito = app.Services.CreateScope())
+{
+    try
+    {
+        var gemini = ambito.ServiceProvider.GetService<IGeminiClient>();
+        var envio = ambito.ServiceProvider.GetService<IEnvioCorreo>();
+        var correo = ambito.ServiceProvider.GetService<IEmailSender<ApplicationUser>>();
+
+        app.Logger.LogInformation(
+            "Inyección de dependencias verificada: IGeminiClient -> {Gemini}; " +
+            "IEnvioCorreo -> {Envio}; IEmailSender<ApplicationUser> -> {Correo}.",
+            gemini?.GetType().Name ?? "NO REGISTRADO",
+            envio?.GetType().Name ?? "NO REGISTRADO",
+            correo?.GetType().Name ?? "NO REGISTRADO");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(
+            ex,
+            "No se pudieron resolver los servicios externos desde el contenedor de dependencias.");
+    }
 }
 
 app.UseForwardedHeaders();
