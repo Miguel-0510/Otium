@@ -41,7 +41,7 @@ La interfaz y el dominio están en español. Quedan pantallas heredadas de la pl
 | Autenticación | ASP.NET Core Identity + cookies |
 | Base de datos | SQLite + EF Core |
 | Paquetes EF/Identity | `10.0.12` |
-| APIs externas | Open Library (HTTPS), Google Gemini (HTTPS), SMTP Brevo (SSL) |
+| APIs externas | Open Library (HTTPS), Google Gemini (HTTPS), Resend (HTTPS), SMTP (SSL) |
 | PWA | `manifest.json`, `sw.js`, `instalar.js` |
 | Puerto local publicado | `http://localhost:5000` |
 | Puerto de desarrollo | `http://localhost:5235`, `https://localhost:7111` |
@@ -125,7 +125,9 @@ Services/
   GlosarioService.cs              Persistencia y cuotas del glosario
   GeminiClient.cs                 Cliente Gemini: prompt, HTTP y parseo
   BuscadorLibros.cs               Cliente Open Library con caché y reintentos
-  EmailSender.cs                  Envío SMTP
+  EmailSender.cs                  Plantillas y envío (delega en IEnvioCorreo)
+  ResendEnvioCorreo.cs            Transporte HTTP de Resend
+  SmtpEnvioCorreo.cs              Transporte SMTP
 wwwroot/
   app.css, tema.js                Estilos y tema
   manifest.json, sw.js            PWA
@@ -142,7 +144,10 @@ Claves usadas:
 |---|---|---|
 | `ConnectionStrings:DefaultConnection` | SQLite | `appsettings.json` |
 | `DataProtection:KeysPath` | Persistencia de claves | Entorno/Docker |
-| `Correo:Host` | Servidor SMTP | Configuración local/entorno |
+| `Resend:ApiKey` | API key de Resend | Entorno (`Resend__ApiKey`) |
+| `Resend:Remitente` | Remitente verificado en Resend | Entorno (`Resend__Remitente`) |
+| `Resend:UrlApi` | Base de la API de Resend | Opcional (`https://api.resend.com/`) |
+| `Correo:Host` | Servidor SMTP (alternativa a Resend) | Configuración local/entorno |
 | `Correo:Puerto` | Puerto SMTP | Configuración local/entorno |
 | `Correo:Usuario` | Usuario SMTP | Configuración local/entorno |
 | `Correo:Clave` | Contraseña SMTP | Configuración local/entorno |
@@ -151,6 +156,9 @@ Claves usadas:
 | `Gemini:Modelo` | Modelo Gemini | Opcional |
 | `Sitio:UrlPublica` | URL externa para enlaces de correo | Configuración local/entorno |
 | `Invitacion:Codigo` | Legado; ya no se usa en el fuente actual | `appsettings.Development.json` |
+
+Si `Resend:ApiKey` está definida se usa Resend; en caso contrario se usa SMTP. También se aceptan `RESEND_API_KEY` y `GEMINI_API_KEY` como alias de entorno.
+En producción configura `Resend__Remitente` con un remitente de un dominio verificado en Resend. Si se omite, se usa `onboarding@resend.dev`, que solo permite enviar al correo del propietario de la cuenta.
 
 Reglas:
 
@@ -192,7 +200,7 @@ dotnet user-secrets set "Correo:Clave" "<valor>"
 | Presentación | Componentes Razor, CSS aislado, JS mínimo | Existe, pero `Estantes.razor` concentra demasiada lógica |
 | Aplicación | `Services/*` | Parcial; mezcla casos de uso, persistencia y configuración |
 | Dominio | `Models/*` | Entidades anémicas, sin reglas de negocio |
-| Infraestructura | EF Core, SQLite, SMTP, HttpClient | Existe |
+| Infraestructura | EF Core, SQLite, Resend, SMTP, HttpClient | Existe |
 | Contratos | Interfaces de servicios | Parcial; `IBuscadorLibros` e `IGeminiClient` existen; faltan DTOs de entrada/salida |
 
 Flujo típico de una página Blazor:
@@ -236,8 +244,9 @@ Relaciones relevantes en `Data/ApplicationDbContext.cs`:
 ### 6.5 Integraciones externas
 
 - **Open Library:** búsqueda de 8 resultados por título/autor; portadas desde `covers.openlibrary.org`.
-- **Gemini:** definiciones breves; modelo por defecto `gemini-flash-lite-latest`.
-- **SMTP:** envío de enlaces de confirmación y recuperación.
+- **Gemini:** definiciones breves; modelo por defecto `gemini-flash-lite-latest`; la API key se envía en `x-goog-api-key`.
+- **Resend:** envío de enlaces de confirmación y recuperación por HTTPS; se selecciona si existe `Resend:ApiKey`.
+- **SMTP:** alternativa a Resend para envío de enlaces.
 - **PWA:** el service worker solo guarda la página de aviso sin conexión. La app requiere conexión, por diseño.
 
 ### 6.6 Despliegue dual: Tailscale local y VPS Oracle
@@ -649,11 +658,13 @@ Acciones:
 
 #### P2-17. `EmailSender` frágil
 
-- `Services/EmailSender.cs:33-37` usa `int.Parse` y claves opcionales sin validación.
-- Si falta `Correo:Host`, `Correo:Usuario` o `Correo:Clave`, falla en tiempo de ejecución.
+**Estado: parcialmente corregido (2026-10-25).** `EmailSender` delega en `IEnvioCorreo`; Resend es el transporte principal y SMTP la alternativa. Ambos tienen timeout, cancelación y manejo de errores sin romper la petición. El arranque registra si el correo está configurado. Sigue pendiente valorar una cola/outbox y MailKit para SMTP.
+
+- ~~`Services/EmailSender.cs:33-37` usa `int.Parse` y claves opcionales sin validación.~~
+- ~~Si falta `Correo:Host`, `Correo:Usuario` o `Correo:Clave`, falla en tiempo de ejecución.~~
 - `SmtpClient` es una API heredada; valorar MailKit.
 - Enviar correo dentro de la petición puede aumentar la latencia; valorar cola/outbox.
-- No hay reintentos, cancelación ni verificación de configuración al arrancar.
+- ~~No hay reintentos, cancelación ni verificación de configuración al arrancar.~~
 
 #### P2-18. Sin respaldos ni recuperación documentada
 

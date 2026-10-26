@@ -2,7 +2,16 @@
 
 Todos los cambios notables de este proyecto se documentarán en este archivo.
 
-## [No publicado] - 2026-10-24
+## [No publicado] - 2026-10-25
+
+### Despliegue en Render
+- Añadido transporte de correo con Resend (`ResendEnvioCorreo`) y abstracción `IEnvioCorreo`; SMTP queda como alternativa. Se usa Resend cuando `Resend:ApiKey` está configurada.
+- `EmailSender` conserva las plantillas y delega el envío en el transporte seleccionado.
+- Resend y SMTP tienen timeout y capturan errores de red/HTTP sin bloquear la petición.
+- Gemini y Resend normalizan la API key (espacios) y aceptan `GEMINI_API_KEY` / `RESEND_API_KEY` como alias.
+- Añadido log de arranque que indica si Gemini y el correo están configurados, sin exponer secretos.
+- Gemini reintenta `429` y trata los timeouts como error controlado en el glosario.
+- Eliminado `.github/workflows/docker.yml`.
 
 ### Telemetría y archivos estáticos
 - Añadido `Sentry.AspNetCore` para telemetría de errores. Solo se activa si `Sentry:Dsn` está configurado (variables de entorno/User Secrets); en desarrollo y tests no envía nada.

@@ -107,9 +107,14 @@ public class GlosarioService : IGlosarioService
 
             return (true, "Guardada en tu glosario.", nueva);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogError(ex, "La consulta a Gemini agotó el tiempo de espera.");
+            return (false, "La consulta tardó demasiado. Inténtalo de nuevo.", null);
         }
         catch (Exception ex)
         {

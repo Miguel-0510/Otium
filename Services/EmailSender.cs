@@ -1,20 +1,16 @@
-﻿using System.Net;
-using System.Net.Mail;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.AspNetCore.Identity;
 using Otium.Data;
-using Otium.Services.Options;
 
 namespace Otium.Services;
 
 public class EmailSender : IEmailSender<ApplicationUser>
 {
-    private readonly CorreoOptions _opciones;
+    private readonly IEnvioCorreo _envio;
     private readonly ILogger<EmailSender> _logger;
 
-    public EmailSender(IOptions<CorreoOptions> opciones, ILogger<EmailSender> logger)
+    public EmailSender(IEnvioCorreo envio, ILogger<EmailSender> logger)
     {
-        _opciones = opciones.Value;
+        _envio = envio;
         _logger = logger;
     }
 
@@ -32,35 +28,14 @@ public class EmailSender : IEmailSender<ApplicationUser>
 
     private async Task EnviarAsync(string destinatario, string asunto, string cuerpoHtml)
     {
-        if (string.IsNullOrWhiteSpace(_opciones.Host)
-            || string.IsNullOrWhiteSpace(_opciones.Usuario)
-            || string.IsNullOrWhiteSpace(_opciones.Clave)
-            || string.IsNullOrWhiteSpace(_opciones.Remitente))
-        {
-            _logger.LogWarning("Correo no configurado; se omite el envío a {Destinatario}", destinatario);
-            return;
-        }
+        var enviado = await _envio.EnviarAsync(destinatario, asunto, cuerpoHtml);
 
-        using var mensaje = new MailMessage();
-        mensaje.From = new MailAddress(_opciones.Remitente, "Otium");
-        mensaje.To.Add(destinatario);
-        mensaje.Subject = asunto;
-        mensaje.Body = cuerpoHtml;
-        mensaje.IsBodyHtml = true;
-
-        using var cliente = new SmtpClient(_opciones.Host, _opciones.Puerto)
+        if (!enviado)
         {
-            Credentials = new NetworkCredential(_opciones.Usuario, _opciones.Clave),
-            EnableSsl = true
-        };
-
-        try
-        {
-            await cliente.SendMailAsync(mensaje);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "No se pudo enviar el correo a {Destinatario}", destinatario);
+            _logger.LogWarning(
+                "No se pudo enviar el correo '{Asunto}' a {Destinatario}. Revisa la configuración del proveedor.",
+                asunto,
+                destinatario);
         }
     }
 }

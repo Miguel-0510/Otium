@@ -26,6 +26,8 @@ public sealed class OtiumWebAppFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("Correo__Remitente", "pruebas@example.com");
         Environment.SetEnvironmentVariable("Gemini__ApiKey", "");
         Environment.SetEnvironmentVariable("Gemini__Modelo", "gemini-flash-lite-latest");
+        Environment.SetEnvironmentVariable("Resend__ApiKey", "");
+        Environment.SetEnvironmentVariable("RESEND_API_KEY", "");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

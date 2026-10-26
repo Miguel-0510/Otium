@@ -40,12 +40,20 @@ public class GeminiClient : IGeminiClient
     {
         if (!EstaConfigurado)
         {
+            _logger.LogWarning("Gemini no está configurado; no se puede definir '{Palabra}'.", palabra);
             return null;
         }
 
         var texto = (palabra ?? "").Trim();
         if (texto.Length == 0)
         {
+            return null;
+        }
+
+        var modelo = (_opciones.Modelo ?? "").Trim();
+        if (modelo.Length == 0)
+        {
+            _logger.LogError("Gemini:Modelo está vacío; no se puede consultar el servicio.");
             return null;
         }
 
@@ -60,7 +68,7 @@ public class GeminiClient : IGeminiClient
                      "Si tiene varios significados, elige el mas comun o el que mejor encaje con el contexto dado. " +
                      "Responde solo con la definicion, sin repetir la palabra, sin comillas y sin comentarios adicionales.";
 
-        var url = $"v1beta/models/{_opciones.Modelo}:generateContent";
+        var url = $"v1beta/models/{Uri.EscapeDataString(modelo)}:generateContent";
         var cuerpo = new
         {
             contents = new[] { new { parts = new[] { new { text = prompt } } } },
@@ -97,7 +105,7 @@ public class GeminiClient : IGeminiClient
         {
             Content = JsonContent.Create(cuerpo)
         };
-        solicitud.Headers.Add("x-goog-api-key", _opciones.ApiKey);
+        solicitud.Headers.Add("x-goog-api-key", _opciones.ApiKey.Trim());
         return solicitud;
     }
 
@@ -113,6 +121,19 @@ public class GeminiClient : IGeminiClient
             try
             {
                 respuesta = await _http.SendAsync(solicitud, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException) when (intento < MaxIntentos)
+            {
+                await Task.Delay(EsperaEntreIntentos * intento, cancellationToken);
+                continue;
+            }
+            catch (OperationCanceledException ex)
+            {
+                throw new TimeoutException("La consulta a Gemini superó el tiempo de espera.", ex);
             }
             catch (HttpRequestException) when (intento < MaxIntentos)
             {
@@ -133,7 +154,9 @@ public class GeminiClient : IGeminiClient
     }
 
     private static bool EsTransitorio(HttpStatusCode estado) =>
-        estado == HttpStatusCode.RequestTimeout || (int)estado >= 500;
+        estado == HttpStatusCode.RequestTimeout
+        || estado == HttpStatusCode.TooManyRequests
+        || (int)estado >= 500;
 }
 
 internal class RespuestaGemini

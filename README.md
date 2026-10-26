@@ -28,7 +28,7 @@ Aplicación web personal de diario de lectura y gestión de biblioteca. Stack: A
 | UI | Blazor Web App, `InteractiveServer` |
 | Autenticación | ASP.NET Core Identity + cookies |
 | Base de datos | SQLite + EF Core |
-| APIs externas | Open Library, Google Gemini, SMTP Brevo |
+| APIs externas | Open Library, Google Gemini, Resend, SMTP |
 | PWA | `manifest.json`, `sw.js`, `instalar.js` |
 
 ## Comandos
@@ -61,10 +61,13 @@ Las claves se leen de variables de entorno / User Secrets / `appsettings.Develop
 
 - `ConnectionStrings:DefaultConnection` — SQLite
 - `DataProtection:KeysPath` — persistencia de claves de Data Protection
-- `Correo:Host/Puerto/Usuario/Clave/Remitente` — SMTP
+- `Resend:ApiKey` / `Resend:Remitente` / `Resend:UrlApi` — Resend (prioritario si hay API key)
+- `Correo:Host/Puerto/Usuario/Clave/Remitente` — SMTP (alternativa)
 - `Gemini:ApiKey` / `Gemini:Modelo` — Gemini
 - `Sitio:UrlPublica` — URL pública para enlaces de recuperación
 - `Seguridad:PermitirHttp` — permite HTTP en modo Production (Tailscale)
+
+Si `Resend:ApiKey` está definida, los correos se envían por Resend; en caso contrario se usa SMTP. Configura `Resend:Remitente` con un remitente de un dominio verificado en Resend.
 
 Nunca commitear secretos ni archivos `.db`.
 

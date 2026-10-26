@@ -87,6 +87,19 @@ public class BuscadorLibros : IBuscadorLibros
             {
                 respuesta = await _http.GetAsync(url, cancellationToken);
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException) when (intento < MaxIntentos)
+            {
+                await Task.Delay(EsperaEntreIntentos * intento, cancellationToken);
+                continue;
+            }
+            catch (OperationCanceledException ex)
+            {
+                throw new TimeoutException("La búsqueda en Open Library superó el tiempo de espera.", ex);
+            }
             catch (HttpRequestException) when (intento < MaxIntentos)
             {
                 await Task.Delay(EsperaEntreIntentos * intento, cancellationToken);

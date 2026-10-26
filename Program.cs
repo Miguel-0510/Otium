@@ -145,8 +145,37 @@ builder.Services.AddOptions<CorreoOptions>()
     .Bind(builder.Configuration.GetSection(CorreoOptions.Seccion))
     .ValidateDataAnnotations();
 
+builder.Services.AddOptions<ResendOptions>()
+    .Bind(builder.Configuration.GetSection(ResendOptions.Seccion))
+    .PostConfigure(opciones =>
+    {
+        if (string.IsNullOrWhiteSpace(opciones.ApiKey))
+        {
+            opciones.ApiKey = (builder.Configuration["RESEND_API_KEY"] ?? "").Trim();
+        }
+
+        opciones.ApiKey = (opciones.ApiKey ?? "").Trim();
+        opciones.Remitente = (opciones.Remitente ?? "").Trim();
+    })
+    .Validate(opciones => string.IsNullOrWhiteSpace(opciones.UrlApi)
+        || (Uri.TryCreate(opciones.UrlApi, UriKind.Absolute, out var url)
+            && (url.Scheme == Uri.UriSchemeHttp || url.Scheme == Uri.UriSchemeHttps)),
+        "Resend:UrlApi debe ser una URL absoluta http o https.");
+
 builder.Services.AddOptions<GeminiOptions>()
     .Bind(builder.Configuration.GetSection(GeminiOptions.Seccion))
+    .PostConfigure(opciones =>
+    {
+        if (string.IsNullOrWhiteSpace(opciones.ApiKey))
+        {
+            opciones.ApiKey = (builder.Configuration["GEMINI_API_KEY"] ?? "").Trim();
+        }
+
+        opciones.ApiKey = (opciones.ApiKey ?? "").Trim();
+        opciones.Modelo = string.IsNullOrWhiteSpace(opciones.Modelo)
+            ? "gemini-flash-lite-latest"
+            : opciones.Modelo.Trim();
+    })
     .Validate(opciones => !string.IsNullOrWhiteSpace(opciones.Modelo),
         "Gemini:Modelo no puede estar vacío.");
 
@@ -230,7 +259,37 @@ builder.Services.AddScoped<IRegistroService, RegistroService>();
 builder.Services.AddScoped<IRecuperacionContrasenaService, RecuperacionContrasenaService>();
 builder.Services.AddScoped<IEliminacionCuentaService, EliminacionCuentaService>();
 builder.Services.AddScoped<IExportacionDatosService, ExportacionDatosService>();
-builder.Services.AddSingleton<IEmailSender<ApplicationUser>, EmailSender>();
+var resendApiKey = builder.Configuration["Resend:ApiKey"];
+if (string.IsNullOrWhiteSpace(resendApiKey))
+{
+    resendApiKey = builder.Configuration["RESEND_API_KEY"];
+}
+
+if (!string.IsNullOrWhiteSpace(resendApiKey))
+{
+    builder.Services.AddHttpClient<IEnvioCorreo, ResendEnvioCorreo>(cliente =>
+    {
+        var urlApi = (builder.Configuration["Resend:UrlApi"] ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(urlApi))
+        {
+            urlApi = "https://api.resend.com/";
+        }
+
+        if (!urlApi.EndsWith('/'))
+        {
+            urlApi += "/";
+        }
+
+        cliente.BaseAddress = new Uri(urlApi);
+        cliente.Timeout = TimeSpan.FromSeconds(15);
+    });
+}
+else
+{
+    builder.Services.AddScoped<IEnvioCorreo, SmtpEnvioCorreo>();
+}
+
+builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
 
 builder.Services.AddHttpClient<IBuscadorLibros, BuscadorLibros>(cliente =>
 {
@@ -266,6 +325,61 @@ if (!string.IsNullOrWhiteSpace(sentryDsn))
 }
 
 var app = builder.Build();
+
+var geminiConfigurado = !string.IsNullOrWhiteSpace(app.Configuration["Gemini:ApiKey"])
+    || !string.IsNullOrWhiteSpace(app.Configuration["GEMINI_API_KEY"]);
+if (geminiConfigurado)
+{
+    var modeloGemini = app.Configuration["Gemini:Modelo"];
+    app.Logger.LogInformation(
+        "Gemini configurado con el modelo {Modelo}.",
+        string.IsNullOrWhiteSpace(modeloGemini) ? "gemini-flash-lite-latest" : modeloGemini);
+}
+else
+{
+    app.Logger.LogWarning(
+        "Gemini no está configurado (Gemini:ApiKey/Gemini__ApiKey). " +
+        "El glosario inteligente quedará deshabilitado.");
+}
+
+var resendConfigurado = !string.IsNullOrWhiteSpace(app.Configuration["Resend:ApiKey"])
+    || !string.IsNullOrWhiteSpace(app.Configuration["RESEND_API_KEY"]);
+var smtpConfigurado = !string.IsNullOrWhiteSpace(app.Configuration["Correo:Host"])
+    && !string.IsNullOrWhiteSpace(app.Configuration["Correo:Usuario"])
+    && !string.IsNullOrWhiteSpace(app.Configuration["Correo:Clave"])
+    && !string.IsNullOrWhiteSpace(app.Configuration["Correo:Remitente"]);
+
+if (resendConfigurado)
+{
+    var remitente = app.Configuration["Resend:Remitente"];
+    if (string.IsNullOrWhiteSpace(remitente))
+    {
+        remitente = app.Configuration["Correo:Remitente"];
+    }
+
+    if (string.IsNullOrWhiteSpace(remitente))
+    {
+        app.Logger.LogWarning(
+            "Resend está configurado sin remitente (Resend:Remitente/Correo:Remitente). " +
+            "Se usará onboarding@resend.dev, que solo permite enviar al correo del propietario de la cuenta.");
+    }
+    else
+    {
+        app.Logger.LogInformation("Correo configurado con Resend (remitente {Remitente}).", remitente);
+    }
+}
+else if (smtpConfigurado)
+{
+    app.Logger.LogInformation("Correo configurado con SMTP en {Host}:{Puerto}.",
+        app.Configuration["Correo:Host"],
+        app.Configuration["Correo:Puerto"]);
+}
+else
+{
+    app.Logger.LogWarning(
+        "Correo no configurado (Resend:ApiKey o Correo:Host/Usuario/Clave/Remitente). " +
+        "La recuperación de contraseña no enviará mensajes.");
+}
 
 app.UseForwardedHeaders();
 
