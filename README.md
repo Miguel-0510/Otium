@@ -81,3 +81,32 @@ Nunca commitear secretos ni archivos `.db`.
 - **Render:** `Production`; usar HTTPS, `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`, PostgreSQL y `Brevo__ApiKey`. No se necesitan puertos SMTP.
 
 El proyecto no está listo para lanzamiento público hasta completar los hallazgos P2 (CI, respaldos automáticos, validación de entrada, endurecimiento operativo) descritos en `AGENTS.md`.
+
+## Variables de entorno en Render
+
+Doble guion bajo (`__`) = separador de nivel de configuración de .NET:
+
+```bash
+ASPNETCORE_ENVIRONMENT=Production
+ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+ConnectionStrings__DefaultConnection="postgresql://usuario:clave@host:puento/basededatos"
+Definiciones__ApiKey="<API key de OpenRouter/Z.ai>"        # alias: OPENROUTER_API_KEY, ZAI_API_KEY, GLM_API_KEY
+Definiciones__Endpoint="https://openrouter.ai/api/v1/"     # opcional; por defecto Z.ai
+Definiciones__Modelo="z-ai/glm-5.3-flash"                  # opcional; por defecto glm-5.3-flash
+Brevo__ApiKey="xkeysib-..."                                # API key v3 de Brevo (no SMTP key)
+Brevo__SenderEmail="remitente@verificado.tld"
+Brevo__SenderName="Otium"
+Brevo__Endpoint="https://api.brevo.com/v3/smtp/email"      # opcional
+Seguridad__PermitirHttp=false                              # exigir HTTPS en Production
+```
+
+Opcionales: `DataProtection__KeysPath` (si se usa un disco persistente; sin él, el llavero se guarda en la tabla `DataProtectionKeys`), `Sentry:Dsn`, `Proxy__KnownProxies__0` y `Sitio__UrlPublica` (para enlaces de recuperación).
+
+## Documentación
+
+| Documento | Contenido |
+|---|---|
+| [`DOCS/requerimientos_otium.md`](DOCS/requerimientos_otium.md) | Requerimientos técnicos, diagramas UML (casos de uso, secuencia y arquitectura en Mermaid) |
+| [`DOCS/ficha-tecnica.md`](DOCS/ficha-tecnica.md) | Arquitectura, servicios integrados, seguridad y calidad |
+| [`DOCS/respaldos.md`](DOCS/respaldos.md) | RPO/RTO y procedimiento de restauración de la base de datos |
+| [`AGENTS.md`](AGENTS.md) | Guía de trabajo, auditoría técnica y convenciones para agentes |
