@@ -6,7 +6,7 @@
     <div class="busqueda">
         <label>
             Buscar por título o autor
-            <input @bind="textoBusqueda" @bind:event="oninput" @onkeydown="TeclaBusqueda" placeholder="Rayuela Cortázar" />
+            <input @bind="textoBusqueda" @bind:event="oninput" @onkeydown="TeclaBusqueda" placeholder="Escribe aquí el libro que buscas" />
         </label>
         <button class="boton" disabled="@buscando" @onclick="Buscar">
             @(buscando ? "Buscando..." : "Buscar")

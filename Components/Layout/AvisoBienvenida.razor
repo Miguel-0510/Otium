@@ -1,0 +1,65 @@
+@inject IJSRuntime JS
+@inject ILogger<AvisoBienvenida> Logger
+
+@if (mostrar)
+{
+    <section class="aviso-bienvenida" role="dialog" aria-label="Bienvenida a Otium">
+        <div class="aviso-contenido">
+            <h2>Bienvenido a Otium</h2>
+            <p class="aviso-intro">
+                Otium es tu diario de lectura y biblioteca personal: un lugar tranquilo para
+                guardar tu vida lectora.
+            </p>
+            <ul class="aviso-lista">
+                <li><strong>Estantes:</strong> organiza lo que estás leyendo, terminaste o quieres leer.</li>
+                <li><strong>Travesías:</strong> registra cuántas páginas avanzaste y qué pasó en ellas, con resúmenes.</li>
+                <li><strong>Glosario:</strong> guarda palabras con definiciones rápidas hechas por IA, también dentro del contexto de lo que lees.</li>
+                <li><strong>Amigos:</strong> comparte puntuaciones y reseñas solo con quienes tú decidas.</li>
+                <li><strong>Instalable:</strong> funciona como app en tu dispositivo.</li>
+            </ul>
+            <div class="aviso-acciones">
+                <button class="boton" @onclick="Cerrar">Entendido</button>
+                <button class="boton secundario" @onclick="NoMostrarMas">No volver a mostrar</button>
+            </div>
+        </div>
+    </section>
+}
+
+@code {
+    private bool mostrar;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        try
+        {
+            mostrar = !await JS.InvokeAsync<bool>("otiumAviso.estaOculto");
+            if (mostrar)
+            {
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Si el JS no está disponible, se omite el aviso sin romper la página.
+            Logger.LogWarning(ex, "No se pudo comprobar el estado del aviso de bienvenida.");
+        }
+    }
+
+    private void Cerrar() => mostrar = false;
+
+    private async Task NoMostrarMas()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("otiumAviso.ocultarSiempre");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "No se pudo guardar la preferencia de no mostrar el aviso de bienvenida.");
+        }
+
+        mostrar = false;
+    }
+}

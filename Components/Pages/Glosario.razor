@@ -27,7 +27,7 @@
     <div class="busqueda">
         <label>
             Palabra o frase
-            <input @bind="palabraNueva" @bind:event="oninput" @onkeydown="TeclaBuscar" placeholder="efímero o: demostró una resiliencia formidable" />
+            <input @bind="palabraNueva" @bind:event="oninput" @onkeydown="TeclaBuscar" placeholder="Escribe aquí la palabra o frase" />
         </label>
         <button class="boton" disabled="@buscando" @onclick="Buscar">
             @(buscando ? "Buscando..." : "Buscar")

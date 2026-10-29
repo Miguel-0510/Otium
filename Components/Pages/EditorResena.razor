@@ -10,7 +10,7 @@
     {
         <div class="contenido-travesias">
             <textarea class="bloc-notas" rows="8"
-                      placeholder="Qué te dejó este libro"
+                      placeholder="Escribe aquí tu reseña del libro"
                       @bind="ReseñaTexto"
                       @bind:after="GuardarReseña"></textarea>
             <p class="nota">Tu reseña se guarda al salir del cuadro de texto.</p>
@@ -85,7 +85,7 @@
                     </div>
                     <label class="campo-resumen">
                         Resumen de esta travesía
-                        <textarea class="bloc-notas" rows="8" placeholder="Qué pasó en estas páginas..." @bind="NuevoResumenEntrada"></textarea>
+                        <textarea class="bloc-notas" rows="8" placeholder="Escribe aquí el resumen de esta travesía" @bind="NuevoResumenEntrada"></textarea>
                     </label>
                     <div class="acciones">
                         @if (!string.IsNullOrEmpty(ErrorEntrada))

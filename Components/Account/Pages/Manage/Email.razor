@@ -28,7 +28,7 @@
             @if (isEmailConfirmed)
             {
                 <div class="form-floating mb-3 input-group">
-                    <input type="text" value="@email" id="email" class="form-control" placeholder="Escribe tu correo" disabled />
+                    <input type="text" value="@email" id="email" class="form-control" placeholder="Escribe aquí tu correo" disabled />
                     <div class="input-group-append">
                         <span class="h-100 input-group-text text-success font-weight-bold">✓</span>
                     </div>
@@ -38,13 +38,13 @@
             else
             {
                 <div class="form-floating mb-3">
-                    <input type="text" value="@email" id="email" class="form-control" placeholder="Escribe tu correo" disabled />
+                    <input type="text" value="@email" id="email" class="form-control" placeholder="Escribe aquí tu correo" disabled />
                     <label for="email" class="form-label">Correo electrónico</label>
                     <button type="submit" class="btn btn-link" form="send-verification-form">Enviar correo de verificación</button>
                 </div>
             }
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.NewEmail" id="Input.NewEmail" class="form-control" autocomplete="email" aria-required="true" placeholder="Escribe un nuevo correo" />
+                <InputText @bind-Value="Input.NewEmail" id="Input.NewEmail" class="form-control" autocomplete="email" aria-required="true" placeholder="Escribe aquí tu correo" />
                 <label for="Input.NewEmail" class="form-label">Nuevo correo electrónico</label>
                 <ValidationMessage For="() => Input.NewEmail" class="text-danger" />
             </div>

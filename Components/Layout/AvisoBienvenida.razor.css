@@ -1,0 +1,49 @@
+.aviso-bienvenida {
+    max-width: 720px;
+    margin: 0 auto 26px;
+    padding: 20px 24px;
+    color: var(--tinta);
+    background: var(--tinte);
+    border: 1.5px solid var(--esmeralda);
+    border-radius: 14px;
+}
+
+.aviso-bienvenida h2 {
+    display: block;
+    margin: 0 0 8px;
+    font-family: var(--serif);
+    font-size: 1.35rem;
+    color: var(--enlace);
+}
+
+.aviso-intro {
+    margin: 0 0 10px;
+    line-height: 1.6;
+}
+
+.aviso-lista {
+    margin: 0 0 14px;
+    padding-left: 20px;
+    line-height: 1.65;
+}
+
+.aviso-lista li {
+    margin-bottom: 4px;
+}
+
+.aviso-lista strong {
+    color: var(--enlace);
+}
+
+.aviso-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+@media (max-width: 480px) {
+    .aviso-bienvenida {
+        margin: 0 0 20px;
+        padding: 16px;
+    }
+}
