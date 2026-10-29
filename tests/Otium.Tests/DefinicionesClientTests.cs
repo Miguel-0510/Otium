@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Otium.Services;
@@ -10,47 +11,94 @@ namespace Otium.Tests;
 
 public sealed class DefinicionesClientTests
 {
+    private static DefinicionesOptions Opciones() =>
+        new() { ApiKey = "clave-de-prueba", Modelo = "glm-test" };
+
+    private static DefinicionesClient Cliente(HttpClient http, ILogger<DefinicionesClient>? logger = null) =>
+        new(
+            http,
+            new MemoryCache(new MemoryCacheOptions()),
+            Options.Create(Opciones()),
+            logger ?? NullLogger<DefinicionesClient>.Instance);
+
     [Fact]
-    public async Task Envia_la_clave_en_cabecera_y_parsea_la_definicion_json()
+    public async Task Envia_la_clave_en_cabecera_y_parsea_termino_y_definicion_json()
     {
-        const string definicion = "Definición de prueba.";
         using var handler = new ServicioDefinicionesFalso(
-            """{"definicion": "Definición de prueba.", "contexto_lectura": ""}""");
+            """{"termino": "efímero", "definicion": "Que dura poco tiempo.", "contexto_lectura": ""}""");
         using var http = new HttpClient(handler)
         {
             BaseAddress = new Uri(DefinicionesOptions.EndpointPorDefecto)
         };
 
-        var cliente = new DefinicionesClient(
-            http,
-            new MemoryCache(new MemoryCacheOptions()),
-            Options.Create(new DefinicionesOptions { ApiKey = "clave-de-prueba", Modelo = "glm-test" }),
-            NullLogger<DefinicionesClient>.Instance);
+        var resultado = await Cliente(http).DefinirAsync("efímero", "", incluirContextoLectura: false);
 
-        var definicionObtenida = await cliente.DefinirAsync("efímero", "Libro de prueba");
-
-        Assert.Equal(definicion, definicionObtenida);
+        Assert.NotNull(resultado);
+        Assert.Equal("efímero", resultado.Termino);
+        Assert.Equal("Que dura poco tiempo.", resultado.Definicion);
+        Assert.Equal("", resultado.ContextoLectura);
         Assert.Equal("Bearer clave-de-prueba", handler.Clave);
         Assert.EndsWith("chat/completions", handler.Ruta, StringComparison.Ordinal);
 
         using var documento = System.Text.Json.JsonDocument.Parse(handler.Cuerpo!);
         var raiz = documento.RootElement;
         Assert.Equal("glm-test", raiz.GetProperty("model").GetString());
-        Assert.Contains(
-            "efímero",
-            raiz.GetProperty("messages")[1].GetProperty("content").GetString()!,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "Libro de prueba",
-            raiz.GetProperty("messages")[1].GetProperty("content").GetString()!,
-            StringComparison.Ordinal);
+        var sistema = raiz.GetProperty("messages")[0].GetProperty("content").GetString()!;
+        var usuario = raiz.GetProperty("messages")[1].GetProperty("content").GetString()!;
+        Assert.Contains("efímero", usuario, StringComparison.Ordinal);
+        // MODO 1: no solicita contexto de lectura.
+        Assert.DoesNotContain("contexto_lectura", sistema, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Con_contexto_pide_el_matiz_del_libro()
+    {
+        using var handler = new ServicioDefinicionesFalso(
+            """{"termino": "resiliencia", "definicion": "Capacidad de adaptarse ante la adversidad.", "contexto_lectura": ""}""");
+        using var http = new HttpClient(handler)
+        {
+            BaseAddress = new Uri(DefinicionesOptions.EndpointPorDefecto)
+        };
+
+        var resultado = await Cliente(http)
+            .DefinirAsync("demostró una resiliencia formidable", "Libro de prueba", incluirContextoLectura: true);
+
+        Assert.NotNull(resultado);
+
+        using var documento = System.Text.Json.JsonDocument.Parse(handler.Cuerpo!);
+        var mensajes = documento.RootElement.GetProperty("messages");
+        var sistema = mensajes[0].GetProperty("content").GetString()!;
+        var usuario = mensajes[1].GetProperty("content").GetString()!;
+        Assert.Contains("contexto_lectura", sistema, StringComparison.Ordinal);
+        Assert.Contains("Libro de prueba", usuario, StringComparison.Ordinal);
+        Assert.Contains("resiliencia", usuario, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Recorta_el_texto_a_200_caracteres_antes_de_enviarlo()
+    {
+        using var handler = new ServicioDefinicionesFalso(
+            """{"termino": "palabra", "definicion": "Definición de prueba.", "contexto_lectura": ""}""");
+        using var http = new HttpClient(handler)
+        {
+            BaseAddress = new Uri(DefinicionesOptions.EndpointPorDefecto)
+        };
+
+        var texto = new string('a', 150) + new string('b', 150);
+        var resultado = await Cliente(http).DefinirAsync(texto, "", incluirContextoLectura: false);
+
+        Assert.NotNull(resultado);
+        using var documento = System.Text.Json.JsonDocument.Parse(handler.Cuerpo!);
+        var usuario = documento.RootElement.GetProperty("messages")[1].GetProperty("content").GetString()!;
+        Assert.Contains(new string('a', 150), usuario, StringComparison.Ordinal);
+        Assert.DoesNotContain(new string('b', 51), usuario, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task Sin_clave_no_llama_al_servicio()
     {
         using var handler = new ServicioDefinicionesFalso(
-            """{"definicion": "No debe usarse.", "contexto_lectura": ""}""");
+            """{"termino": "efímero", "definicion": "No debe usarse.", "contexto_lectura": ""}""");
         using var http = new HttpClient(handler)
         {
             BaseAddress = new Uri(DefinicionesOptions.EndpointPorDefecto)
@@ -63,34 +111,8 @@ public sealed class DefinicionesClientTests
             NullLogger<DefinicionesClient>.Instance);
 
         Assert.False(cliente.EstaConfigurado);
-        Assert.Null(await cliente.DefinirAsync("efímero", ""));
+        Assert.Null(await cliente.DefinirAsync("efímero", "", incluirContextoLectura: false));
         Assert.Equal(0, handler.Llamadas);
-    }
-
-    [Fact]
-    public async Task Separa_definicion_global_del_contexto_de_lectura()
-    {
-        const string definicion = "Que dura poco tiempo.";
-        const string contexto = "En la novela suele aplicarse a sentimientos pasajeros.";
-
-        using var handler = new ServicioDefinicionesFalso(
-            """{"definicion": "Que dura poco tiempo.", "contexto_lectura": "En la novela suele aplicarse a sentimientos pasajeros."}""");
-        using var http = new HttpClient(handler)
-        {
-            BaseAddress = new Uri(DefinicionesOptions.EndpointPorDefecto)
-        };
-
-        var cliente = new DefinicionesClient(
-            http,
-            new MemoryCache(new MemoryCacheOptions()),
-            Options.Create(new DefinicionesOptions { ApiKey = "clave-de-prueba", Modelo = "glm-test" }),
-            NullLogger<DefinicionesClient>.Instance);
-
-        var definicionObtenida = await cliente.DefinirAsync("efímero", "Libro de prueba");
-
-        Assert.NotNull(definicionObtenida);
-        Assert.StartsWith(definicion, definicionObtenida!, StringComparison.Ordinal);
-        Assert.Contains("\n\nEn el contexto de la lectura: " + contexto, definicionObtenida!, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -112,9 +134,9 @@ public sealed class DefinicionesClientTests
             Options.Create(new DefinicionesOptions { ApiKey = clave, Modelo = "glm-test" }),
             logger);
 
-        var definicion = await cliente.DefinirAsync("efímero", "");
+        var resultado = await cliente.DefinirAsync("efímero", "", incluirContextoLectura: false);
 
-        Assert.Null(definicion);
+        Assert.Null(resultado);
         Assert.Contains("403", logger.Texto, StringComparison.Ordinal);
         Assert.Contains("API key not valid", logger.Texto, StringComparison.Ordinal);
         Assert.DoesNotContain(clave, logger.Texto, StringComparison.Ordinal);

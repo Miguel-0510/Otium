@@ -102,7 +102,7 @@ public sealed class ValidacionEntradaTests
     }
 
     [Fact]
-    public async Task El_glosario_rechaza_palabras_demasiado_largas()
+    public async Task El_glosario_rechaza_textos_demasiado_largos()
     {
         await using var scope = _fabrica.Services.CreateAsyncScope();
         var registro = scope.ServiceProvider.GetRequiredService<IRegistroService>();
@@ -113,8 +113,9 @@ public sealed class ValidacionEntradaTests
 
         var resultado = await glosario.BuscarYGuardarAsync(
             usuario.Usuario!.Id,
-            new string('x', 101),
-            "Libro");
+            new string('x', 501),
+            "Libro",
+            false);
 
         Assert.False(resultado.Exito);
         Assert.Null(resultado.Palabra);

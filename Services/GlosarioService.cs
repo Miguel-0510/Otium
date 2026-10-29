@@ -7,7 +7,18 @@ namespace Otium.Services;
 public interface IGlosarioService
 {
     Task<List<PalabraGlosario>> ObtenerDeUsuarioAsync(string usuarioId, CancellationToken cancellationToken = default);
-    Task<(bool Exito, string Mensaje, PalabraGlosario? Palabra)> BuscarYGuardarAsync(string usuarioId, string palabra, string libroTitulo, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Consulta y guarda una palabra o frase. Si <paramref name="incluirContextoLectura"/> está activo y hay
+    /// libro, la definición incluye el matiz "En el contexto de la lectura: ..." solo cuando aporta valor.
+    /// </summary>
+    Task<(bool Exito, string Mensaje, PalabraGlosario? Palabra)> BuscarYGuardarAsync(
+        string usuarioId,
+        string texto,
+        string libroTitulo,
+        bool incluirContextoLectura,
+        CancellationToken cancellationToken = default);
+
     Task<bool> EliminarAsync(string usuarioId, int palabraId, CancellationToken cancellationToken = default);
     Task<bool> EditarDefinicionAsync(string usuarioId, int palabraId, string nuevaDefinicion, CancellationToken cancellationToken = default);
     Task EliminarTodosDeUsuarioAsync(string usuarioId, CancellationToken cancellationToken = default);
@@ -43,25 +54,38 @@ public class GlosarioService : IGlosarioService
 
     public async Task<(bool Exito, string Mensaje, PalabraGlosario? Palabra)> BuscarYGuardarAsync(
         string usuarioId,
-        string palabra,
+        string texto,
         string libroTitulo,
+        bool incluirContextoLectura,
         CancellationToken cancellationToken = default)
     {
-        var texto = (palabra ?? "").Trim();
-        if (string.IsNullOrEmpty(texto))
+        var entrada = (texto ?? "").Trim();
+        if (string.IsNullOrEmpty(entrada))
         {
-            return (false, "Escribe una palabra.", null);
+            return (false, "Escribe una palabra o frase.", null);
         }
 
-        if (texto.Length > 100)
+        if (entrada.Length > 500)
         {
-            return (false, "La palabra no puede superar 100 caracteres.", null);
+            return (false, "El texto no puede superar 500 caracteres.", null);
         }
 
-        var titulo = (libroTitulo ?? "").Trim();
+        var titulo = incluirContextoLectura ? (libroTitulo ?? "").Trim() : "";
         if (titulo.Length > 300)
         {
             return (false, "El título del libro no puede superar 300 caracteres.", null);
+        }
+
+        var esPalabraUnica = entrada
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries).Length == 1
+            && entrada.Length <= 100;
+        if (esPalabraUnica)
+        {
+            var existenteUnico = await ObtenerPalabraExistenteAsync(usuarioId, entrada, cancellationToken);
+            if (existenteUnico is not null)
+            {
+                return (true, "Ya está en tu glosario.", existenteUnico);
+            }
         }
 
         if (!_definiciones.EstaConfigurado)
@@ -74,15 +98,15 @@ public class GlosarioService : IGlosarioService
             return (false, "Alcanzaste el límite diario de definiciones. Inténtalo mañana.", null);
         }
 
-        var existente = await ObtenerPalabraExistenteAsync(usuarioId, texto, cancellationToken);
-        if (existente is not null)
-        {
-            return (true, "Ya está en tu glosario.", existente);
-        }
-
         try
         {
-            var definicion = await _definiciones.DefinirAsync(texto, titulo, cancellationToken);
+            var resultado = await _definiciones.DefinirAsync(entrada, titulo, incluirContextoLectura, cancellationToken);
+            if (resultado is null)
+            {
+                return (false, "No encontré una definición para esa palabra.", null);
+            }
+
+            var definicion = resultado.Definicion;
             if (string.IsNullOrWhiteSpace(definicion))
             {
                 return (false, "No encontré una definición para esa palabra.", null);
@@ -93,11 +117,24 @@ public class GlosarioService : IGlosarioService
                 return (false, "La definición recibida es demasiado larga.", null);
             }
 
+            var textoFinal = resultado.ContextoLectura.Length == 0
+                ? definicion
+                : $"{definicion}\n\nEn el contexto de la lectura: {resultado.ContextoLectura}";
+
+            var existenteTermino = await ObtenerPalabraExistenteAsync(usuarioId, resultado.Termino, cancellationToken);
+            if (existenteTermino is not null)
+            {
+                var avisoDuplicado = esPalabraUnica
+                    ? "Ya está en tu glosario."
+                    : $"Término analizado: {resultado.Termino}. Ya está en tu glosario.";
+                return (true, avisoDuplicado, existenteTermino);
+            }
+
             var nueva = new PalabraGlosario
             {
                 UsuarioId = usuarioId,
-                Palabra = texto,
-                Definicion = definicion,
+                Palabra = resultado.Termino,
+                Definicion = textoFinal,
                 LibroTitulo = titulo
             };
 
@@ -105,7 +142,10 @@ public class GlosarioService : IGlosarioService
             db.PalabrasGlosario.Add(nueva);
             await db.SaveChangesAsync(cancellationToken);
 
-            return (true, "Guardada en tu glosario.", nueva);
+            var aviso = esPalabraUnica && resultado.Termino.Equals(entrada.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? "Guardada en tu glosario."
+                : $"Término analizado: {resultado.Termino}. Guardada en tu glosario.";
+            return (true, aviso, nueva);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

@@ -26,13 +26,23 @@
 
     <div class="busqueda">
         <label>
-            Palabra
-            <input @bind="palabraNueva" @bind:event="oninput" @onkeydown="TeclaBuscar" placeholder="verosímil" />
+            Palabra o frase
+            <input @bind="palabraNueva" @bind:event="oninput" @onkeydown="TeclaBuscar" placeholder="efímero o: demostró una resiliencia formidable" />
         </label>
         <button class="boton" disabled="@buscando" @onclick="Buscar">
             @(buscando ? "Buscando..." : "Buscar")
         </button>
     </div>
+
+    <label class="interruptor-lectura">
+        <input type="checkbox" @bind="incluirContextoLectura" disabled="@string.IsNullOrEmpty(libroContexto)" />
+        <span>Contextualizar con la lectura actual</span>
+    </label>
+    @if (string.IsNullOrEmpty(libroContexto))
+    {
+        <p class="pista-interruptor">Abre el glosario desde la ficha de un libro para contextualizar las definiciones.</p>
+    }
+
     @if (!string.IsNullOrEmpty(mensaje))
     {
         <p class="@(exito ? "nota" : "error")">@mensaje</p>
@@ -97,6 +107,7 @@
     private string nuevaDefinicion = "";
     private string palabraNueva = "";
     private string libroContexto = "";
+    private bool incluirContextoLectura;
     private bool buscando;
     private string mensaje = "";
     private bool exito;
@@ -126,7 +137,7 @@
     {
         if (string.IsNullOrWhiteSpace(palabraNueva))
         {
-            mensaje = "Escribe una palabra primero.";
+            mensaje = "Escribe una palabra o frase primero.";
             exito = false;
             return;
         }
@@ -134,7 +145,12 @@
         buscando = true;
         mensaje = "";
 
-        var (ok, msg, nueva) = await Servicio.BuscarYGuardarAsync(usuarioId, palabraNueva, libroContexto);
+        var texto = palabraNueva.Trim();
+        var (ok, msg, nueva) = await Servicio.BuscarYGuardarAsync(
+            usuarioId,
+            texto,
+            libroContexto,
+            incluirContextoLectura);
 
         exito = ok;
         mensaje = msg;

@@ -12,27 +12,49 @@ public interface IDefinicionClient
 {
     bool EstaConfigurado { get; }
 
-    Task<string?> DefinirAsync(string palabra, string libroTitulo, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Define un texto (palabra o frase). Si envía una frase, el modelo extrae el término principal.
+    /// El modo "incluirContextoLectura" pide además el matiz contextual del libro indicado.
+    /// </summary>
+    Task<ResultadoDefinicion?> DefinirAsync(string texto, string libroTitulo, bool incluirContextoLectura, CancellationToken cancellationToken = default);
 }
+
+/// <summary>Resultado del modelo: término analizado, definición global y contexto de lectura (puede quedar vacío).</summary>
+public sealed record ResultadoDefinicion(string Termino, string Definicion, string ContextoLectura);
 
 public class DefinicionesClient : IDefinicionClient
 {
     private const int MaxIntentos = 2;
     private const int LimiteCuerpoLog = 4000;
     private const int MaxTokensSalida = 300;
+    private const int LongitudMaximaTexto = 200;
     private static readonly TimeSpan EsperaEntreIntentos = TimeSpan.FromMilliseconds(300);
     private static readonly TimeSpan DuracionCacheDefinicion = TimeSpan.FromDays(7);
 
-    private const string Instrucciones =
+    private const string InstruccionesBase =
         "Eres un diccionario conciso en español para una app de lectura. " +
-        "Responde ÚNICAMENTE con un objeto JSON válido, sin markdown, sin cercas de código y sin explicaciones, " +
-        "con la forma exacta {\"definicion\": \"...\", \"contexto_lectura\": \"...\"}. " +
-        "Reglas: \"definicion\" debe ser la acepción general más común de la palabra, en una sola frase de " +
-        "máximo 15 palabras, sin repetir la palabra y sin comillas dentro del valor. " +
-        "\"contexto_lectura\" debe ser una frase de máximo 20 palabras que explique el matiz o uso relevante " +
-        "de la palabra en el libro indicado, SOLO si ese contexto aporta un significado situacional clave; " +
-        "si la acepción general ya aplica igual o el contexto no aporta nada relevante, responde con cadena vacía. " +
+        "Si el texto dado es una sola palabra, el término es esa palabra; si es una frase u oración, " +
+        "identifica la palabra clave o término principal que merece definición. " +
         "No añadas campos extra, introducciones, saludos ni texto de relleno.";
+
+    private const string InstruccionesSinContexto =
+        InstruccionesBase +
+        " Responde ÚNICAMENTE con un objeto JSON válido, sin markdown y sin cercas de código, " +
+        "con la forma exacta {\"termino\": \"...\", \"definicion\": \"...\"}. " +
+        "\"termino\" es la palabra clave (una o dos palabras, en minúscula). " +
+        "\"definicion\" es la acepción global más común del término: de 15 a 20 palabras como máximo, " +
+        "súper directa al punto, sin introducciones, sin repetir la palabra y sin comillas dentro del valor.";
+
+    private const string InstruccionesConContexto =
+        InstruccionesBase +
+        " Responde ÚNICAMENTE con un objeto JSON válido, sin markdown y sin cercas de código, " +
+        "con la forma exacta {\"termino\": \"...\", \"definicion\": \"...\", \"contexto_lectura\": \"...\"}. " +
+        "\"termino\" es la palabra clave (una o dos palabras, en minúscula). " +
+        "\"definicion\" es la acepción global más común del término: de 15 a 20 palabras como máximo, " +
+        "súper directa al punto, sin introducciones, sin repetir la palabra y sin comillas dentro del valor. " +
+        "\"contexto_lectura\" es una frase de máximo 20 palabras que explica el matiz o uso relevante " +
+        "del término en el libro indicado, SOLO si ese contexto aporta un significado situacional clave para la obra; " +
+        "si la acepción general ya aplica igual o el contexto no aporta nada relevante, responde con cadena vacía.";
 
     private static readonly JsonSerializerOptions OpcionesJson = new(JsonSerializerDefaults.Web);
 
@@ -56,16 +78,20 @@ public class DefinicionesClient : IDefinicionClient
 
     public bool EstaConfigurado => !string.IsNullOrWhiteSpace(_opciones.ApiKey);
 
-    public async Task<string?> DefinirAsync(string palabra, string libroTitulo, CancellationToken cancellationToken = default)
+    public async Task<ResultadoDefinicion?> DefinirAsync(
+        string texto,
+        string libroTitulo,
+        bool incluirContextoLectura,
+        CancellationToken cancellationToken = default)
     {
         if (!EstaConfigurado)
         {
-            _logger.LogWarning("El servicio de definiciones no está configurado; no se puede definir '{Palabra}'.", palabra);
+            _logger.LogWarning("El servicio de definiciones no está configurado; no se puede definir '{Texto}'.", texto);
             return null;
         }
 
-        var texto = (palabra ?? "").Trim();
-        if (texto.Length == 0)
+        var textoRecortado = RecortarTexto(texto);
+        if (textoRecortado.Length == 0)
         {
             return null;
         }
@@ -77,23 +103,24 @@ public class DefinicionesClient : IDefinicionClient
             return null;
         }
 
-        var claveCache = $"definicion:{texto.ToLowerInvariant()}:{(libroTitulo ?? "").ToLowerInvariant()}";
-        if (_cache.TryGetValue(claveCache, out string? definicionCacheada) && definicionCacheada is not null)
+        var titulado = (libroTitulo ?? "").Trim();
+        var modoConContexto = incluirContextoLectura && titulado.Length > 0;
+        var claveCache = $"definicion:{textoRecortado.ToLowerInvariant()}:{(modoConContexto ? titulado.ToLowerInvariant() : "")}:{incluirContextoLectura}";
+        if (_cache.TryGetValue(claveCache, out ResultadoDefinicion? cacheado) && cacheado is not null)
         {
-            return definicionCacheada;
+            return cacheado;
         }
 
-        var titulado = (libroTitulo ?? "").Trim();
-        var prompt = string.IsNullOrWhiteSpace(titulado)
-            ? $"Palabra: \"{texto}\"\nLibro de lectura: (ninguno; responde \"contexto_lectura\" vacío)"
-            : $"Palabra: \"{texto}\"\nLibro de lectura: \"{titulado}\"";
+        var prompt = modoConContexto
+            ? $"Texto o palabra: \"{textoRecortado}\"\nLibro de lectura: \"{titulado}\""
+            : $"Texto o palabra: \"{textoRecortado}\"";
 
         var cuerpo = new
         {
             model = modelo,
             messages = new[]
             {
-                new { role = "system", content = Instrucciones },
+                new { role = "system", content = modoConContexto ? InstruccionesConContexto : InstruccionesSinContexto },
                 new { role = "user", content = prompt }
             },
             temperature = 0.2,
@@ -108,7 +135,7 @@ public class DefinicionesClient : IDefinicionClient
 
             if (!respuesta.IsSuccessStatusCode)
             {
-                await RegistrarErrorHttpAsync(respuesta, modelo, texto, cancellationToken);
+                await RegistrarErrorHttpAsync(respuesta, modelo, textoRecortado, cancellationToken);
                 return null;
             }
 
@@ -122,9 +149,9 @@ public class DefinicionesClient : IDefinicionClient
                 var cuerpoRespuesta = await LeerCuerpoAsync(respuesta, cancellationToken);
                 _logger.LogError(
                     ex,
-                    "El servicio de definiciones devolvió HTTP 200 con JSON inválido al definir '{Palabra}' con el modelo '{Modelo}'. " +
+                    "El servicio de definiciones devolvió HTTP 200 con JSON inválido al definir '{Texto}' con el modelo '{Modelo}'. " +
                     "ResponseBody: {ResponseBody}",
-                    texto,
+                    textoRecortado,
                     modelo,
                     Truncar(cuerpoRespuesta));
                 return null;
@@ -136,22 +163,22 @@ public class DefinicionesClient : IDefinicionClient
             {
                 var cuerpoRespuesta = await LeerCuerpoAsync(respuesta, cancellationToken);
                 _logger.LogWarning(
-                    "El servicio de definiciones respondió HTTP 200 sin texto utilizable al definir '{Palabra}' con el modelo '{Modelo}'. " +
+                    "El servicio de definiciones respondió HTTP 200 sin texto utilizable al definir '{Texto}' con el modelo '{Modelo}'. " +
                     "Posible bloqueo de seguridad o respuesta vacía. ResponseBody: {ResponseBody}",
-                    texto,
+                    textoRecortado,
                     modelo,
                     Truncar(cuerpoRespuesta));
                 return null;
             }
 
-            var definicion = ComponerDefinicion(contenido, texto, modelo);
-            if (definicion is null)
+            var resultado = ExtraerResultado(contenido, textoRecortado, modelo);
+            if (resultado is null)
             {
                 return null;
             }
 
-            _cache.Set(claveCache, definicion, DuracionCacheDefinicion);
-            return definicion;
+            _cache.Set(claveCache, resultado, DuracionCacheDefinicion);
+            return resultado;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -161,8 +188,8 @@ public class DefinicionesClient : IDefinicionClient
         {
             _logger.LogError(
                 ex,
-                "La consulta al servicio de definiciones para '{Palabra}' con el modelo '{Modelo}' superó el tiempo límite de {Segundos} s.",
-                texto,
+                "La consulta al servicio de definiciones para '{Texto}' con el modelo '{Modelo}' superó el tiempo límite de {Segundos} s.",
+                textoRecortado,
                 modelo,
                 _http.Timeout.TotalSeconds);
             return null;
@@ -171,8 +198,8 @@ public class DefinicionesClient : IDefinicionClient
         {
             _logger.LogError(
                 ex,
-                "La consulta al servicio de definiciones para '{Palabra}' con el modelo '{Modelo}' agotó los reintentos por tiempo de espera.",
-                texto,
+                "La consulta al servicio de definiciones para '{Texto}' con el modelo '{Modelo}' agotó los reintentos por tiempo de espera.",
+                textoRecortado,
                 modelo);
             return null;
         }
@@ -180,9 +207,9 @@ public class DefinicionesClient : IDefinicionClient
         {
             _logger.LogError(
                 ex,
-                "Error de red o TLS al contactar el servicio de definiciones para '{Palabra}' con el modelo '{Modelo}'. " +
+                "Error de red o TLS al contactar el servicio de definiciones para '{Texto}' con el modelo '{Modelo}'. " +
                 "Endpoint: {Endpoint}; HTTP status: {Estado}.",
-                texto,
+                textoRecortado,
                 modelo,
                 DefinicionesOptions.EndpointPorDefecto,
                 ex.StatusCode?.ToString() ?? "sin respuesta");
@@ -192,8 +219,8 @@ public class DefinicionesClient : IDefinicionClient
         {
             _logger.LogWarning(
                 ex,
-                "No se pudo consultar el servicio de definiciones para '{Palabra}': {Mensaje}",
-                texto,
+                "No se pudo consultar el servicio de definiciones para '{Texto}': {Mensaje}",
+                textoRecortado,
                 ex.Message);
             return null;
         }
@@ -201,19 +228,19 @@ public class DefinicionesClient : IDefinicionClient
         {
             _logger.LogError(
                 ex,
-                "Error inesperado al consultar el servicio de definiciones para '{Palabra}' con el modelo '{Modelo}'.",
-                texto,
+                "Error inesperado al consultar el servicio de definiciones para '{Texto}' con el modelo '{Modelo}'.",
+                textoRecortado,
                 modelo);
             return null;
         }
     }
 
     /// <summary>
-    /// Extrae el JSON pedido al modelo y compone el texto final: definición global breve
-    /// y, solo si el modelo aporta un matiz relevante de lectura, la línea "En el contexto de la lectura: ...".
+    /// Extrae el JSON pedido al modelo y devuelve término, definición global y contexto de lectura.
+    /// La composición del texto final (con "En el contexto de la lectura: ...") la hace GlosarioService.
     /// Devuelve null solo cuando no hay definición utilizable y registra el motivo.
     /// </summary>
-    private string? ComponerDefinicion(string contenido, string palabra, string modelo)
+    private ResultadoDefinicion? ExtraerResultado(string contenido, string textoRecortado, string modelo)
     {
         SalidaDefinicion? salida = null;
         try
@@ -229,7 +256,7 @@ public class DefinicionesClient : IDefinicionClient
         }
         catch (JsonException)
         {
-            // Se invertirá en el texto limpio del contenido entero.
+            // El contenido entero se usará como texto limpio de respaldo.
         }
 
         var definicion = salida?.Definicion is not null
@@ -243,17 +270,37 @@ public class DefinicionesClient : IDefinicionClient
         if (string.IsNullOrWhiteSpace(definicion))
         {
             _logger.LogWarning(
-                "El modelo '{Modelo}' no devolvió una definición utilizable para '{Palabra}'.",
+                "El modelo '{Modelo}' no devolvió una definición utilizable para '{Texto}'.",
                 modelo,
-                palabra);
+                textoRecortado);
             return null;
         }
 
-        var contexto = salida?.ContextoLectura?.Trim() ?? "";
+        var termino = salida?.Termino?.Trim() ?? "";
+        if (termino.Length == 0)
+        {
+            // Respaldo: usa la palabra principal del texto enviado.
+            termino = textoRecortado.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
+        }
 
-        return contexto.Length == 0
-            ? definicion
-            : $"{definicion}\n\nEn el contexto de la lectura: {contexto}";
+        if (termino.Length > 100)
+        {
+            termino = termino[..100];
+        }
+
+        return new ResultadoDefinicion(
+            termino,
+            definicion,
+            (salida?.ContextoLectura?.Trim() ?? "").Trim());
+    }
+
+    /// <summary>Recorta el texto a 200 caracteres antes de enviarlo a la API para no desperdiciar tokens.</summary>
+    private static string RecortarTexto(string? texto)
+    {
+        var limpio = (texto ?? "").Trim();
+        return limpio.Length > LongitudMaximaTexto
+            ? limpio[..LongitudMaximaTexto].Trim()
+            : limpio;
     }
 
     private async Task RegistrarErrorHttpAsync(
@@ -413,6 +460,9 @@ internal sealed class MensajeChat
 
 internal sealed class SalidaDefinicion
 {
+    [JsonPropertyName("termino")]
+    public string? Termino { get; set; }
+
     [JsonPropertyName("definicion")]
     public string? Definicion { get; set; }
 

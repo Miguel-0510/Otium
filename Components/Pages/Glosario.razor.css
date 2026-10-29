@@ -31,6 +31,34 @@ h2 {
     border-radius: 0 8px 8px 0;
 }
 
+.interruptor-lectura {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: var(--tinta);
+    cursor: pointer;
+    user-select: none;
+}
+
+.interruptor-lectura input[type="checkbox"] {
+    accent-color: var(--esmeralda);
+    cursor: pointer;
+}
+
+.interruptor-lectura input[type="checkbox"]:disabled + span {
+    color: var(--tinta-suave);
+    cursor: default;
+}
+
+.pista-interruptor {
+    margin: 4px 0 0 26px;
+    font-size: 0.78rem;
+    font-style: italic;
+    color: var(--tinta-suave);
+}
+
 .quitar-contexto {
     margin-left: auto;
     padding: 0 6px;

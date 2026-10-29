@@ -30,15 +30,17 @@ public sealed class GlosarioServiceTests
 
         var servicio = new GlosarioService(
             fabricaDb,
-            new DefinicionFalsa("Definición de prueba."),
+            new DefinicionFalsa(new ResultadoDefinicion("efímero", "Definición de prueba.", "")),
             limites,
             logger);
 
-        var resultado = await servicio.BuscarYGuardarAsync(usuario.Usuario!.Id, "efímero", "Libro de prueba");
+        var resultado = await servicio.BuscarYGuardarAsync(usuario.Usuario!.Id, "efímero", "Libro de prueba", false);
 
         Assert.True(resultado.Exito, resultado.Mensaje);
+        Assert.Contains("Guardada en tu glosario.", resultado.Mensaje, StringComparison.Ordinal);
         Assert.NotNull(resultado.Palabra);
-        Assert.Equal("Definición de prueba.", resultado.Palabra!.Definicion);
+        Assert.Equal("efímero", resultado.Palabra!.Palabra);
+        Assert.Equal("Definición de prueba.", resultado.Palabra.Definicion);
 
         var palabras = await servicio.ObtenerDeUsuarioAsync(usuario.Usuario.Id);
         var palabra = Assert.Single(palabras);
@@ -60,36 +62,101 @@ public sealed class GlosarioServiceTests
         var usuario = await registro.RegistrarAsync($"glosario-duplicado-{Guid.NewGuid():N}@example.com", "Password1");
         Assert.True(usuario.Exito);
 
-        var gemini = new DefinicionFalsa("Definición de prueba.");
-        var servicio = new GlosarioService(fabricaDb, gemini, limites, logger);
+        var definiciones = new DefinicionFalsa(new ResultadoDefinicion("efímero", "Definición de prueba.", ""));
+        var servicio = new GlosarioService(fabricaDb, definiciones, limites, logger);
 
-        var primero = await servicio.BuscarYGuardarAsync(usuario.Usuario!.Id, "Efímero", "");
-        var segundo = await servicio.BuscarYGuardarAsync(usuario.Usuario.Id, "efímero", "");
+        var primero = await servicio.BuscarYGuardarAsync(usuario.Usuario!.Id, "Efímero", "", false);
+        var segundo = await servicio.BuscarYGuardarAsync(usuario.Usuario.Id, "efímero", "", false);
 
         Assert.True(primero.Exito, primero.Mensaje);
         Assert.True(segundo.Exito, segundo.Mensaje);
         Assert.Equal("Ya está en tu glosario.", segundo.Mensaje);
-        Assert.Equal(1, gemini.Llamadas);
+        // La segunda consulta pasa por la vía rápida de deduplicación sin gastar cuota de API.
+        Assert.Equal(1, definiciones.Llamadas);
         Assert.Single(await servicio.ObtenerDeUsuarioAsync(usuario.Usuario.Id));
+    }
+
+    [Fact]
+    public async Task Extrae_el_termino_de_una_frase_larga()
+    {
+        await using var scope = _fabrica.Services.CreateAsyncScope();
+        var registro = scope.ServiceProvider.GetRequiredService<IRegistroService>();
+        var fabricaDb = scope.ServiceProvider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        var limites = scope.ServiceProvider.GetRequiredService<ILimiteIntentosService>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<GlosarioService>>();
+
+        var usuario = await registro.RegistrarAsync($"glosario-frase-{Guid.NewGuid():N}@example.com", "Password1");
+        Assert.True(usuario.Exito);
+
+        var servicio = new GlosarioService(
+            fabricaDb,
+            new DefinicionFalsa(new ResultadoDefinicion("resiliencia", "Capacidad de adaptarse ante la adversidad.", "")),
+            limites,
+            logger);
+
+        var resultado = await servicio.BuscarYGuardarAsync(
+            usuario.Usuario!.Id,
+            "demostró una resiliencia formidable",
+            "",
+            false);
+
+        Assert.True(resultado.Exito, resultado.Mensaje);
+        Assert.Contains("Término analizado: resiliencia", resultado.Mensaje, StringComparison.Ordinal);
+        Assert.NotNull(resultado.Palabra);
+        Assert.Equal("resiliencia", resultado.Palabra!.Palabra);
+        Assert.Equal("Capacidad de adaptarse ante la adversidad.", resultado.Palabra.Definicion);
+    }
+
+    [Fact]
+    public async Task Anade_el_contexto_de_lectura_cuando_aporta_un_matiz()
+    {
+        await using var scope = _fabrica.Services.CreateAsyncScope();
+        var registro = scope.ServiceProvider.GetRequiredService<IRegistroService>();
+        var fabricaDb = scope.ServiceProvider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        var limites = scope.ServiceProvider.GetRequiredService<ILimiteIntentosService>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<GlosarioService>>();
+
+        var usuario = await registro.RegistrarAsync($"glosario-lectura-{Guid.NewGuid():N}@example.com", "Password1");
+        Assert.True(usuario.Exito);
+
+        const string contexto = "En la novela designa el alma de los antagonistas.";
+        var servicio = new GlosarioService(
+            fabricaDb,
+            new DefinicionFalsa(new ResultadoDefinicion("resiliencia", "Capacidad de adaptarse ante la adversidad.", contexto)),
+            limites,
+            logger);
+
+        var resultado = await servicio.BuscarYGuardarAsync(
+            usuario.Usuario!.Id,
+            "resiliencia",
+            "Libro de prueba",
+            true);
+
+        Assert.True(resultado.Exito, resultado.Mensaje);
+        Assert.NotNull(resultado.Palabra);
+        Assert.Contains(
+            $"En el contexto de la lectura: {contexto}",
+            resultado.Palabra!.Definicion,
+            StringComparison.Ordinal);
     }
 
     private sealed class DefinicionFalsa : IDefinicionClient
     {
-        private readonly string _definicion;
+        private readonly ResultadoDefinicion _resultado;
 
-        public DefinicionFalsa(string definicion)
+        public DefinicionFalsa(ResultadoDefinicion resultado)
         {
-            _definicion = definicion;
+            _resultado = resultado;
         }
 
         public bool EstaConfigurado => true;
 
         public int Llamadas { get; private set; }
 
-        public Task<string?> DefinirAsync(string palabra, string libroTitulo, CancellationToken cancellationToken = default)
+        public Task<ResultadoDefinicion?> DefinirAsync(string texto, string libroTitulo, bool incluirContextoLectura, CancellationToken cancellationToken = default)
         {
             Llamadas++;
-            return Task.FromResult<string?>(_definicion);
+            return Task.FromResult<ResultadoDefinicion?>(_resultado);
         }
     }
 }
