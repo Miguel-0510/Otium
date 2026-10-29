@@ -1,18 +1,19 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Otium.Data;
 using Otium.Models;
+using Otium.Models.DTOs;
 
 namespace Otium.Services;
 
 public interface IGlosarioService
 {
-    Task<List<PalabraGlosario>> ObtenerDeUsuarioAsync(string usuarioId, CancellationToken cancellationToken = default);
+    Task<List<PalabraGlosarioDTO>> ObtenerDeUsuarioAsync(string usuarioId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Consulta y guarda una palabra o frase. Si <paramref name="incluirContextoLectura"/> está activo y hay
     /// libro, la definición incluye el matiz "En el contexto de la lectura: ..." solo cuando aporta valor.
     /// </summary>
-    Task<(bool Exito, string Mensaje, PalabraGlosario? Palabra)> BuscarYGuardarAsync(
+    Task<(bool Exito, string Mensaje, PalabraGlosarioDTO? Palabra)> BuscarYGuardarAsync(
         string usuarioId,
         string texto,
         string libroTitulo,
@@ -43,16 +44,17 @@ public class GlosarioService : IGlosarioService
         _limites = limites;
     }
 
-    public async Task<List<PalabraGlosario>> ObtenerDeUsuarioAsync(string usuarioId, CancellationToken cancellationToken = default)
+    public async Task<List<PalabraGlosarioDTO>> ObtenerDeUsuarioAsync(string usuarioId, CancellationToken cancellationToken = default)
     {
         await using var db = await _fabrica.CreateDbContextAsync(cancellationToken);
         return await db.PalabrasGlosario
             .Where(p => p.UsuarioId == usuarioId)
             .OrderBy(p => p.Palabra)
+            .Select(PalabraGlosarioDTO.Proyeccion)
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<(bool Exito, string Mensaje, PalabraGlosario? Palabra)> BuscarYGuardarAsync(
+    public async Task<(bool Exito, string Mensaje, PalabraGlosarioDTO? Palabra)> BuscarYGuardarAsync(
         string usuarioId,
         string texto,
         string libroTitulo,
@@ -84,7 +86,7 @@ public class GlosarioService : IGlosarioService
             var existenteUnico = await ObtenerPalabraExistenteAsync(usuarioId, entrada, cancellationToken);
             if (existenteUnico is not null)
             {
-                return (true, "Ya está en tu glosario.", existenteUnico);
+                return (true, "Ya está en tu glosario.", PalabraGlosarioDTO.DesdeEntidad(existenteUnico));
             }
         }
 
@@ -127,7 +129,7 @@ public class GlosarioService : IGlosarioService
                 var avisoDuplicado = esPalabraUnica
                     ? "Ya está en tu glosario."
                     : $"Término analizado: {resultado.Termino}. Ya está en tu glosario.";
-                return (true, avisoDuplicado, existenteTermino);
+                return (true, avisoDuplicado, PalabraGlosarioDTO.DesdeEntidad(existenteTermino));
             }
 
             var nueva = new PalabraGlosario
@@ -145,7 +147,7 @@ public class GlosarioService : IGlosarioService
             var aviso = esPalabraUnica && resultado.Termino.Equals(entrada.Trim(), StringComparison.OrdinalIgnoreCase)
                 ? "Guardada en tu glosario."
                 : $"Término analizado: {resultado.Termino}. Guardada en tu glosario.";
-            return (true, aviso, nueva);
+            return (true, aviso, PalabraGlosarioDTO.DesdeEntidad(nueva));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

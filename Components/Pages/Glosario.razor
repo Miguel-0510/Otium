@@ -5,6 +5,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using Otium.Models
+@using Otium.Models.DTOs
 @using Otium.Services
 @inject IGlosarioService Servicio
 @inject AuthenticationStateProvider ProveedorAuth
@@ -101,7 +102,7 @@
     public string? LibroDesdeUrl { get; set; }
 
     private string usuarioId = "";
-    private List<PalabraGlosario> palabras = new();
+    private List<PalabraGlosarioDTO> palabras = new();
     private HashSet<int> expandidas = new();
     private int? palabraEnEdicion;
     private string nuevaDefinicion = "";
@@ -166,13 +167,13 @@
         buscando = false;
     }
 
-    private async Task Editar(PalabraGlosario p)
+    private async Task Editar(PalabraGlosarioDTO p)
     {
         palabraEnEdicion = p.Id;
         nuevaDefinicion = p.Definicion;
     }
 
-    private async Task GuardarEdicion(PalabraGlosario p)
+    private async Task GuardarEdicion(PalabraGlosarioDTO p)
     {
         var ok = await Servicio.EditarDefinicionAsync(usuarioId, p.Id, nuevaDefinicion);
         if (ok)
@@ -188,7 +189,7 @@
         nuevaDefinicion = "";
     }
 
-    private async Task Quitar(PalabraGlosario p)
+    private async Task Quitar(PalabraGlosarioDTO p)
     {
         if (await Servicio.EliminarAsync(usuarioId, p.Id))
         {

@@ -123,7 +123,8 @@ Services/
   AmistadService.cs               Código, solicitudes, amigos
   EntradaLecturaService.cs        CRUD de travesías
   GlosarioService.cs              Persistencia y cuotas del glosario
-  DefinicionesClient.cs           Cliente GLM (Z.ai): prompt JSON, HTTP, caché y parseo
+  DefinicionesClient.cs           Cliente GLM (Z.ai/OpenRouter): prompt JSON, HTTP, caché y parseo
+  CircuitBreaker.cs               Interruptor de circuito thread-safe; singleton con clave por cliente (ClavesCircuito)
   BuscadorLibros.cs               Cliente Open Library con caché y reintentos
   EmailSender.cs                  Plantillas y envío (delega en IEnvioCorreo)
   BrevoEnvioCorreo.cs             Transporte HTTP de Brevo

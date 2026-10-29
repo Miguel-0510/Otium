@@ -2,6 +2,7 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Otium.Services;
 
@@ -24,13 +25,26 @@ public class BuscadorLibros : IBuscadorLibros
     private readonly HttpClient _http;
     private readonly IMemoryCache _cache;
     private readonly ILogger<BuscadorLibros> _logger;
-    private readonly CircuitBreaker _circuitBreaker = new();
+    private readonly CircuitBreaker _circuitBreaker;
 
+    /// <summary>Constructor para pruebas: crea un circuito propio.</summary>
     public BuscadorLibros(HttpClient http, IMemoryCache cache, ILogger<BuscadorLibros> logger)
+        : this(http, cache, logger, new CircuitBreaker())
+    {
+    }
+
+    /// <summary>Constructor para DI: recibe el circuito compartido (singleton) del buscador.</summary>
+    [ActivatorUtilitiesConstructor]
+    public BuscadorLibros(
+        HttpClient http,
+        IMemoryCache cache,
+        ILogger<BuscadorLibros> logger,
+        [FromKeyedServices(ClavesCircuito.Buscador)] CircuitBreaker circuitBreaker)
     {
         _http = http;
         _cache = cache;
         _logger = logger;
+        _circuitBreaker = circuitBreaker;
     }
 
     public async Task<List<ResultadoLibro>> BuscarAsync(string texto, CancellationToken cancellationToken = default)

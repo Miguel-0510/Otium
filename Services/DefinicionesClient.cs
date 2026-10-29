@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Otium.Services.Options;
 
@@ -62,18 +63,32 @@ public class DefinicionesClient : IDefinicionClient
     private readonly IMemoryCache _cache;
     private readonly DefinicionesOptions _opciones;
     private readonly ILogger<DefinicionesClient> _logger;
-    private readonly CircuitBreaker _circuitBreaker = new();
+    private readonly CircuitBreaker _circuitBreaker;
 
+    /// <summary>Constructor para pruebas: crea un circuito propio.</summary>
     public DefinicionesClient(
         HttpClient http,
         IMemoryCache cache,
         IOptions<DefinicionesOptions> opciones,
         ILogger<DefinicionesClient> logger)
+        : this(http, cache, opciones, logger, new CircuitBreaker())
+    {
+    }
+
+    /// <summary>Constructor para DI: recibe el circuito compartido (singleton) de definiciones.</summary>
+    [ActivatorUtilitiesConstructor]
+    public DefinicionesClient(
+        HttpClient http,
+        IMemoryCache cache,
+        IOptions<DefinicionesOptions> opciones,
+        ILogger<DefinicionesClient> logger,
+        [FromKeyedServices(ClavesCircuito.Definiciones)] CircuitBreaker circuitBreaker)
     {
         _http = http;
         _cache = cache;
         _opciones = opciones.Value;
         _logger = logger;
+        _circuitBreaker = circuitBreaker;
     }
 
     public bool EstaConfigurado => !string.IsNullOrWhiteSpace(_opciones.ApiKey);

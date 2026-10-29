@@ -36,7 +36,7 @@ Esfuerzo: **S** < 2 h · **M** 2–6 h · **L** 1–2 días · **XL** +2 días o
 | F-04 | `robots.txt` declara `sitemap.xml` inexistente; `security.txt` con dominio placeholder desalineado de `/soporte` | P1 | S | [ ] |
 | F-05 | Errores de alta de libro/travesía invisibles para el usuario (estados muertos en `Estantes.razor`) | P1 | S | [ ] |
 | F-06 | Docker incoherente: root sin `USER`, `/var/data` vs `/data` del compose, healthcheck con `curl`, imágenes sin digest | P1 | M | [ ] |
-| F-07 | `CircuitBreaker` no thread-safe e instanciado por cliente (no pasa por DI) | P2 | S | [ ] |
+| F-07 | `CircuitBreaker` no thread-safe e instanciado por cliente (no pasa por DI) | P2 | S | [x] |
 | F-08 | CSP laxa (`'unsafe-inline'` en script/style, `ws:` siempre) y `AllowedHosts: "*"`; 429 sin página propia | P2 | M | [ ] |
 | F-09 | Workflows duplicados: `build.yml` redundante con el mismo `name: CI`; trigger de release poco coherente en `deploy.yml` | P2 | S | [ ] |
 | F-10 | Fugas de información interna en endpoints de Identity (IDs en errores) — legacy P2-13 | P2 | S | [ ] |
@@ -50,6 +50,7 @@ Esfuerzo: **S** < 2 h · **M** 2–6 h · **L** 1–2 días · **XL** +2 días o
 | F-18 | Documentación desactualizada: `AGENTS.md` dice códigos de 8 caracteres (son 6) y "36 pruebas" (hay 64) | P3 | S | [ ] |
 | F-19 | Paginación `ObtenerDeUsuarioPaginadoAsync` implementada pero sin usar | P3 | S | [ ] |
 | F-20 | Operativo: rotar credenciales si se compartieron (P0-3) y verificar TLS/SignalR/PWA en VPS Oracle (P1-7) | P1 | M | [ ] |
+| F-21 | Descomposición de capas: `Estantes.razor` concentra búsqueda, CRUD, reseñas y travesías; modelos anémicos | P2 | L | [ ] |
 
 ---
 
@@ -206,8 +207,8 @@ funcional en la imagen, una sola ruta de datos y documentación alineada.
 
 ### F-07 — `CircuitBreaker` no thread-safe y fuera de DI
 
-**Estado:** [ ] Pendiente · **Esfuerzo:** S · **Lugar:** `Services/CircuitBreaker.cs`,
-`DefinicionesClient.cs:65`, `BuscadorLibros.cs:27`
+**Estado:** [x] Completado · **Esfuerzo:** S · **Lugar:** `Services/CircuitBreaker.cs`,
+`DefinicionesClient.cs`, `BuscadorLibros.cs`, `Program.cs`
 
 **Problema:** el estado (`_fallosConsecutivos`, `_estado`, `_horaSiguienteIntento`) se
 muta sin sincronización; con la concurrencia de los circuitos Blazor Server, pueden
@@ -220,6 +221,14 @@ con `new()` por cada servicio, sin pasar por DI.
 3. Añadir prueba unitaria de concurrencia (20 llamadas paralelas fallidas → abre una vez).
 
 **Criterio de aceptación:** estados consistentes bajo concurrencia; pruebas en verde.
+
+**Cierre:** corregido. El breaker sincroniza sus transiciones con `lock` (la acción
+externa se ejecuta fuera del candado) y se registra en DI como singleton con clave:
+`ClavesCircuito.Definiciones` y `ClavesCircuito.Buscador` (un circuito por cliente, para
+que un fallo de un proveedor no abra el circuito de los demás). Los constructores sin
+circuito se conservan solo para pruebas. Pruebas en `CircuitBreakerTests` (3): 20 fallos
+paralelos abren el circuito una sola vez, el éxito reinicia el contador y el medio-abierto
+concede una llamada de prueba al vencer la espera.
 
 ---
 
@@ -362,7 +371,36 @@ configuración del proveedor SQLite/Npgsql.
 
 ---
 
-## 4. Hallazgos P3 — pulido y calidad
+### F-21 — Descomposición de capas (deuda estructural del "Capas: parcial")
+
+**Estado:** [ ] Pendiente · **Esfuerzo:** L · **Lugar:** `Components/Pages/Estantes.razor`,
+`Models/`, `Components/Pages/Glosario.razor`
+
+**Problema:** la tabla de patrones de la auditoría marca las capas como "parcial":
+`Estantes.razor` (341 líneas) mezcla búsqueda en Open Library, alta de libros, reseñas,
+travesías y presentación; `Models/` es anémico (DataAnnotations pero sin reglas de
+dominio); no hay carpetas de Dominio/Aplicación formales.
+
+**Progreso ya aplicado (2026-10-28):**
+- La excepción de DTO quedó resuelta: `IGlosarioService` devuelve `PalabraGlosarioDTO`
+  (`Models/DTOs/PalabraGlosarioDTO.cs`) y `Glosario.razor` ya no ve la entidad EF.
+- `CircuitBreaker` es thread-safe y singleton por cliente via DI (ver F-07).
+
+**Pasos restantes (incrementales, un PR por paso):**
+1. Extraer el panel de búsqueda de Open Library de `Estantes.razor` a un componente
+   `BuscadorLibrosPanel` (estado `buscando`, lista de `ResultadoLibro`, selección).
+2. Extraer el bloque de travesías a `ListaTravesias` con `[SupplyParameterFromQuery]`.
+3. Mover las reglas de validación duplicadas de servicios a `Models/` como métodos de
+   dominio ("normalizar") o un validador compartido.
+4. Renombrar/organizar: decidir si se adoptan carpetas `Domain/`+`Application/` o se
+   documenta el hexágono pragmático como decisión oficial (opción recomendada para no
+   romper namespaces y migraciones).
+
+**Criterio de aceptación:** `Estantes.razor` solo orquesta componentes; ninguna vista
+contiene más de dos responsabilidades; build y tests en verde en cada paso.
+
+---
+
 
 ### F-15 — Re-renders redundantes en `BuscadorLibros`
 

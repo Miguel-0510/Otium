@@ -290,6 +290,11 @@ builder.Services.AddScoped<IRegistroService, RegistroService>();
 builder.Services.AddScoped<IRecuperacionContrasenaService, RecuperacionContrasenaService>();
 builder.Services.AddScoped<IEliminacionCuentaService, EliminacionCuentaService>();
 builder.Services.AddScoped<IExportacionDatosService, ExportacionDatosService>();
+// Interruptores de circuito compartidos: una instancia por cliente externo,
+// singleton durante toda la vida de la aplicación y thread-safe.
+builder.Services.AddKeyedSingleton<CircuitBreaker>(ClavesCircuito.Definiciones);
+builder.Services.AddKeyedSingleton<CircuitBreaker>(ClavesCircuito.Buscador);
+
 builder.Services.AddHttpClient<IEnvioCorreo, BrevoEnvioCorreo>(cliente =>
 {
     cliente.Timeout = TimeSpan.FromSeconds(15);
