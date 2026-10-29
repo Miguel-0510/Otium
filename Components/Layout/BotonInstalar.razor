@@ -7,24 +7,38 @@
     <button class="boton-instalar" @onclick="Instalar">Instalar Otium</button>
 }
 
-@if (mostrarModaliOS)
+@if (mostrarModal)
 {
-    <div class="modal-fondo" @onclick="() => mostrarModaliOS = false">
+    <div class="modal-fondo" @onclick="CerrarModal">
         <div class="modal-caja" @onclick:stopPropagation="true">
             <h3>Instalar Otium</h3>
-            <ol>
-                <li>Pulsa Compartir (el cuadrado con la flecha) en la barra de Safari.</li>
-                <li>Elige Añadir a la pantalla de inicio.</li>
-                <li>Pulsa Añadir.</li>
-            </ol>
-            <button class="boton secundario" @onclick="() => mostrarModaliOS = false">Entendido</button>
+
+            @if (esIOS)
+            {
+                <ol>
+                    <li>Pulsa Compartir (el cuadrado con la flecha) en la barra de Safari.</li>
+                    <li>Elige Añadir a la pantalla de inicio.</li>
+                    <li>Pulsa Añadir.</li>
+                </ol>
+            }
+            else
+            {
+                <p>Instalar Otium como app permite usarla a pantalla completa, sin la barra del navegador.</p>
+                <ol>
+                    <li>Abre el menú del navegador (los tres puntos o la hamburguesa).</li>
+                    <li>Busca la opción «Instalar aplicación» o «Añadir a la pantalla de inicio».</li>
+                    <li>Confirma la instalación.</li>
+                </ol>
+            }
+
+            <button class="boton secundario" @onclick="CerrarModal">Entendido</button>
         </div>
     </div>
 }
 
 @code {
     private bool mostrarBoton;
-    private bool mostrarModaliOS;
+    private bool mostrarModal;
     private bool esIOS;
     private DotNetObjectReference<BotonInstalar>? referencia;
 
@@ -34,23 +48,21 @@
 
         try
         {
-            var yaInstalada = await JS.InvokeAsync<bool>("otiumInstalador.yaInstalada");
-            if (yaInstalada) return;
+            referencia = DotNetObjectReference.Create(this);
+
+            // 'instalado' | 'prompt' | 'ios' | 'otro'
+            var estado = await JS.InvokeAsync<string>("otiumInstalador.registrar", referencia);
+            await JS.InvokeVoidAsync("otiumInstalador.observarDisplayMode", referencia);
 
             esIOS = await JS.InvokeAsync<bool>("otiumInstalador.esIOS");
-            if (esIOS)
-            {
-                mostrarBoton = true;
-                StateHasChanged();
-                return;
-            }
-
-            referencia = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("otiumInstalador.registrar", referencia);
+            mostrarBoton = estado != "instalado";
+            StateHasChanged();
         }
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Error inicializando el instalador de PWA.");
+            referencia?.Dispose();
+            referencia = null;
         }
     }
 
@@ -70,19 +82,36 @@
 
     private async Task Instalar()
     {
+        // iOS no soporta beforeinstallprompt: se guían los pasos en un modal.
         if (esIOS)
         {
-            mostrarModaliOS = true;
+            mostrarModal = true;
             return;
         }
 
-        await JS.InvokeAsync<string>("otiumInstalador.mostrarPrompt");
-        mostrarBoton = false;
+        try
+        {
+            var resultado = await JS.InvokeAsync<string>("otiumInstalador.mostrarPrompt");
+            if (resultado != "sin-evento")
+            {
+                mostrarBoton = false;
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "El navegador no permitió mostrar el prompt de instalación.");
+        }
+
+        // Sin prompt nativo disponible: se muestran instrucciones genéricas.
+        mostrarModal = true;
     }
+
+    private void CerrarModal() => mostrarModal = false;
 
     public async ValueTask DisposeAsync()
     {
-        try { referencia?.Dispose(); } catch { }
+        referencia?.Dispose();
         await Task.CompletedTask;
     }
 }
