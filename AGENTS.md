@@ -141,9 +141,10 @@ wwwroot/
 > Configura `Brevo:ApiKey` (API key v3 `xkeysib-`), `Brevo:SenderEmail`, `Brevo:SenderName` y
 > `Brevo:Endpoint`. Las claves `Smtp:*` solo se aceptan como respaldo temporal; `Smtp:Password` debe contener una API key v3, no una SMTP key.
 
-> **Glosario (2026-10-28):** el cliente de Google Gemini fue reemplazado por la API OpenAI-compatible
-> de Z.ai (modelo por defecto `glm-5.3-flash`) para reducir la latencia. Configura `Definiciones:ApiKey`
-> (alias `GLM_API_KEY`/`ZAI_API_KEY`); la antigua clave `Gemini:ApiKey` ya no se usa.
+> **Glosario (2026-10-28):** el cliente de Google Gemini fue reemplazado por una API OpenAI-compatible
+> (por defecto Z.ai, modelo `glm-5.3-flash`; compatible con OpenRouter cambiando `Definiciones:Endpoint`
+> y `Definiciones:Modelo`) para reducir la latencia. Configura `Definiciones:ApiKey`
+> (alias `GLM_API_KEY`, `ZAI_API_KEY` u `OPENROUTER_API_KEY`); la antigua clave `Gemini:ApiKey` ya no se usa.
 
 Claves usadas:
 

@@ -64,7 +64,7 @@ Las claves se leen de variables de entorno / User Secrets / `appsettings.Develop
 - `Brevo:ApiKey` - API key v3 de Brevo (empieza por `xkeysib-`; **no** es la SMTP key).
 - `Brevo:SenderEmail` / `Brevo:SenderName` - remitente verificado y nombre visible.
 - `Brevo:Endpoint` - endpoint HTTP; por defecto `https://api.brevo.com/v3/smtp/email`.
-- `Definiciones:ApiKey` / `Definiciones:Endpoint` / `Definiciones:Modelo` - servicio de definiciones del glosario (Z.ai/GLM; alias de entorno `GLM_API_KEY` o `ZAI_API_KEY`; endpoint por defecto `https://api.z.ai/api/paas/v4/`; modelo por defecto `glm-5.3-flash`).
+- `Definiciones:ApiKey` / `Definiciones:Endpoint` / `Definiciones:Modelo` - servicio de definiciones del glosario (endpoint OpenAI-compatible: Z.ai por defecto `https://api.z.ai/api/paas/v4/` con `glm-5.3-flash`, u OpenRouter `https://openrouter.ai/api/v1/` con `z-ai/glm-5.3-flash`; alias de entorno `GLM_API_KEY`, `ZAI_API_KEY` u `OPENROUTER_API_KEY`).
 - `Sitio:UrlPublica` - URL pública para enlaces de recuperación.
 - `Seguridad:PermitirHttp` - permite HTTP en modo Production (Tailscale).
 

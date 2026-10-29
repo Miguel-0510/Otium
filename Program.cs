@@ -191,9 +191,9 @@ builder.Services.AddOptions<DefinicionesOptions>()
     {
         if (string.IsNullOrWhiteSpace(opciones.ApiKey))
         {
-            opciones.ApiKey = (builder.Configuration["GLM_API_KEY"]
-                ?? Environment.GetEnvironmentVariable("ZAI_API_KEY")
-                ?? "").Trim();
+            opciones.ApiKey = Environment.GetEnvironmentVariable("ZAI_API_KEY")
+                ?? Environment.GetEnvironmentVariable("OPENROUTER_API_KEY")
+                ?? (builder.Configuration["GLM_API_KEY"] ?? "").Trim();
         }
 
         opciones.ApiKey = (opciones.ApiKey ?? "").Trim();

@@ -19,7 +19,8 @@ public static class DiagnosticoConfiguracion
         var valorConfiguracion = configuracion["Definiciones:ApiKey"];
         var valorEntornoDoble = Environment.GetEnvironmentVariable("Definiciones__ApiKey");
         var valorAlias = Environment.GetEnvironmentVariable("GLM_API_KEY")
-            ?? Environment.GetEnvironmentVariable("ZAI_API_KEY");
+            ?? Environment.GetEnvironmentVariable("ZAI_API_KEY")
+            ?? Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
 
         var claveEfectiva = (opciones?.ApiKey
             ?? valorConfiguracion
@@ -37,7 +38,7 @@ public static class DiagnosticoConfiguracion
         var origen = !string.IsNullOrWhiteSpace(valorConfiguracion)
             ? "Definiciones:ApiKey/Definiciones__ApiKey"
             : !string.IsNullOrWhiteSpace(valorAlias)
-                ? "GLM_API_KEY/ZAI_API_KEY"
+                ? "GLM_API_KEY/ZAI_API_KEY/OPENROUTER_API_KEY"
                 : "ninguna";
 
         logger.LogInformation(
@@ -60,7 +61,7 @@ public static class DiagnosticoConfiguracion
         {
             logger.LogWarning(
                 "El servicio de definiciones no tiene API key configurada. Define Definiciones__ApiKey, " +
-                "GLM_API_KEY o ZAI_API_KEY (API key de Z.ai) en el entorno del servidor; " +
+                "GLM_API_KEY, ZAI_API_KEY u OPENROUTER_API_KEY en el entorno del servidor; " +
                 "el glosario inteligente no funcionará.");
             return;
         }
