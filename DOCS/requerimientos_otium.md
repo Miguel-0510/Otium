@@ -31,6 +31,7 @@ Fecha: 28/10/2026
 | Fecha | Versión | Autor | Organización | Descripción |
 |---|---|---|---|---|
 | 28/10/2026 | 1.0 | Miguel (propietario) | Otium | Redacción inicial adaptada al estado beta privada del proyecto |
+| 28/10/2026 | 1.1 | Miguel (propietario) | Otium | Añadido diagrama de clases (entidades y servicios principales) |
 | | | | | |
 
 ---
@@ -182,6 +183,114 @@ flowchart TB
     SVC --> DP
     SVC --> CACHE
     SVC --> PG
+```
+
+### Diagrama de clases (entidades y servicios principales)
+
+Representa el modelo real del código fuente: `ApplicationUser` (Usuario de Identity),
+`Libro`, `EntradaLectura` (los "travesías"/fichas de lectura), `PalabraGlosario` (glosario)
+y los contratos de servicio `GlosarioService` e `EmailSender` (con su transporte
+`BrevoEnvioCorreo`). Las cardinalidades reflejan las FK de `ApplicationDbContext`
+(cascada de usuario→libros y libro→travesías; `PalabraGlosario` se filtra por
+`UsuarioId` sin FK).
+
+```mermaid
+classDiagram
+    class ApplicationUser["Usuario (ApplicationUser)"] {
+        +string Id
+        +string Email
+        +string UserName
+        +string PasswordHash
+        +string CodigoAmigo
+        +bool CompartirEstantes
+    }
+
+    class Estante {
+        <<enumeration>>
+        Leyendo
+        Leido
+        QuieroLeer
+    }
+
+    class Libro {
+        +int Id
+        +string UsuarioId
+        +string Titulo
+        +string Autor
+        +Estante Estante
+        +int Puntuacion
+        +string Resena
+        +string PortadaUrl
+        +string IdExterno
+    }
+
+    class EntradaLectura["EntradaLectura (FichaLectura)"] {
+        +int Id
+        +int LibroId
+        +int Numero
+        +int? PaginaInicio
+        +int? PaginaFin
+        +string Resumen
+        +DateTime Fecha
+    }
+
+    class PalabraGlosario {
+        +int Id
+        +string UsuarioId
+        +string Palabra
+        +string Definicion
+        +string LibroTitulo
+        +DateTime Fecha
+    }
+
+    class IGlosarioService {
+        <<interface>>
+        +ObtenerDeUsuarioAsync(usuarioId)
+        +BuscarYGuardarAsync(usuarioId, texto, libroTitulo, incluirContexto)
+        +EditarDefinicionAsync(usuarioId, palabraId, nuevaDefinicion)
+        +EliminarAsync(usuarioId, palabraId)
+        +EliminarTodosDeUsuarioAsync(usuarioId)
+    }
+
+    class GlosarioService {
+        -IDefinicionClient definiciones
+        -ILimiteIntentosService limites
+        -IMemoryCache cache
+    }
+
+    class IDefinicionClient {
+        <<interface>>
+        +EstaConfigurado
+        +DefinirAsync(texto, libroTitulo, incluirContextoLectura)
+    }
+
+    class IEnvioCorreo {
+        <<interface>>
+        +EstaConfigurado
+        +EnviarAsync(destinatario, asunto, cuerpoHtml)
+    }
+
+    class BrevoEnvioCorreo {
+        -HttpClient cliente
+        -BrevoOptions opciones
+    }
+
+    class EmailSender {
+        -IEnvioCorreo envio
+        +envio.AsuntoConfirmacion
+        +envio.AsuntoRecuperacion
+        +envio.AsuntoCodigo
+    }
+
+    ApplicationUser "1" --> "0..*" Libro : UsuarioId, cascada
+    Estante <-- Libro : Estante
+    Libro "1" --> "0..*" EntradaLectura : LibroId, cascada
+    ApplicationUser "1" --> "0..*" PalabraGlosario : UsuarioId, sin FK
+    GlosarioService ..|> IGlosarioService
+    GlosarioService --> PalabraGlosario : CRUD por usuarioId
+    GlosarioService --> IDefinicionClient : llamada IA
+    BrevoEnvioCorreo ..|> IEnvioCorreo
+    EmailSender --> IEnvioCorreo : delega transporte
 ```
 
 ## 7. Requerimientos funcionales
