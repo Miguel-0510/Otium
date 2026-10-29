@@ -2,6 +2,10 @@
     margin-top: 20px;
 }
 
+h1 {
+    margin: 0 0 20px;
+}
+
 h2 {
     display: flex;
     align-items: center;
@@ -35,25 +39,40 @@ h2 {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-top: 10px;
+    margin: 12px 0 0;
+    font: inherit;
     font-size: 0.9rem;
+    font-weight: 600;
     color: var(--tinta);
     cursor: pointer;
     user-select: none;
 }
 
 .interruptor-lectura input[type="checkbox"] {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
     accent-color: var(--esmeralda);
     cursor: pointer;
 }
 
-.interruptor-lectura input[type="checkbox"]:disabled + span {
-    color: var(--tinta-suave);
+.interruptor-lectura input[type="checkbox"]:disabled {
     cursor: default;
+    opacity: 0.5;
+}
+
+.interruptor-lectura input[type="checkbox"]:disabled + span,
+.interruptor-lectura input[type="checkbox"]:disabled ~ span {
+    color: var(--tinta-suave);
 }
 
 .pista-interruptor {
-    margin: 4px 0 0 26px;
+    margin: 6px 0 0 24px;
     font-size: 0.78rem;
     font-style: italic;
     color: var(--tinta-suave);
