@@ -32,6 +32,7 @@ Fecha: 28/10/2026
 |---|---|---|---|---|
 | 28/10/2026 | 1.0 | Miguel (propietario) | Otium | Redacción inicial adaptada al estado beta privada del proyecto |
 | 28/10/2026 | 1.1 | Miguel (propietario) | Otium | Añadido diagrama de clases (entidades y servicios principales) |
+| 28/10/2026 | 1.2 | Miguel (propietario) | Otium | Añadidos diagramas de despliegue y de actividades (glosario inteligente) |
 | | | | | |
 
 ---
@@ -293,6 +294,46 @@ classDiagram
     EmailSender --> IEnvioCorreo : delega transporte
 ```
 
+### Diagrama de despliegue
+
+Representa la distribución física: dispositivo del usuario, contenedor .NET 10 en
+PaaS Render, base de datos PostgreSQL en la nube y APIs de terceros. Precisión
+arquitectónica: la UI no se ejecuta con Blazor WebAssembly — es **Blazor Interactive
+Server** (la lógica vive en el servidor; el navegador solo mantiene el circuito
+SignalR). Se incluye Open Library además de los servicios requeridos, por ser la
+tercera integración externa de la solución.
+
+```mermaid
+flowchart TB
+    subgraph CLIENTE["Nodo: dispositivo del usuario"]
+        NAV["Navegador web moderno<br/>UI Blazor identidad de marca<br/>circuito SignalR (wss)"]
+        PWA["PWA instalada<br/>manifest.json + sw.js<br/>modo standalone"]
+    end
+
+    subgraph RENDER["Nodo: PaaS Render — contenedor .NET 10"]
+        PROXY["Proxy TLS del borde<br/>termina HTTPS 443<br/>ForwardedHeaders"]
+        KESTREL["Kestrel - ASP.NET Core 10<br/>Blazor Interactive Server<br/>servicios de dominio:<br/>glosario, libros, travesias, amigos<br/>clientes: IA, correo, Open Library"]
+    end
+
+    subgraph DATOS["Nodo: servicio de base de datos"]
+        PG[("PostgreSQL en la nube<br/>acceso EF Core 10<br/>esquema via EnsureCreated<br/>tabla DataProtectionKeys")]
+    end
+
+    subgraph TERCCEROS["Nodo: servicios externos — HTTPS 443"]
+        OR["OpenRouter API<br/>inference LLM<br/>POST chat/completions<br/>modelo GLM-5.3-Flash"]
+        BR["Brevo REST API<br/>correos transaccionales<br/>POST v3/smtp/email"]
+        OL["Open Library<br/>GET search.json<br/>fichas de libros"]
+    end
+
+    NAV -- "HTTPS 443 + wss SignalR" --> PROXY
+    PWA -- "HTTPS 443 + wss SignalR" --> PROXY
+    PROXY -- "HTTP interno (loopback)" --> KESTREL
+    KESTREL -- "Npgsql - SslMode Require" --> PG
+    KESTREL -- "REST JSON Bearer - timeout 10 s" --> OR
+    KESTREL -- "REST JSON api-key - timeout 15 s" --> BR
+    KESTREL -- "REST JSON - timeout 10 s" --> OL
+```
+
 ## 7. Requerimientos funcionales
 
 Los requerimientos se organizan por funcionalidad de producto. Formato: descripción, prioridad, acciones iniciadoras y comportamiento esperado, y lista de requerimientos `REQ-XX-n`.
@@ -339,6 +380,44 @@ sequenceDiagram
     GS-->>UI: (éxito, mensaje uniforme, PalabraGlosario)
     UI->>UI: estado buscando=false + StateHasChanged
     UI-->>L: mensaje de guardado y lista re-renderizada en el DOM
+```
+
+#### Diagrama de actividades — flujo del glosario inteligente
+
+Lógica de negocio completa del módulo: valida en C# (efectiva 500, preventiva 200),
+decide el modo del prompt según el interruptor de contextualización y solo consume
+cuota/API cuando aporta un resultado.
+
+```mermaid
+flowchart TD
+    INI((Inicio)) --> ENT["El lector ingresa texto o frase<br/>y pulsa Buscar"]
+    ENT --> VAL{"El texto supera<br/>200 caracteres?"}
+    VAL -- "sí" --> TRC["Truncar preventivamente a 200<br/>optimización de tokens"]
+    VAL -- "no" --> DUP{"Palabra ya en el glosario?<br/>consulta en BD"}
+    TRC --> DUP
+    DUP -- "sí" --> MSG1["Mensaje: Ya está en tu glosario."]
+    MSG1 --> UI2["Estado buscando = false"]
+    DUP -- "no" --> CUOTA{"Cuota diaria disponible<br/>50 por usuario?"}
+    CUOTA -- "no" --> MSG2["Mensaje: límite diario alcanzado"]
+    MSG2 --> UI2
+    CUOTA -- "sí" --> TOG{"Interruptor contextualizar<br/>activado y con libro activo?"}
+    TOG -- "no: modo global" --> P1["Construir prompt sintético<br/>definicion lexicografica estricta<br/>15 a 20 palabras"]
+    TOG -- "sí: modo contextual" --> P2["Inyectar metadatos de la obra<br/>solicitar contexto_lectura<br/>solo si aporta un matiz"]
+    P1 --> HTTP["Enviar POST chat/completions<br/>a OpenRouter - GLM-5.3-Flash<br/>Bearer + temperature 0.2 + max_tokens 300<br/>timeout 10 s + reintentos + circuit breaker"]
+    P2 --> HTTP
+    HTTP --> RESP{"Respuesta JSON válida<br/>y sin error HTTP?"}
+    RESP -- "no" --> ERR["Mensaje amigable en español<br/>sin exponer detalle técnico"]
+    ERR --> UI2
+    RESP -- "sí" --> DES["Deserializar DTO ResultadoDefinicion<br/>termino + definicion + contexto_lectura"]
+    DES --> COMP{"El contexto aportó matiz<br/>relevante a la lectura?"}
+    COMP -- "sí" --> COMPX["Componer: definicion +<br/>En el contexto de la lectura: ..."]
+    COMP -- "no" --> COMPY["Guardar solo la definición global"]
+    COMPX --> INS["Insertar PalabraGlosario<br/>del usuarioId en la BD"]
+    COMPY --> INS
+    INS --> UI["Estado buscando = false<br/>re-render del circuito Blazor"]
+    UI --> DOM["DOM actualizado:<br/>lista con el resultado en pantalla"]
+    UI2 --> DOM
+    DOM --> FIN((Fin))
 ```
 
 **Requerimientos funcionales:**
