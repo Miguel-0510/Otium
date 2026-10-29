@@ -885,3 +885,8 @@ textarea {
 .quitar-palabra {
     margin: 8px 0 0 22px;
 }
+
+
+body.aviso-fondo-bloqueado {
+    overflow: hidden;
+}

@@ -3,12 +3,13 @@
 
 @if (mostrar)
 {
-    <section class="aviso-bienvenida" role="dialog" aria-label="Bienvenida a Otium">
-        <div class="aviso-contenido">
+    <div class="aviso-fondo" @onclick="Cerrar" role="dialog" aria-modal="true" aria-label="Bienvenida a Otium">
+        <div class="aviso-caja" @onclick:stopPropagation="true">
+            <img src="icons/icon-192.png" alt="" class="aviso-logo" aria-hidden="true" />
             <h2>Bienvenido a Otium</h2>
             <p class="aviso-intro">
-                Otium es tu diario de lectura y biblioteca personal: un lugar tranquilo para
-                guardar tu vida lectora.
+                Otium es tu diario de lectura y biblioteca personal: un lugar tranquilo
+                para guardar tu vida lectora.
             </p>
             <ul class="aviso-lista">
                 <li><strong>Estantes:</strong> organiza lo que estás leyendo, terminaste o quieres leer.</li>
@@ -22,7 +23,7 @@
                 <button class="boton secundario" @onclick="NoMostrarMas">No volver a mostrar</button>
             </div>
         </div>
-    </section>
+    </div>
 }
 
 @code {
@@ -37,6 +38,7 @@
             mostrar = !await JS.InvokeAsync<bool>("otiumAviso.estaOculto");
             if (mostrar)
             {
+                await JS.InvokeVoidAsync("otiumAviso.bloquearFondo");
                 StateHasChanged();
             }
         }
@@ -47,7 +49,11 @@
         }
     }
 
-    private void Cerrar() => mostrar = false;
+    private async Task Cerrar()
+    {
+        mostrar = false;
+        await DesbloquearFondo();
+    }
 
     private async Task NoMostrarMas()
     {
@@ -61,5 +67,18 @@
         }
 
         mostrar = false;
+        await DesbloquearFondo();
+    }
+
+    private async Task DesbloquearFondo()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("otiumAviso.liberarFondo");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "No se pudo restaurar el scroll tras cerrar el aviso de bienvenida.");
+        }
     }
 }

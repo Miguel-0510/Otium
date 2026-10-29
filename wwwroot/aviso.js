@@ -13,5 +13,11 @@ window.otiumAviso = {
         } catch {
             // Sin acceso a localStorage (navegación privada), el aviso simplemente se muestra de nuevo.
         }
+    },
+    bloquearFondo: function () {
+        document.body.classList.add('aviso-fondo-bloqueado');
+    },
+    liberarFondo: function () {
+        document.body.classList.remove('aviso-fondo-bloqueado');
     }
 };
