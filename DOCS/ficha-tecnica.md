@@ -21,7 +21,7 @@
 - **Opciones tipadas y validadas** con `IOptions<T>` + `AddOptions().Bind().Validate()` (`BrevoOptions`, `DefinicionesOptions`, `SitioOptions`, `DataProtection`): validación al arranque, fail-fast.
 - **Repository/Service** pragmático: los servicios contienen la lógica y el acceso a datos; los componentes Razor delegan y no tocan EF directamente. Autorización a nivel de dato: los servicios filtran siempre por `usuarioId` (anti-IDOR).
 - **DTOs** para superficie externa: exportación de datos personal (`PalabraGlosarioExportada`, records inmutables); las entidades EF no se exponen fuera de la aplicación.
-- **Adapter**: `IEnvioCorreo` abstrae el transporte de correo y `IDefinicionClient`/`IBuscadorLibros` abstraen proveedores externos (el proveedor de IA puede conmutarse Z.ai ⇄ OpenRouter por configuración sin touch de código).
+- **Adapter**: `IEnvioCorreo` abstrae el transporte de correo y `IDefinicionClient`/`IBuscadorLibros` abstraen proveedores externos (el proveedor de IA puede conmutarse Z.ai ⇄ OpenRouter por configuración sin tocar código).
 - **Detección de proveedor de BD:** PostgreSQL en Render vía cadena de conexión normalizada (`postgresql://` → ADO.NET con `SslMode=Require`); arranque con reintentos exponenciales (5) y parada controlada si no se puede preparar el esquema.
 - **Dominio**: entidades con validación in-line (DataAnnotations) y reglas en servicios; sin manejadores de eventos de dominio (alcance consciente y limitado a una app personal).
 
