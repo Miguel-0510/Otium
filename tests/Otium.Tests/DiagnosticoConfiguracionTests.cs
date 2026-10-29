@@ -9,17 +9,18 @@ public sealed class DiagnosticoConfiguracionTests
     [Fact]
     public void Registra_longitudes_y_no_expone_los_secretos()
     {
-        const string claveGemini = "clave-gemini-secreta-1234567890";
+        const string claveDefiniciones = "clave-definiciones-secreta-1234567890";
         const string claveBrevo = "xkeysib-clave-brevo-secreta-1234567890";
 
         var configuracion = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Gemini:ApiKey"] = claveGemini,
+                ["Definiciones:ApiKey"] = claveDefiniciones,
                 ["Brevo:ApiKey"] = claveBrevo,
                 ["Brevo:SenderEmail"] = "remitente@example.com",
                 ["Brevo:SenderName"] = "Otium",
-                ["Brevo:Endpoint"] = "https://api.brevo.com/v3/smtp/email"
+                ["Brevo:Endpoint"] = "https://api.brevo.com/v3/smtp/email",
+                ["Definiciones:Endpoint"] = "https://api.z.ai/api/paas/v4/"
             })
             .Build();
 
@@ -28,7 +29,7 @@ public sealed class DiagnosticoConfiguracionTests
         DiagnosticoConfiguracion.Registrar(
             configuracion,
             logger,
-            new GeminiOptions { ApiKey = claveGemini, Modelo = "gemini-test" },
+            new DefinicionesOptions { ApiKey = claveDefiniciones, Modelo = "glm-test" },
             new BrevoOptions
             {
                 ApiKey = claveBrevo,
@@ -37,17 +38,18 @@ public sealed class DiagnosticoConfiguracionTests
                 Endpoint = "https://api.brevo.com/v3/smtp/email"
             });
 
-        Assert.Contains($"longitud={claveGemini.Length}", logger.Texto, StringComparison.Ordinal);
+        Assert.Contains($"longitud={claveDefiniciones.Length}", logger.Texto, StringComparison.Ordinal);
         Assert.Contains($"longitud {claveBrevo.Length}", logger.Texto, StringComparison.Ordinal);
         Assert.Contains("https://api.brevo.com/v3/smtp/email", logger.Texto, StringComparison.Ordinal);
         Assert.Contains("remitente@example.com", logger.Texto, StringComparison.Ordinal);
         Assert.Contains("API v3", logger.Texto, StringComparison.Ordinal);
-        Assert.DoesNotContain(claveGemini, logger.Texto, StringComparison.Ordinal);
+        Assert.Contains("glm-test", logger.Texto, StringComparison.Ordinal);
+        Assert.DoesNotContain(claveDefiniciones, logger.Texto, StringComparison.Ordinal);
         Assert.DoesNotContain(claveBrevo, logger.Texto, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Advierte_por_las_claves_de_brevo_y_gemini_que_faltan()
+    public void Advierte_por_las_claves_de_brevo_y_definiciones_que_faltan()
     {
         var configuracion = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>())
@@ -58,13 +60,13 @@ public sealed class DiagnosticoConfiguracionTests
         DiagnosticoConfiguracion.Registrar(
             configuracion,
             logger,
-            new GeminiOptions { ApiKey = "", Modelo = "gemini-test" },
+            new DefinicionesOptions { ApiKey = "", Modelo = "glm-test" },
             new BrevoOptions { ApiKey = "", SenderEmail = "" });
 
         Assert.Contains("[Warning]", logger.Texto, StringComparison.Ordinal);
         Assert.Contains("Brevo:ApiKey", logger.Texto, StringComparison.Ordinal);
         Assert.Contains("Brevo:SenderEmail", logger.Texto, StringComparison.Ordinal);
-        Assert.Contains("Gemini no tiene API key", logger.Texto, StringComparison.Ordinal);
+        Assert.Contains("El servicio de definiciones no tiene API key", logger.Texto, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -86,7 +88,7 @@ public sealed class DiagnosticoConfiguracionTests
         DiagnosticoConfiguracion.Registrar(
             configuracion,
             logger,
-            new GeminiOptions { ApiKey = "clave-gemini-suficientemente-larga", Modelo = "gemini-test" },
+            new DefinicionesOptions { ApiKey = "clave-definiciones-suficientemente-larga", Modelo = "glm-test" },
             new BrevoOptions
             {
                 ApiKey = claveSmtp,

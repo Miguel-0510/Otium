@@ -2,6 +2,15 @@
 
 Todos los cambios notables de este proyecto se documentarán en este archivo.
 
+## [No publicado] - 2026-10-28
+
+### Glosario: GLM-5.3-Flash y respuesta estructurada
+- Sustituido el cliente de Gemini por `DefinicionesClient` (API OpenAI-compatible de Z.ai, `POST /chat/completions`, modelo por defecto `glm-5.3-flash`) para reducir la latencia de respuesta.
+- Nueva configuración `Definiciones:ApiKey` (alias de entorno `GLM_API_KEY`/`ZAI_API_KEY`), `Definiciones:Endpoint` y `Definiciones:Modelo`; el diagnóstico de arranque registra el servicio de definiciones.
+- El prompt exige respuesta solo en JSON: `{"definicion", "contexto_lectura"}`; la definición global es una frase de máximo 15 palabras y el contexto de lectura se emite solo si aporta un matiz relevante al libro.
+- El texto guardado combina la definición global con la línea "En el contexto de la lectura: ..." solo cuando procede; el CSS del glosario conserva el salto de línea (`white-space: pre-line`).
+- Ajustes de rendimiento: timeout de 15 s a 10 s, máximo 2 intentos de reintento y `max_tokens` limitado a 300.
+
 ## [No publicado] - 2026-10-26
 
 ### Correo por API HTTP de Brevo

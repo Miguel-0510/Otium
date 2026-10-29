@@ -185,22 +185,30 @@ builder.Services.AddOptions<BrevoOptions>()
         && endpoint.Scheme == Uri.UriSchemeHttps,
         "Brevo:Endpoint debe ser una URL HTTPS.");
 
-builder.Services.AddOptions<GeminiOptions>()
-    .Bind(builder.Configuration.GetSection(GeminiOptions.Seccion))
+builder.Services.AddOptions<DefinicionesOptions>()
+    .Bind(builder.Configuration.GetSection(DefinicionesOptions.Seccion))
     .PostConfigure(opciones =>
     {
         if (string.IsNullOrWhiteSpace(opciones.ApiKey))
         {
-            opciones.ApiKey = (builder.Configuration["GEMINI_API_KEY"] ?? "").Trim();
+            opciones.ApiKey = (builder.Configuration["GLM_API_KEY"]
+                ?? Environment.GetEnvironmentVariable("ZAI_API_KEY")
+                ?? "").Trim();
         }
 
         opciones.ApiKey = (opciones.ApiKey ?? "").Trim();
+        opciones.Endpoint = string.IsNullOrWhiteSpace(opciones.Endpoint)
+            ? DefinicionesOptions.EndpointPorDefecto
+            : opciones.Endpoint.Trim();
         opciones.Modelo = string.IsNullOrWhiteSpace(opciones.Modelo)
-            ? "gemini-flash-lite-latest"
+            ? DefinicionesOptions.ModeloPorDefecto
             : opciones.Modelo.Trim();
     })
     .Validate(opciones => !string.IsNullOrWhiteSpace(opciones.Modelo),
-        "Gemini:Modelo no puede estar vacío.");
+        "Definiciones:Modelo no puede estar vacío.")
+    .Validate(opciones => Uri.TryCreate(opciones.Endpoint, UriKind.Absolute, out var urlEndpoint)
+        && urlEndpoint.Scheme == Uri.UriSchemeHttps,
+        "Definiciones:Endpoint debe ser una URL HTTPS.");
 
 builder.Services.AddOptions<SitioOptions>()
     .Bind(builder.Configuration.GetSection(SitioOptions.Seccion))
@@ -300,10 +308,17 @@ builder.Services.AddScoped<ILibroService, LibroService>();
 builder.Services.AddScoped<IAmistadService, AmistadService>();
 builder.Services.AddScoped<IEntradaLecturaService, EntradaLecturaService>();
 
-builder.Services.AddHttpClient<IGeminiClient, GeminiClient>(cliente =>
+var endpointDefiniciones = builder.Configuration[DefinicionesOptions.Seccion + ":Endpoint"]?.Trim() is { Length: > 0 } valor
+    ? valor
+    : DefinicionesOptions.EndpointPorDefecto;
+if (!endpointDefiniciones.EndsWith('/'))
 {
-    cliente.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
-    cliente.Timeout = TimeSpan.FromSeconds(15);
+    endpointDefiniciones += "/";
+}
+builder.Services.AddHttpClient<IDefinicionClient, DefinicionesClient>(cliente =>
+{
+    cliente.BaseAddress = new Uri(endpointDefiniciones);
+    cliente.Timeout = TimeSpan.FromSeconds(10);
 });
 
 builder.Services.AddScoped<IGlosarioService, GlosarioService>();
@@ -324,16 +339,16 @@ if (!string.IsNullOrWhiteSpace(sentryDsn))
 
 var app = builder.Build();
 
-GeminiOptions? opcionesGemini = null;
+DefinicionesOptions? opcionesDefiniciones = null;
 BrevoOptions? opcionesBrevo = null;
 
 try
 {
-    opcionesGemini = app.Services.GetRequiredService<IOptions<GeminiOptions>>().Value;
+    opcionesDefiniciones = app.Services.GetRequiredService<IOptions<DefinicionesOptions>>().Value;
 }
 catch (Exception ex) when (ex is OptionsValidationException or InvalidOperationException)
 {
-    app.Logger.LogError(ex, "La configuración de Gemini no es válida.");
+    app.Logger.LogError(ex, "La configuración del servicio de definiciones no es válida.");
 }
 
 try
@@ -345,20 +360,20 @@ catch (Exception ex) when (ex is OptionsValidationException or InvalidOperationE
     app.Logger.LogError(ex, "La configuración de Brevo HTTP no es válida.");
 }
 
-DiagnosticoConfiguracion.Registrar(app.Configuration, app.Logger, opcionesGemini, opcionesBrevo);
+DiagnosticoConfiguracion.Registrar(app.Configuration, app.Logger, opcionesDefiniciones, opcionesBrevo);
 
 using (var ambito = app.Services.CreateScope())
 {
     try
     {
-        var gemini = ambito.ServiceProvider.GetService<IGeminiClient>();
+        var definiciones = ambito.ServiceProvider.GetService<IDefinicionClient>();
         var envio = ambito.ServiceProvider.GetService<IEnvioCorreo>();
         var correo = ambito.ServiceProvider.GetService<IEmailSender<ApplicationUser>>();
 
         app.Logger.LogInformation(
-            "Inyección de dependencias verificada: IGeminiClient -> {Gemini}; " +
+            "Inyección de dependencias verificada: IDefinicionClient -> {Definiciones}; " +
             "IEnvioCorreo -> {Envio}; IEmailSender<ApplicationUser> -> {Correo}.",
-            gemini?.GetType().Name ?? "NO REGISTRADO",
+            definiciones?.GetType().Name ?? "NO REGISTRADO",
             envio?.GetType().Name ?? "NO REGISTRADO",
             correo?.GetType().Name ?? "NO REGISTRADO");
     }

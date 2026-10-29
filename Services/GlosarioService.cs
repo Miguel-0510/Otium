@@ -16,18 +16,18 @@ public interface IGlosarioService
 public class GlosarioService : IGlosarioService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _fabrica;
-    private readonly IGeminiClient _gemini;
+    private readonly IDefinicionClient _definiciones;
     private readonly ILogger<GlosarioService> _logger;
     private readonly ILimiteIntentosService _limites;
 
     public GlosarioService(
         IDbContextFactory<ApplicationDbContext> fabrica,
-        IGeminiClient gemini,
+        IDefinicionClient definiciones,
         ILimiteIntentosService limites,
         ILogger<GlosarioService> logger)
     {
         _fabrica = fabrica;
-        _gemini = gemini;
+        _definiciones = definiciones;
         _logger = logger;
         _limites = limites;
     }
@@ -64,9 +64,9 @@ public class GlosarioService : IGlosarioService
             return (false, "El título del libro no puede superar 300 caracteres.", null);
         }
 
-        if (!_gemini.EstaConfigurado)
+        if (!_definiciones.EstaConfigurado)
         {
-            return (false, "Falta configurar la llave de Gemini en el servidor.", null);
+            return (false, "El servicio de definiciones no está configurado en el servidor.", null);
         }
 
         if (!_limites.IntentarCuotaDiaria($"glosario:{usuarioId}", 50))
@@ -82,7 +82,7 @@ public class GlosarioService : IGlosarioService
 
         try
         {
-            var definicion = await _gemini.DefinirAsync(texto, titulo, cancellationToken);
+            var definicion = await _definiciones.DefinirAsync(texto, titulo, cancellationToken);
             if (string.IsNullOrWhiteSpace(definicion))
             {
                 return (false, "No encontré una definición para esa palabra.", null);
@@ -113,12 +113,12 @@ public class GlosarioService : IGlosarioService
         }
         catch (OperationCanceledException ex)
         {
-            _logger.LogError(ex, "La consulta a Gemini agotó el tiempo de espera.");
+            _logger.LogError(ex, "La consulta al servicio de definiciones agotó el tiempo de espera.");
             return (false, "La consulta tardó demasiado. Inténtalo de nuevo.", null);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al consultar Gemini para el glosario.");
+            _logger.LogError(ex, "Error al consultar el servicio de definiciones para el glosario.");
             return (false, "No pude consultar la definición en este momento. Inténtalo más tarde.", null);
         }
     }

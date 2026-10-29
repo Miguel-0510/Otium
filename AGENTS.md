@@ -22,7 +22,7 @@ Funciones principales:
 - Búsqueda de libros por título o autor en Open Library.
 - Portadas, puntuación de 1 a 5 y reseñas.
 - "Travesías": entradas de lectura con páginas y resumen.
-- Glosario personal con definiciones generadas por Gemini.
+- Glosario personal con definiciones generadas por GLM-5.3-Flash (Z.ai): definición global breve y, solo si aporta un matiz relevante, un apartado "En el contexto de la lectura:".
 - Amigos mediante código de 4 dígitos.
 - Tema claro/oscuro.
 - PWA instalable con página de aviso sin conexión.
@@ -41,7 +41,7 @@ La interfaz y el dominio están en español. Quedan pantallas heredadas de la pl
 | Autenticación | ASP.NET Core Identity + cookies |
 | Base de datos | SQLite + EF Core |
 | Paquetes EF/Identity | `10.0.12` |
-| APIs externas | Open Library (HTTPS), Google Gemini (HTTPS), Brevo HTTP API (HTTPS) |
+| APIs externas | Open Library (HTTPS), Z.ai GLM (HTTPS), Brevo HTTP API (HTTPS) |
 | PWA | `manifest.json`, `sw.js`, `instalar.js` |
 | Puerto local publicado | `http://localhost:5000` |
 | Puerto de desarrollo | `http://localhost:5235`, `https://localhost:7111` |
@@ -123,7 +123,7 @@ Services/
   AmistadService.cs               Código, solicitudes, amigos
   EntradaLecturaService.cs        CRUD de travesías
   GlosarioService.cs              Persistencia y cuotas del glosario
-  GeminiClient.cs                 Cliente Gemini: prompt, HTTP y parseo
+  DefinicionesClient.cs           Cliente GLM (Z.ai): prompt JSON, HTTP, caché y parseo
   BuscadorLibros.cs               Cliente Open Library con caché y reintentos
   EmailSender.cs                  Plantillas y envío (delega en IEnvioCorreo)
   BrevoEnvioCorreo.cs             Transporte HTTP de Brevo
@@ -141,6 +141,10 @@ wwwroot/
 > Configura `Brevo:ApiKey` (API key v3 `xkeysib-`), `Brevo:SenderEmail`, `Brevo:SenderName` y
 > `Brevo:Endpoint`. Las claves `Smtp:*` solo se aceptan como respaldo temporal; `Smtp:Password` debe contener una API key v3, no una SMTP key.
 
+> **Glosario (2026-10-28):** el cliente de Google Gemini fue reemplazado por la API OpenAI-compatible
+> de Z.ai (modelo por defecto `glm-5.3-flash`) para reducir la latencia. Configura `Definiciones:ApiKey`
+> (alias `GLM_API_KEY`/`ZAI_API_KEY`); la antigua clave `Gemini:ApiKey` ya no se usa.
+
 Claves usadas:
 
 | Clave | Uso | Dónde |
@@ -151,12 +155,13 @@ Claves usadas:
 | `Brevo:SenderEmail` | Remitente verificado en Brevo | `appsettings.json` |
 | `Brevo:SenderName` | Nombre visible del remitente | `appsettings.json` |
 | `Brevo:Endpoint` | Endpoint HTTP de Brevo | `appsettings.json` |
-| `Gemini:ApiKey` | API key de Gemini | Configuración local/entorno |
-| `Gemini:Modelo` | Modelo Gemini | Opcional |
+| `Definiciones:ApiKey` | API key de Z.ai (GLM) para el glosario | Configuración local/entorno |
+| `Definiciones:Endpoint` | Endpoint OpenAI-compatible de Z.ai | `appsettings.json` |
+| `Definiciones:Modelo` | Modelo GLM (`glm-5.3-flash`) | `appsettings.json` |
 | `Sitio:UrlPublica` | URL externa para enlaces de correo | Configuración local/entorno |
 | `Invitacion:Codigo` | Legado; ya no se usa en el fuente actual | `appsettings.Development.json` |
 
-El correo se envía con la API HTTP de Brevo (`https://api.brevo.com/v3/smtp/email`) mediante `BrevoEnvioCorreo`. `Brevo:SenderEmail` debe ser un remitente verificado en Brevo y `Brevo:ApiKey` una API key v3 (`xkeysib-`). Las claves `Smtp:*` son legado; `Smtp:Password` solo se usa como respaldo y debe contener una API key v3. `GEMINI_API_KEY` se acepta como alias de entorno para Gemini.
+El correo se envía con la API HTTP de Brevo (`https://api.brevo.com/v3/smtp/email`) mediante `BrevoEnvioCorreo`. `Brevo:SenderEmail` debe ser un remitente verificado en Brevo y `Brevo:ApiKey` una API key v3 (`xkeysib-`). Las claves `Smtp:*` son legado; `Smtp:Password` solo se usa como respaldo y debe contener una API key v3. `GLM_API_KEY` o `ZAI_API_KEY` se aceptan como alias de entorno para el servicio de definiciones (Z.ai).
 
 Reglas:
 
@@ -166,13 +171,13 @@ Reglas:
 
 ```powershell
 dotnet user-secrets init
-dotnet user-secrets set "Gemini:ApiKey" "<valor>"
+dotnet user-secrets set "Definiciones:ApiKey" "<valor>"
 dotnet user-secrets set "Brevo:ApiKey" "<valor>"
 ```
 
 - En producción usar variables de entorno o un gestor de secretos, nunca el archivo del repositorio.
 - Si se define `DataProtection:KeysPath`, debe existir y tener permisos restringidos. Si no se define, las claves se guardan en la tabla `DataProtectionKeys` de la base de datos, de modo que sobreviven a reinicios y despliegues.
-- `Gemini:ApiKey` se envía en la cabecera `x-goog-api-key` y no se devuelve en los mensajes de error.
+- `Definiciones:ApiKey` se envía en la cabecera `Authorization: Bearer` y no se devuelve en los mensajes de error.
 
 ---
 
@@ -199,7 +204,7 @@ dotnet user-secrets set "Brevo:ApiKey" "<valor>"
 | Aplicación | `Services/*` | Parcial; mezcla casos de uso, persistencia y configuración |
 | Dominio | `Models/*` | Entidades anémicas, sin reglas de negocio |
 | Infraestructura | EF Core, SQLite, SMTP (Brevo), HttpClient | Existe |
-| Contratos | Interfaces de servicios | Parcial; `IBuscadorLibros` e `IGeminiClient` existen; faltan DTOs de entrada/salida |
+| Contratos | Interfaces de servicios | Parcial; `IBuscadorLibros` e `IDefinicionClient` existen; faltan DTOs de entrada/salida |
 
 Flujo típico de una página Blazor:
 
@@ -242,7 +247,7 @@ Relaciones relevantes en `Data/ApplicationDbContext.cs`:
 ### 6.5 Integraciones externas
 
 - **Open Library:** búsqueda de 8 resultados por título/autor; portadas desde `covers.openlibrary.org`.
-- **Gemini:** definiciones breves; modelo por defecto `gemini-flash-lite-latest`; la API key se envía en `x-goog-api-key`.
+- **GLM (Z.ai):** definiciones breves del glosario; endpoint OpenAI-compatible `https://api.z.ai/api/paas/v4/chat/completions`, modelo por defecto `glm-5.3-flash`; la API key viaja en `Authorization: Bearer`. La respuesta es JSON (`definicion` + `contexto_lectura` opcional) y se guarda como definición global seguida de "En el contexto de la lectura: ..." solo si aporta un matiz relevante.
 - **Brevo HTTP API:** envío de enlaces de recuperación con `POST https://api.brevo.com/v3/smtp/email`, autenticación `api-key` y cuerpo JSON (`sender`, `to`, `subject`, `htmlContent`).
 - **PWA:** el service worker solo guarda la página de aviso sin conexión. La app requiere conexión, por diseño.
 
@@ -338,7 +343,7 @@ OSI es un modelo de comunicaciones de red, no una arquitectura de software. No e
 
 | Capa OSI | Uso en Otium | Estado |
 |---|---|---|
-| 7 Aplicación | HTTP/HTTPS, Blazor SignalR, Open Library, Gemini, SMTP | Correcto en salidas; entrada publicada sin TLS |
+| 7 Aplicación | HTTP/HTTPS, Blazor SignalR, Open Library, Z.ai GLM, Brevo | Correcto en salidas; entrada publicada sin TLS |
 | 6 Presentación | HTML, CSS, JS, JSON, UTF-8 | Correcto |
 | 5 Sesión | Cookies de Identity, circuito SignalR, Data Protection | Correcto: llavero persistido en base de datos o filesystem |
 | 4 Transporte | TCP | Correcto |
@@ -377,7 +382,7 @@ La separación actual es **aceptable para beta privada**, no para un diseño por
 | `.editorconfig` / `global.json` | No | Sin convenciones ni SDK fijado |
 | Secretos fuera del repo | Sí | Credenciales locales movidas a User Secrets; `appsettings.Development.json` saneado. Rotación pendiente por el propietario |
 | HTTPS/TLS de entrada | Sí (código) | Proxy TLS + `ForwardedHeaders`; pendiente verificar en VPS Oracle |
-| Rate limiting | Sí | HTTP en login/registro/recuperación y cuotas por usuario en amistades/Gemini |
+| Rate limiting | Sí | HTTP en login/registro/recuperación y cuotas por usuario en amistades/definiciones |
 | Confirmación de correo | Parcial | Opción B: confirmación opcional; el correo solo se envía al recuperar contraseña |
 | Recuperación de contraseña | Sí | Funciona sin exigir `EmailConfirmed`; enlaces construidos con `Sitio:UrlPublica`; probado con `IEmailSender` falso |
 | Eliminación de cuenta | Sí | Flujo único transaccional con libros, travesías, glosario y amistades |

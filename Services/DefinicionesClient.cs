@@ -8,27 +8,45 @@ using Otium.Services.Options;
 
 namespace Otium.Services;
 
-public interface IGeminiClient
+public interface IDefinicionClient
 {
     bool EstaConfigurado { get; }
 
     Task<string?> DefinirAsync(string palabra, string libroTitulo, CancellationToken cancellationToken = default);
 }
 
-public class GeminiClient : IGeminiClient
+public class DefinicionesClient : IDefinicionClient
 {
-    private const int MaxIntentos = 3;
+    private const int MaxIntentos = 2;
     private const int LimiteCuerpoLog = 4000;
+    private const int MaxTokensSalida = 300;
     private static readonly TimeSpan EsperaEntreIntentos = TimeSpan.FromMilliseconds(300);
     private static readonly TimeSpan DuracionCacheDefinicion = TimeSpan.FromDays(7);
 
+    private const string Instrucciones =
+        "Eres un diccionario conciso en español para una app de lectura. " +
+        "Responde ÚNICAMENTE con un objeto JSON válido, sin markdown, sin cercas de código y sin explicaciones, " +
+        "con la forma exacta {\"definicion\": \"...\", \"contexto_lectura\": \"...\"}. " +
+        "Reglas: \"definicion\" debe ser la acepción general más común de la palabra, en una sola frase de " +
+        "máximo 15 palabras, sin repetir la palabra y sin comillas dentro del valor. " +
+        "\"contexto_lectura\" debe ser una frase de máximo 20 palabras que explique el matiz o uso relevante " +
+        "de la palabra en el libro indicado, SOLO si ese contexto aporta un significado situacional clave; " +
+        "si la acepción general ya aplica igual o el contexto no aporta nada relevante, responde con cadena vacía. " +
+        "No añadas campos extra, introducciones, saludos ni texto de relleno.";
+
+    private static readonly JsonSerializerOptions OpcionesJson = new(JsonSerializerDefaults.Web);
+
     private readonly HttpClient _http;
     private readonly IMemoryCache _cache;
-    private readonly GeminiOptions _opciones;
-    private readonly ILogger<GeminiClient> _logger;
+    private readonly DefinicionesOptions _opciones;
+    private readonly ILogger<DefinicionesClient> _logger;
     private readonly CircuitBreaker _circuitBreaker = new();
 
-    public GeminiClient(HttpClient http, IMemoryCache cache, IOptions<GeminiOptions> opciones, ILogger<GeminiClient> logger)
+    public DefinicionesClient(
+        HttpClient http,
+        IMemoryCache cache,
+        IOptions<DefinicionesOptions> opciones,
+        ILogger<DefinicionesClient> logger)
     {
         _http = http;
         _cache = cache;
@@ -42,7 +60,7 @@ public class GeminiClient : IGeminiClient
     {
         if (!EstaConfigurado)
         {
-            _logger.LogWarning("Gemini no está configurado; no se puede definir '{Palabra}'.", palabra);
+            _logger.LogWarning("El servicio de definiciones no está configurado; no se puede definir '{Palabra}'.", palabra);
             return null;
         }
 
@@ -55,32 +73,37 @@ public class GeminiClient : IGeminiClient
         var modelo = (_opciones.Modelo ?? "").Trim();
         if (modelo.Length == 0)
         {
-            _logger.LogError("Gemini:Modelo está vacío; no se puede consultar el servicio.");
+            _logger.LogError("Definiciones:Modelo está vacío; no se puede consultar el servicio.");
             return null;
         }
 
-        var claveCache = $"gemini:{texto.ToLowerInvariant()}:{(libroTitulo ?? "").ToLowerInvariant()}";
+        var claveCache = $"definicion:{texto.ToLowerInvariant()}:{(libroTitulo ?? "").ToLowerInvariant()}";
         if (_cache.TryGetValue(claveCache, out string? definicionCacheada) && definicionCacheada is not null)
         {
             return definicionCacheada;
         }
 
-        var contexto = string.IsNullOrWhiteSpace(libroTitulo) ? "" : $" en el contexto del libro \"{libroTitulo}\"";
-        var prompt = $"Da una definicion breve (maximo dos frases) y clara en espanol de la palabra \"{texto}\"{contexto}. " +
-                     "Si tiene varios significados, elige el mas comun o el que mejor encaje con el contexto dado. " +
-                     "Responde solo con la definicion, sin repetir la palabra, sin comillas y sin comentarios adicionales.";
+        var titulado = (libroTitulo ?? "").Trim();
+        var prompt = string.IsNullOrWhiteSpace(titulado)
+            ? $"Palabra: \"{texto}\"\nLibro de lectura: (ninguno; responde \"contexto_lectura\" vacío)"
+            : $"Palabra: \"{texto}\"\nLibro de lectura: \"{titulado}\"";
 
-        var url = $"v1beta/models/{Uri.EscapeDataString(modelo)}:generateContent";
         var cuerpo = new
         {
-            contents = new[] { new { parts = new[] { new { text = prompt } } } },
-            generationConfig = new { maxOutputTokens = 150, temperature = 0.2 }
+            model = modelo,
+            messages = new[]
+            {
+                new { role = "system", content = Instrucciones },
+                new { role = "user", content = prompt }
+            },
+            temperature = 0.2,
+            max_tokens = MaxTokensSalida
         };
 
         try
         {
             using var respuesta = await _circuitBreaker.EjecutarAsync(
-                _ => EnviarConReintentosAsync(() => CrearSolicitud(url, cuerpo), cancellationToken),
+                _ => EnviarConReintentosAsync(() => CrearSolicitud(cuerpo), cancellationToken),
                 cancellationToken);
 
             if (!respuesta.IsSuccessStatusCode)
@@ -89,17 +112,17 @@ public class GeminiClient : IGeminiClient
                 return null;
             }
 
-            RespuestaGemini? datos;
+            RespuestaChat? datos;
             try
             {
-                datos = await respuesta.Content.ReadFromJsonAsync<RespuestaGemini>(cancellationToken);
+                datos = await respuesta.Content.ReadFromJsonAsync<RespuestaChat>(OpcionesJson, cancellationToken);
             }
             catch (JsonException ex)
             {
                 var cuerpoRespuesta = await LeerCuerpoAsync(respuesta, cancellationToken);
                 _logger.LogError(
                     ex,
-                    "Gemini devolvió HTTP 200 con JSON inválido al definir '{Palabra}' con el modelo '{Modelo}'. " +
+                    "El servicio de definiciones devolvió HTTP 200 con JSON inválido al definir '{Palabra}' con el modelo '{Modelo}'. " +
                     "ResponseBody: {ResponseBody}",
                     texto,
                     modelo,
@@ -107,17 +130,23 @@ public class GeminiClient : IGeminiClient
                 return null;
             }
 
-            var definicion = datos?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text?.Trim();
+            var contenido = datos?.Choices?.FirstOrDefault()?.Message?.Content?.Trim();
 
-            if (string.IsNullOrWhiteSpace(definicion))
+            if (string.IsNullOrWhiteSpace(contenido))
             {
                 var cuerpoRespuesta = await LeerCuerpoAsync(respuesta, cancellationToken);
                 _logger.LogWarning(
-                    "Gemini respondió HTTP 200 sin texto utilizable al definir '{Palabra}' con el modelo '{Modelo}'. " +
+                    "El servicio de definiciones respondió HTTP 200 sin texto utilizable al definir '{Palabra}' con el modelo '{Modelo}'. " +
                     "Posible bloqueo de seguridad o respuesta vacía. ResponseBody: {ResponseBody}",
                     texto,
                     modelo,
                     Truncar(cuerpoRespuesta));
+                return null;
+            }
+
+            var definicion = ComponerDefinicion(contenido, texto, modelo);
+            if (definicion is null)
+            {
                 return null;
             }
 
@@ -132,7 +161,7 @@ public class GeminiClient : IGeminiClient
         {
             _logger.LogError(
                 ex,
-                "La consulta a Gemini para '{Palabra}' con el modelo '{Modelo}' superó el tiempo límite de {Segundos} s.",
+                "La consulta al servicio de definiciones para '{Palabra}' con el modelo '{Modelo}' superó el tiempo límite de {Segundos} s.",
                 texto,
                 modelo,
                 _http.Timeout.TotalSeconds);
@@ -142,7 +171,7 @@ public class GeminiClient : IGeminiClient
         {
             _logger.LogError(
                 ex,
-                "La consulta a Gemini para '{Palabra}' con el modelo '{Modelo}' agotó los reintentos por tiempo de espera.",
+                "La consulta al servicio de definiciones para '{Palabra}' con el modelo '{Modelo}' agotó los reintentos por tiempo de espera.",
                 texto,
                 modelo);
             return null;
@@ -151,11 +180,11 @@ public class GeminiClient : IGeminiClient
         {
             _logger.LogError(
                 ex,
-                "Error de red o TLS al contactar Gemini para '{Palabra}' con el modelo '{Modelo}'. " +
-                "Endpoint: https://generativelanguage.googleapis.com/{Url}; HTTP status: {Estado}.",
+                "Error de red o TLS al contactar el servicio de definiciones para '{Palabra}' con el modelo '{Modelo}'. " +
+                "Endpoint: {Endpoint}; HTTP status: {Estado}.",
                 texto,
                 modelo,
-                url,
+                DefinicionesOptions.EndpointPorDefecto,
                 ex.StatusCode?.ToString() ?? "sin respuesta");
             return null;
         }
@@ -163,7 +192,7 @@ public class GeminiClient : IGeminiClient
         {
             _logger.LogWarning(
                 ex,
-                "No se pudo consultar Gemini para '{Palabra}': {Mensaje}",
+                "No se pudo consultar el servicio de definiciones para '{Palabra}': {Mensaje}",
                 texto,
                 ex.Message);
             return null;
@@ -172,11 +201,59 @@ public class GeminiClient : IGeminiClient
         {
             _logger.LogError(
                 ex,
-                "Error inesperado al consultar Gemini para '{Palabra}' con el modelo '{Modelo}'.",
+                "Error inesperado al consultar el servicio de definiciones para '{Palabra}' con el modelo '{Modelo}'.",
                 texto,
                 modelo);
             return null;
         }
+    }
+
+    /// <summary>
+    /// Extrae el JSON pedido al modelo y compone el texto final: definición global breve
+    /// y, solo si el modelo aporta un matiz relevante de lectura, la línea "En el contexto de la lectura: ...".
+    /// Devuelve null solo cuando no hay definición utilizable y registra el motivo.
+    /// </summary>
+    private string? ComponerDefinicion(string contenido, string palabra, string modelo)
+    {
+        SalidaDefinicion? salida = null;
+        try
+        {
+            var inicio = contenido.IndexOf('{');
+            var fin = contenido.LastIndexOf('}');
+            if (inicio >= 0 && fin > inicio)
+            {
+                salida = JsonSerializer.Deserialize<SalidaDefinicion>(
+                    contenido[inicio..(fin + 1)],
+                    OpcionesJson);
+            }
+        }
+        catch (JsonException)
+        {
+            // Se invertirá en el texto limpio del contenido entero.
+        }
+
+        var definicion = salida?.Definicion is not null
+            && salida.Definicion.Trim().Length > 0
+            ? salida.Definicion.Trim()
+            : contenido
+                .Replace("```json", "")
+                .Replace("```", "")
+                .Trim();
+
+        if (string.IsNullOrWhiteSpace(definicion))
+        {
+            _logger.LogWarning(
+                "El modelo '{Modelo}' no devolvió una definición utilizable para '{Palabra}'.",
+                modelo,
+                palabra);
+            return null;
+        }
+
+        var contexto = salida?.ContextoLectura?.Trim() ?? "";
+
+        return contexto.Length == 0
+            ? definicion
+            : $"{definicion}\n\nEn el contexto de la lectura: {contexto}";
     }
 
     private async Task RegistrarErrorHttpAsync(
@@ -192,7 +269,7 @@ public class GeminiClient : IGeminiClient
             : respuesta.ReasonPhrase;
 
         _logger.LogWarning(
-            "Gemini devolvió StatusCode={Estado} ({Motivo}) al definir '{Palabra}' con el modelo '{Modelo}'. " +
+            "El servicio de definiciones devolvió StatusCode={Estado} ({Motivo}) al definir '{Palabra}' con el modelo '{Modelo}'. " +
             "{Pista} ResponseBody: {ResponseBody}",
             estado,
             motivo,
@@ -205,11 +282,11 @@ public class GeminiClient : IGeminiClient
     private static string ObtenerPista(int estado) => estado switch
     {
         400 => "Petición inválida: revisa el formato del prompt o los parámetros del modelo.",
-        401 => "API key ausente o inválida: verifica Gemini__ApiKey/GEMINI_API_KEY.",
-        403 => "API key sin permisos o API de Gemini deshabilitada para el proyecto.",
-        404 => "Modelo no encontrado: revisa Gemini:Modelo (por ejemplo gemini-flash-lite-latest).",
-        429 => "Cuota o límite de peticiones excedido en Gemini.",
-        >= 500 => "Error interno o indisponibilidad temporal de Gemini.",
+        401 => "API key ausente o inválida: verifica Definiciones__ApiKey/GLM_API_KEY/ZAI_API_KEY.",
+        403 => "API key sin permisos o sin saldo para el modelo configurado.",
+        404 => "Modelo o endpoint no encontrado: revisa Definiciones:Modelo (por ejemplo glm-5.3-flash) y Definiciones:Endpoint.",
+        429 => "Cuota o límite de peticiones excedido en el servicio de definiciones.",
+        >= 500 => "Error interno o indisponibilidad temporal del servicio de definiciones.",
         _ => "Revisa la clave, el modelo y la cuota de la API."
     };
 
@@ -239,13 +316,13 @@ public class GeminiClient : IGeminiClient
             : $"{texto[..LimiteCuerpoLog]}... (truncado; {texto.Length} caracteres en total)";
     }
 
-    private HttpRequestMessage CrearSolicitud(string url, object cuerpo)
+    private HttpRequestMessage CrearSolicitud(object cuerpo)
     {
-        var solicitud = new HttpRequestMessage(HttpMethod.Post, url)
+        var solicitud = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
         {
             Content = JsonContent.Create(cuerpo)
         };
-        solicitud.Headers.Add("x-goog-api-key", _opciones.ApiKey.Trim());
+        solicitud.Headers.Add("Authorization", $"Bearer {_opciones.ApiKey.Trim()}");
         return solicitud;
     }
 
@@ -270,7 +347,7 @@ public class GeminiClient : IGeminiClient
             {
                 _logger.LogWarning(
                     ex,
-                    "Timeout al contactar Gemini (intento {Intento}/{Total}); se reintentará.",
+                    "Timeout al contactar el servicio de definiciones (intento {Intento}/{Total}); se reintentará.",
                     intento,
                     MaxIntentos);
                 await Task.Delay(EsperaEntreIntentos * intento, cancellationToken);
@@ -278,13 +355,13 @@ public class GeminiClient : IGeminiClient
             }
             catch (OperationCanceledException ex)
             {
-                throw new TimeoutException("La consulta a Gemini superó el tiempo de espera.", ex);
+                throw new TimeoutException("La consulta al servicio de definiciones superó el tiempo de espera.", ex);
             }
             catch (HttpRequestException ex) when (intento < MaxIntentos)
             {
                 _logger.LogWarning(
                     ex,
-                    "Error de red al contactar Gemini (intento {Intento}/{Total}): {Mensaje}; se reintentará.",
+                    "Error de red al contactar el servicio de definiciones (intento {Intento}/{Total}): {Mensaje}; se reintentará.",
                     intento,
                     MaxIntentos,
                     ex.Message);
@@ -298,7 +375,7 @@ public class GeminiClient : IGeminiClient
             }
 
             _logger.LogWarning(
-                "Gemini respondió HTTP {Estado} (intento {Intento}/{Total}); se reintentará.",
+                "El servicio de definiciones respondió HTTP {Estado} (intento {Intento}/{Total}); se reintentará.",
                 (int)respuesta.StatusCode,
                 intento,
                 MaxIntentos);
@@ -307,7 +384,7 @@ public class GeminiClient : IGeminiClient
             await Task.Delay(EsperaEntreIntentos * intento, cancellationToken);
         }
 
-        throw new InvalidOperationException("No se pudo completar la consulta a Gemini.");
+        throw new InvalidOperationException("No se pudo completar la consulta al servicio de definiciones.");
     }
 
     private static bool EsTransitorio(HttpStatusCode estado) =>
@@ -316,26 +393,29 @@ public class GeminiClient : IGeminiClient
         || (int)estado >= 500;
 }
 
-internal class RespuestaGemini
+internal sealed class RespuestaChat
 {
-    [JsonPropertyName("candidates")]
-    public List<CandidatoGemini>? Candidates { get; set; }
+    [JsonPropertyName("choices")]
+    public List<OpcionChat>? Choices { get; set; }
 }
 
-internal class CandidatoGemini
+internal sealed class OpcionChat
+{
+    [JsonPropertyName("message")]
+    public MensajeChat? Message { get; set; }
+}
+
+internal sealed class MensajeChat
 {
     [JsonPropertyName("content")]
-    public ContenidoGemini? Content { get; set; }
+    public string? Content { get; set; }
 }
 
-internal class ContenidoGemini
+internal sealed class SalidaDefinicion
 {
-    [JsonPropertyName("parts")]
-    public List<ParteGemini>? Parts { get; set; }
-}
+    [JsonPropertyName("definicion")]
+    public string? Definicion { get; set; }
 
-internal class ParteGemini
-{
-    [JsonPropertyName("text")]
-    public string? Text { get; set; }
+    [JsonPropertyName("contexto_lectura")]
+    public string? ContextoLectura { get; set; }
 }

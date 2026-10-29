@@ -9,7 +9,7 @@ Aplicación web personal de diario de lectura y gestión de biblioteca. Stack: A
 - Búsqueda de libros por título o autor en Open Library con portadas.
 - Puntuación de 1 a 5 y reseñas.
 - "Travesías": entradas de lectura con páginas y resumen.
-- Glosario personal con definiciones generadas por Gemini (caché y circuit breaker).
+- Glosario personal con definiciones generadas por GLM-5.3-Flash (Z.ai), con caché y circuit breaker.
 - Amigos mediante código alfanumérico, solicitudes, aceptar/rechazar, eliminar, bloquear.
 - Compartir estantes opcional (desactivado por defecto).
 - Tema claro/oscuro.
@@ -28,7 +28,7 @@ Aplicación web personal de diario de lectura y gestión de biblioteca. Stack: A
 | UI | Blazor Web App, `InteractiveServer` |
 | Autenticación | ASP.NET Core Identity + cookies |
 | Base de datos | SQLite + EF Core |
-| APIs externas | Open Library, Google Gemini, Brevo HTTP API |
+| APIs externas | Open Library, Z.ai (GLM-5.3-Flash), Brevo HTTP API |
 | PWA | `manifest.json`, `sw.js`, `instalar.js` |
 
 ## Comandos
@@ -64,7 +64,7 @@ Las claves se leen de variables de entorno / User Secrets / `appsettings.Develop
 - `Brevo:ApiKey` - API key v3 de Brevo (empieza por `xkeysib-`; **no** es la SMTP key).
 - `Brevo:SenderEmail` / `Brevo:SenderName` - remitente verificado y nombre visible.
 - `Brevo:Endpoint` - endpoint HTTP; por defecto `https://api.brevo.com/v3/smtp/email`.
-- `Gemini:ApiKey` / `Gemini:Modelo` - Gemini.
+- `Definiciones:ApiKey` / `Definiciones:Endpoint` / `Definiciones:Modelo` - servicio de definiciones del glosario (Z.ai/GLM; alias de entorno `GLM_API_KEY` o `ZAI_API_KEY`; endpoint por defecto `https://api.z.ai/api/paas/v4/`; modelo por defecto `glm-5.3-flash`).
 - `Sitio:UrlPublica` - URL pública para enlaces de recuperación.
 - `Seguridad:PermitirHttp` - permite HTTP en modo Production (Tailscale).
 

@@ -7,18 +7,19 @@ public static class DiagnosticoConfiguracion
     public static void Registrar(
         IConfiguration configuracion,
         ILogger logger,
-        GeminiOptions? gemini,
+        DefinicionesOptions? definiciones,
         BrevoOptions? brevo)
     {
-        RegistrarGemini(configuracion, logger, gemini);
+        RegistrarDefiniciones(configuracion, logger, definiciones);
         RegistrarBrevo(configuracion, logger, brevo);
     }
 
-    private static void RegistrarGemini(IConfiguration configuracion, ILogger logger, GeminiOptions? opciones)
+    private static void RegistrarDefiniciones(IConfiguration configuracion, ILogger logger, DefinicionesOptions? opciones)
     {
-        var valorConfiguracion = configuracion["Gemini:ApiKey"];
-        var valorEntornoDoble = Environment.GetEnvironmentVariable("Gemini__ApiKey");
-        var valorAlias = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+        var valorConfiguracion = configuracion["Definiciones:ApiKey"];
+        var valorEntornoDoble = Environment.GetEnvironmentVariable("Definiciones__ApiKey");
+        var valorAlias = Environment.GetEnvironmentVariable("GLM_API_KEY")
+            ?? Environment.GetEnvironmentVariable("ZAI_API_KEY");
 
         var claveEfectiva = (opciones?.ApiKey
             ?? valorConfiguracion
@@ -26,20 +27,25 @@ public static class DiagnosticoConfiguracion
             ?? "").Trim();
 
         var modelo = string.IsNullOrWhiteSpace(opciones?.Modelo)
-            ? "gemini-flash-lite-latest"
+            ? DefinicionesOptions.ModeloPorDefecto
             : opciones!.Modelo;
 
+        var endpoint = (opciones?.Endpoint
+            ?? configuracion["Definiciones:Endpoint"]
+            ?? DefinicionesOptions.EndpointPorDefecto).Trim();
+
         var origen = !string.IsNullOrWhiteSpace(valorConfiguracion)
-            ? "Gemini:ApiKey/Gemini__ApiKey"
+            ? "Definiciones:ApiKey/Definiciones__ApiKey"
             : !string.IsNullOrWhiteSpace(valorAlias)
-                ? "GEMINI_API_KEY"
+                ? "GLM_API_KEY/ZAI_API_KEY"
                 : "ninguna";
 
         logger.LogInformation(
-            "Diagnóstico Gemini: Gemini:ApiKey={PresenteConfiguracion} (longitud {LongitudConfiguracion}); " +
-            "Gemini__ApiKey={PresenteEntornoDoble} (longitud {LongitudEntornoDoble}); " +
-            "GEMINI_API_KEY={PresenteAlias} (longitud {LongitudAlias}); " +
+            "Diagnóstico definiciones: Endpoint='{Endpoint}', Definiciones:ApiKey={PresenteConfiguracion} " +
+            "(longitud {LongitudConfiguracion}); Definiciones__ApiKey={PresenteEntornoDoble} " +
+            "(longitud {LongitudEntornoDoble}); GLM_API_KEY/ZAI_API_KEY={PresenteAlias} (longitud {LongitudAlias}); " +
             "clave efectiva longitud={LongitudEfectiva}, origen='{Origen}', modelo='{Modelo}'.",
+            endpoint,
             !string.IsNullOrWhiteSpace(valorConfiguracion),
             valorConfiguracion?.Length ?? 0,
             !string.IsNullOrWhiteSpace(valorEntornoDoble),
@@ -53,17 +59,27 @@ public static class DiagnosticoConfiguracion
         if (claveEfectiva.Length == 0)
         {
             logger.LogWarning(
-                "Gemini no tiene API key configurada. Define Gemini__ApiKey o GEMINI_API_KEY " +
-                "en el entorno del servidor; el glosario inteligente no funcionará.");
+                "El servicio de definiciones no tiene API key configurada. Define Definiciones__ApiKey, " +
+                "GLM_API_KEY o ZAI_API_KEY (API key de Z.ai) en el entorno del servidor; " +
+                "el glosario inteligente no funcionará.");
             return;
         }
 
         if (claveEfectiva.Length < 20)
         {
             logger.LogWarning(
-                "Gemini:ApiKey tiene una longitud atípica ({Longitud}). " +
+                "Definiciones:ApiKey tiene una longitud atípica ({Longitud}). " +
                 "Verifica que la variable de entorno no esté truncada o contenga comillas.",
                 claveEfectiva.Length);
+        }
+
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri)
+            || uri.Scheme != Uri.UriSchemeHttps)
+        {
+            logger.LogWarning(
+                "Definiciones:Endpoint='{Endpoint}' no es una URL HTTPS válida. " +
+                "Se espera https://api.z.ai/api/paas/v4.",
+                endpoint);
         }
     }
 

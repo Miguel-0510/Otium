@@ -30,7 +30,7 @@ public sealed class GlosarioServiceTests
 
         var servicio = new GlosarioService(
             fabricaDb,
-            new GeminiFalso("Definición de prueba."),
+            new DefinicionFalsa("Definición de prueba."),
             limites,
             logger);
 
@@ -60,7 +60,7 @@ public sealed class GlosarioServiceTests
         var usuario = await registro.RegistrarAsync($"glosario-duplicado-{Guid.NewGuid():N}@example.com", "Password1");
         Assert.True(usuario.Exito);
 
-        var gemini = new GeminiFalso("Definición de prueba.");
+        var gemini = new DefinicionFalsa("Definición de prueba.");
         var servicio = new GlosarioService(fabricaDb, gemini, limites, logger);
 
         var primero = await servicio.BuscarYGuardarAsync(usuario.Usuario!.Id, "Efímero", "");
@@ -73,11 +73,11 @@ public sealed class GlosarioServiceTests
         Assert.Single(await servicio.ObtenerDeUsuarioAsync(usuario.Usuario.Id));
     }
 
-    private sealed class GeminiFalso : IGeminiClient
+    private sealed class DefinicionFalsa : IDefinicionClient
     {
         private readonly string _definicion;
 
-        public GeminiFalso(string definicion)
+        public DefinicionFalsa(string definicion)
         {
             _definicion = definicion;
         }
