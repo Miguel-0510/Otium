@@ -4,7 +4,7 @@ Registro de la búsqueda de nombre, la evidencia recogida y lo que queda por hac
 Complementa la **Fase −1** de [`../ROADMAP.md`](../ROADMAP.md) (R-90..R-95).
 
 - **Fecha de la investigación:** 2026-11-15
-- **Decisión:** **pendiente**. `Otium` queda descartado por colisión de nicho. Hay ocho rondas de
+- **Decisión:** **pendiente**. `Otium` queda descartado por colisión de nicho. Hay nueve rondas de
   criba y una lista corta de finalistas; la candidata principal es **Elicona**, pero **no se ha
   elegido nombre**.
 - **Estado:** criba hecha; **elección y clearance formal pendientes (R-90)**
@@ -321,6 +321,76 @@ libres, y **19 conservan además el `.com`**. Todas sin apps (salvo `Lirania`) y
 - `Naiade` equivale a *náyade*, sustantivo común: bonito, pero descriptivo.
 - `Lirania` está ocupado por un juego de estrategia.
 
+## 3.8 Ronda 9 — castellano de paisaje y latín de biblioteca (2026-11-15)
+
+Petición: salir del griego y buscar **castellano y latín**, siempre por combinación de sílabas.
+Se probaron **205 nombres** en tres sabores; **147 tienen `.es` y `.app` libres y 60 conservan
+también el `.com`**. Todas las seleccionadas están limpias de apps y de menciones web.
+
+### Sabor castellano de paisaje
+
+Prefijos del campo español (`alcor-`, `prad-`, `sot-`, `riber-`, `font-`, `oter-`, `zarc-`,
+`almandr-`) con terminaciones `-al`, `-eta`, `-ina`, `-elba`, `-iega`.
+
+| Nombre | Composición | Lectura |
+|---|---|---|
+| **Cimalva** | *cima* + *alba* | cim-AL-va; cumbre al amanecer, tres sílabas |
+| **Fontelba** | *fuente* + *alba* | fon-TEL-ba; la fuente del amanecer |
+| **Almandral** | *almendro* + `-al` | al-man-DRAL; almendral, con `d` sonora |
+| **Alcoreta** | *alcor* (colina) + `-eta` | al-co-RE-ta; la colina pequeña |
+| **Alcorina** | *alcor* + `-ina` | al-co-RI-na |
+| **Ribernal** | *ribera* + `-al` | ri-ber-NAL |
+| **Marismal** | *marisma* + `-al` | ma-ris-MAL |
+| **Alcorzal** | *alcorza* (dulce) + `-al` | al-cor-ZAL |
+| **Oterral** | *otero* + `-al` | o-te-RRAL |
+| **Zarcal** | *zarza* + `-al` | zar-CAL; dos sílabas, muy castellano |
+| **Fresnedal** | *fresno* + `-eda` + `-al` | fres-ne-DAL |
+| **Hontanela** | *hontanar* + `-ela` | hon-ta-NE-la |
+
+### Sabor latín de biblioteca
+
+Raíces de libro y papel: *codex*, *charta*, *pergamena*, *nemus*, *litus*, *boscus*.
+
+| Nombre | Composición | Lectura |
+|---|---|---|
+| **Codicila** | *codex* / *códice* + `-ila` | co-di-CI-la; lleva "códice" dentro |
+| **Chartaria** | *charta* (papel) + `-aria` | char-TA-ria; el obrador de papel |
+| **Pergamela** | *pergamena* (pergamino) + `-ela` | per-ga-ME-la |
+| **Pergamina** | *pergamena* + `-ina` | per-ga-MI-na |
+| **Nemorina** | *nemus* (bosque) + `-ina` | ne-mo-RI-na |
+| **Litorana** | *litus* (costa) + `-ana` | li-to-RA-na |
+| **Boscaria** | *boscus* (bosque) + `-aria` | bos-CA-ria |
+| **Melandria** | *mel* (miel) + `-andria` | me-LAN-dria |
+
+### Sabor inventado castellano
+
+Terminación `-iega` (como *labriega*, *mujeriegas*), muy reconocible como español aunque no
+exista la palabra.
+
+**Alcoriega** · **Pradiega** · **Sotiega** · **Lomiega** · **Naviega** · **Fontiega** ·
+**Riberiega** · **Oteriza** · **Alboresa** · **Saviania** · **Hontanina** · **Almandrina** ·
+**Aurelanea**
+
+### Selección
+
+| # | Nombre | Por qué |
+|---|---|---|
+| 1 | **Cimalva** | La más bonita de toda la ronda: castellana, corta, con imagen de cumbre al alba |
+| 2 | **Fontelba** | Fuente y amanecer en una palabra; suena a lugar, no a invento |
+| 3 | **Codicila** | La más "de libros" sin decir libro: *códice* escondido |
+| 4 | **Almandral** | Castellana y rotunda; el oído la reconoce como paisaje |
+| 5 | **Alcoriega** | La más sonora del grupo `-iega`; parece un topónimo real |
+| 6 | **Pergamela** | Evoca pergamino y suena a nombre propio |
+| 7 | **Alcoreta** | Suave y breve, con `-eta` de diminutivo |
+| 8 | **Boscaria** | Bosque + taller; la más "de oficio" |
+
+**Matices:**
+
+- `Hontanela` se parece demasiado a *fontanela* (la mollera del bebé): mejor `Hontanera`.
+- `Litorala` y `Ribernala` se oyen forzadas: las dejé fuera de la selección.
+- `Zarcal` es preciosa pero tan corta que el `.es` y el `.app` son también más fáciles de ocupar
+  en el futuro.
+
 ### Límites de esta verificación
 - `RDAP 404` en `.com` acredita que **no está registrado**; no confirma el precio (puede ser
   *premium*). Se comprueba al añadirlo al carrito del registrador.
@@ -376,7 +446,7 @@ igual en español, italiano e inglés; no compite con un término genérico del 
 
 | # | Acción | Responsable | Estado |
 |---|---|---|---|
-| 1 | Cerrar la elección del nombre entre las finalistas (§3.1 a §3.7) | Propietario | Pendiente (R-90) |
+| 1 | Cerrar la elección del nombre entre las finalistas (§3.1 a §3.8) | Propietario | Pendiente (R-90) |
 | 2 | Clearance formal OEPM/EUIPO/USPTO en clases 9, 41 y 42 (R-90) | Propietario / asesor | Pendiente |
 | 3 | Comprar `<nombre>.es` y `<nombre>.app` (y el `.com` defensivo si es trivial) | Propietario | Bloqueada por 1 |
 | 4 | Reservar handles `@<nombre>` (R-92) | Propietario | Bloqueada por 1 |
