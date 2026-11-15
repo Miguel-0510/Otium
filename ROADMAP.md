@@ -124,7 +124,7 @@ las migraciones. El renombrado es mecánico pero transversal; hacerlo después d
 obligaría a repetirlo sobre `Otium.Data` y sobre la migración inicial de PostgreSQL.
 
 **El nombre no está decidido.** Hay nueve rondas de criba y una lista corta en `DOCS/marca.md`
-(§3.1 a §3.8). La candidata principal es **Elicona**, pero la elección se cierra al final de esta
+(§3.1 a §3.9). La candidata principal es **Elicona**, pero la elección se cierra al final de esta
 fase, con la clearance de R-90 delante. Mientras no se cierre: nada de dominios, handles ni
 renombrado de código.
 

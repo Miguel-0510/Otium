@@ -5,8 +5,8 @@ Complementa la **Fase −1** de [`../ROADMAP.md`](../ROADMAP.md) (R-90..R-95).
 
 - **Fecha de la investigación:** 2026-11-15
 - **Decisión:** **pendiente**. `Otium` queda descartado por colisión de nicho. Hay nueve rondas de
-  criba y una lista corta de finalistas; la candidata principal es **Elicona**, pero **no se ha
-  elegido nombre**.
+  criba (§3.1 a §3.8) y una consulta puntual (§3.9), con una lista corta de finalistas; la
+  candidata principal es **Elicona**, pero **no se ha elegido nombre**.
 - **Estado:** criba hecha; **elección y clearance formal pendientes (R-90)**
 - **Alcance:** este documento es evidencia técnica, no asesoría legal
 
@@ -391,6 +391,41 @@ exista la palabra.
 - `Zarcal` es preciosa pero tan corta que el `.es` y el `.app` son también más fáciles de ocupar
   en el futuro.
 
+## 3.9 Consulta puntual — Glotium (2026-11-15)
+
+**No está usada.** Es el nombre más libre de todo el proceso: ningún dominio, ninguna app y
+ninguna mención web.
+
+| Comprobación | Resultado |
+|---|---|
+| `glotium.com` | Sin registrar (RDAP 404) |
+| `glotium.es` | Sin delegación DNS (`NXDOMAIN`) |
+| `glotium.app` | Sin registrar (RDAP 404 y sin DNS) |
+| `glotium.net`, `glotium.org`, `glotium.io` | Libres |
+| App Store ES/US | Cero coincidencias |
+| Play Store | Cero coincidencias |
+| Búsqueda web `"glotium"` | Cero resultados |
+| Marcas y empresas | Nada con ese nombre; solo suenan parecido `Gootium` (mochilas), `Glowrium` (lámparas) y `Glorium` (consultoría), de otros sectores |
+
+**Lectura del nombre.** Se apoya en `glot-`, la raíz griega de *lengua* (glotis, glosa, glosario),
+y en la terminación `-ium`, que suena a latín culto. Permite una historia honesta: *lengua + ocio*,
+y engancha con el glosario que ya existe en el producto.
+
+**Dos reparos, y el segundo es serio:**
+
+1. **Suena a ciencia.** La terminación `-ium` es la de los elementos químicos y los fármacos
+   (ilium, gadolinium). Un lector nuevo puede pensar en un suplemento antes que en un libro.
+2. **Contiene `Otium`.** Cuatro de sus seis letras son el nombre que se está abandonando. Eso da
+   continuidad, pero también arrastra el problema: la solicitud USPTO `OTIUM` (serial 50156419,
+   clase 041) y los competidores `otium-library.com`, `otiumbookshelf.com` y `otiumfeed.it` siguen
+   ahí. En marcas, añadir un prefijo a un signo anterior para servicios idénticos puede bastar
+   para que se aprecie riesgo de confusión. No es descartable, pero **es justo lo que tiene que
+   resolver R-90**, y no conviene comprar dominios antes de saberlo.
+
+**Variantes con la misma raíz, si se quiere conservar el sonido y soltar el `otium`:**
+`Glotela`, `Glotira`, `Glotane`, `Glotina` y `Glotiuma` tienen los tres dominios libres;
+`Glotia` y `Glotio` tienen el `.com` ocupado.
+
 ### Límites de esta verificación
 - `RDAP 404` en `.com` acredita que **no está registrado**; no confirma el precio (puede ser
   *premium*). Se comprueba al añadirlo al carrito del registrador.
@@ -446,7 +481,7 @@ igual en español, italiano e inglés; no compite con un término genérico del 
 
 | # | Acción | Responsable | Estado |
 |---|---|---|---|
-| 1 | Cerrar la elección del nombre entre las finalistas (§3.1 a §3.8) | Propietario | Pendiente (R-90) |
+| 1 | Cerrar la elección del nombre entre las finalistas (§3.1 a §3.9) | Propietario | Pendiente (R-90) |
 | 2 | Clearance formal OEPM/EUIPO/USPTO en clases 9, 41 y 42 (R-90) | Propietario / asesor | Pendiente |
 | 3 | Comprar `<nombre>.es` y `<nombre>.app` (y el `.com` defensivo si es trivial) | Propietario | Bloqueada por 1 |
 | 4 | Reservar handles `@<nombre>` (R-92) | Propietario | Bloqueada por 1 |
