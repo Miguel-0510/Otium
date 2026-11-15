@@ -4,9 +4,10 @@ Plan de ejecución para convertir la beta privada en un producto de lectura con 
 distribución en Play Store.
 
 - **Proyecto:** `C:\Proyectos\Otium` (carpeta y ensamblados sin renombrar; ver R-93)
-- **Nombre comercial:** **en evaluación**. La candidata principal es **Elicona**, pero la decisión
-  no está cerrada: hay nueve rondas de criba y una lista corta en `DOCS/marca.md`. Hasta que se
-  cierre, **no se compran dominios, no se reservan handles y no se renombra el código**.
+- **Nombre comercial:** **Olvium seleccionado para clearance formal (R-90)**. La decisión no
+  está cerrada hasta que R-90 confirme ausencia de conflicto de marca. Hay diez rondas de criba
+  (§3.1 a §3.9) más la selección documentada en §3.10 de `DOCS/marca.md`. Hasta que se cierre,
+  **no se compran dominios, no se reservan handles y no se renombra el código**.
 - **Base:** `a39b5e8` (`main`), árbol limpio
 - **Fecha de decisión del plan:** 2026-11-15
 - **Histórico:** los hallazgos F-xx de la auditoría viven en `DOCS/hallazgos.md`; siguen válidos
@@ -123,10 +124,9 @@ Objetivo: dejar de llamarse `Otium` antes de tocar la base de datos, el manifies
 las migraciones. El renombrado es mecánico pero transversal; hacerlo después de la Fase 0
 obligaría a repetirlo sobre `Otium.Data` y sobre la migración inicial de PostgreSQL.
 
-**El nombre no está decidido.** Hay nueve rondas de criba y una lista corta en `DOCS/marca.md`
-(§3.1 a §3.9). La candidata principal es **Elicona**, pero la elección se cierra al final de esta
-fase, con la clearance de R-90 delante. Mientras no se cierre: nada de dominios, handles ni
-renombrado de código.
+**El nombre seleccionado es Olvium.** Hay diez rondas de criba y la selección documentada en
+`DOCS/marca.md` (§3.1 a §3.10). La elección se cierra al final de esta fase, con la clearance de
+R-90 delante. Mientras no se cierre: nada de dominios, handles ni renombrado de código.
 
 **Evidencia acumulada (2026-11-15).** `Otium` está ocupado en el mismo nicho:
 `otium-library.com` (*book tracker and reading journal*, suscripción de pago),

@@ -4,10 +4,10 @@ Registro de la búsqueda de nombre, la evidencia recogida y lo que queda por hac
 Complementa la **Fase −1** de [`../ROADMAP.md`](../ROADMAP.md) (R-90..R-95).
 
 - **Fecha de la investigación:** 2026-11-15
-- **Decisión:** **pendiente**. `Otium` queda descartado por colisión de nicho. Hay nueve rondas de
-  criba (§3.1 a §3.8) y una consulta puntual (§3.9), con una lista corta de finalistas; la
-  candidata principal es **Elicona**, pero **no se ha elegido nombre**.
-- **Estado:** criba hecha; **elección y clearance formal pendientes (R-90)**
+- **Decisión:** **Olvium seleccionada para clearance formal (R-90)**. `Otium` queda descartado por
+  colisión de nicho. Se han completado diez rondas de criba (§3.1 a §3.9) más la selección
+  documentada en §3.10. `Elicona` deja de ser candidata principal.
+- **Estado:** criba hecha; **elección adoptada, clearance formal pendiente (R-90)**
 - **Alcance:** este documento es evidencia técnica, no asesoría legal
 
 ---
@@ -434,7 +434,48 @@ y engancha con el glosario que ya existe en el producto.
 - Handles de redes sociales, denominaciones sociales y marcas (OEPM, EUIPO, USPTO) siguen siendo
   comprobación **manual**: es R-90. Ninguna tabla de este documento sustituye un dictamen.
 
+## 3.10 Decisión adoptada — Olvium (2026-11-15)
 
+**Nombre seleccionado para llevar a clearance formal (R-90).** Se elige por mantener la letra
+inicial `O` (sin cambiar el logotipo ya diseñado), por su sonoridad corta y limpia (tres sílabas:
+ol-vi-um), y por estar libre de apps y menciones web.
+
+### Evidencia de disponibilidad
+
+| Comprobación | Método | Resultado |
+|---|---|---|
+| `olvium.com` | RDAP Verisign `.com` | Ocupado (terceros) |
+| `olvium.es` | DNS `NS` via dns.google | Libre (`NXDOMAIN`) |
+| `olvium.app` | DNS `NS` via dns.google | Libre (`NXDOMAIN`) |
+| `olvium.xyz`, `olvium.online`, `olvium.co`, `olvium.io` | DNS `NS` / RDAP | Libres |
+| `olviumbooks`, `olviumreads`, `olviumlibro`, `olviumlectura`, `olviumlector`, `olviumapp` | RDAP/DNS en `.com`, `.es`, `.app`, `.xyz`, `.online`, `.co`, `.io` | Libres en todos los TLDs verificados |
+| App Store iOS (ES/US) | iTunes Search API `entity=software` | Ninguna coincidencia |
+| Google Play | Scraping HTML `play.google.com/store/search` | Ninguna coincidencia |
+| Búsqueda web `"olvium"` | DuckDuckGo HTML | Sin resultados |
+| Búsqueda web `"olvium" + libros/lectura/app` | DuckDuckGo HTML | Sin resultados |
+| Redes sociales `"olvium" + instagram/facebook/twitter/tiktok/linkedin` | DuckDuckGo HTML | Sin resultados |
+
+### Reparos documentados
+
+1. **`.com` ocupado.** Está registrado por terceros. Si se necesita obligatoriamente, hay que
+   comprarlo o usar un sufijo (`olviumbooks.com`, `olviumreads.com`, etc., todos verificados
+   libres).
+2. **Semejanza fonética con `Otium`.** `Olvium` (ol-vi-um) es muy cercano a `Otium` (o-ti-um).
+   Como `Otium` se descarta por colisión de nicho (USPTO serial 50156419, clase 041;
+   `otium-library.com`, `otiumbookshelf.com`, `otiumfeed.it`), `Olvium` arrastra el mismo
+   riesgo: añadir una letra a un signo anterior para servicios idénticos puede apreciarse como
+   riesgo de confusión. **Es R-90 quien debe resolverlo.**
+3. **Terminación `-ium`.** Suena a elemento químico o fármaco; un lector nuevo puede pensar en
+   un suplemento antes que en un libro.
+
+### Límites de esta verificación
+
+- `RDAP 404` en `.com` acredita que **no está registrado**; no confirma el precio.
+- En `.es` no hay RDAP público: se usa la ausencia de delegación DNS. `NXDOMAIN` es indicio
+  fuerte, no reserva.
+- Handles de redes sociales, denominaciones sociales y marcas (OEPM, EUIPO, USPTO) siguen
+  siendo comprobación **manual**: es R-90. Ninguna tabla de este documento sustituye un
+  dictamen.
 
 ## 4. Candidata principal — Elicona
 
@@ -481,7 +522,7 @@ igual en español, italiano e inglés; no compite con un término genérico del 
 
 | # | Acción | Responsable | Estado |
 |---|---|---|---|
-| 1 | Cerrar la elección del nombre entre las finalistas (§3.1 a §3.9) | Propietario | Pendiente (R-90) |
+| 1 | Cerrar la elección del nombre entre las finalistas (§3.1 a §3.10) | Propietario | Seleccionado: Olvium (pendiente R-90) |
 | 2 | Clearance formal OEPM/EUIPO/USPTO en clases 9, 41 y 42 (R-90) | Propietario / asesor | Pendiente |
 | 3 | Comprar `<nombre>.es` y `<nombre>.app` (y el `.com` defensivo si es trivial) | Propietario | Bloqueada por 1 |
 | 4 | Reservar handles `@<nombre>` (R-92) | Propietario | Bloqueada por 1 |
