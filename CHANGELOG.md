@@ -2,6 +2,17 @@
 
 Todos los cambios notables de este proyecto se documentarán en este archivo.
 
+## [No publicado] - 2026-11-15
+
+### Plan de producto y reorganización documental
+- Nombre comercial **en evaluación**: `Otium` colisiona en el nicho y hay una lista corta de finalistas. La candidata principal es **Elicona**, pero no hay decisión; el rebrand (R-93) no se ejecuta hasta cerrar R-90. Evidencia en `DOCS/marca.md`.
+- Añadida la Fase −1 (marca), la Fase 1.5 (hábito y retención, R-21..R-29) y la Fase 5 (lectura compartida, R-70..R-75) al plan.
+- `ROADMAP.md` pasa a ser el **plan vigente** por fases (Fase −1 a 5). El backlog anterior se movió a `DOCS/hallazgos.md` y quedó marcado como histórico.
+- Nuevos documentos: `DOCS/README.md` (índice y política), `DOCS/producto.md`, `DOCS/lector.md`, `DOCS/catalogo.md`, `DOCS/monetizacion.md`, `DOCS/despliegue.md`, `DOCS/licencias.md`.
+- `DOCS/ficha-tecnica.md` y `DOCS/requerimientos_otium.md` marcados como históricos; `DOCS/respaldos.md` ampliado con el objetivo PostgreSQL + restic + B2.
+- `AGENTS.md`: mapa documental al inicio y corrección de datos obsoletos (código de amigo de 6 caracteres, paquetes EF 10.0.14, 68 pruebas, README/CHANGELOG existentes).
+- Sin cambios de código.
+
 ## [No publicado] - 2026-10-28
 
 ### Glosario: GLM-5.3-Flash y respuesta estructurada

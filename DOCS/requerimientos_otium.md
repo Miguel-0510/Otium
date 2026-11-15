@@ -1,5 +1,12 @@
 # Documento de requerimientos de software
 
+> **Documento histórico.** SRS de la beta del 2026-10-28. Describe el alcance anterior al plan
+> de producto: sin lector integrado, sin catálogo, sin cobro y sin TWA.
+>
+> - Alcance vigente: [`producto.md`](producto.md).
+> - Plan vigente: [`../ROADMAP.md`](../ROADMAP.md).
+> - Se conserva por los diagramas y la trazabilidad; no se actualiza.
+
 **Otium — Diario de lectura y gestión de biblioteca personal**
 Fecha: 28/10/2026
 

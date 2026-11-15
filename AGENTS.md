@@ -1,13 +1,29 @@
 # AGENTS.md - Otium
 
-Guía de trabajo y auditoría técnica del proyecto.
+Guía de trabajo y auditoría técnica del proyecto. **Léela antes de tocar código.**
 
 - **Fuente de verdad:** `C:\Proyectos\Otium`
 - **Build publicado:** `C:\Otium\OtiumServidor` (no editar a mano)
-- **Datos de producción:** `C:\OtiumDatos\app.db`
+- **Datos de producción:** `C:\OtiumDatos\app.db` (SQLite; el objetivo es PostgreSQL en Hetzner)
 - **Commit auditado:** `0f02b1b` (`main`)
 - **Fecha de auditoría:** 2026-10-23
-- **Estado:** beta privada funcional; **no listo para lanzamiento público** hasta resolver los hallazgos P0/P1.
+- **Estado:** beta privada funcional. P0 y P1 cerrados; el producto objetivo (lector, catálogo,
+  cobro, TWA) está planificado y **no implementado**.
+
+### Dónde está cada cosa
+
+| Necesito… | Documento |
+|---|---|
+| Saber qué se construye y en qué orden | [`ROADMAP.md`](ROADMAP.md) |
+| Saber qué es el producto y qué no | [`DOCS/producto.md`](DOCS/producto.md) |
+| Diseño del lector, catálogo o cobro | [`DOCS/lector.md`](DOCS/lector.md), [`DOCS/catalogo.md`](DOCS/catalogo.md), [`DOCS/monetizacion.md`](DOCS/monetizacion.md) |
+| Desplegar u operar | [`DOCS/despliegue.md`](DOCS/despliegue.md), [`DOCS/respaldos.md`](DOCS/respaldos.md) |
+| Nombre, dominios y marca | [`DOCS/marca.md`](DOCS/marca.md) |
+| Índice completo y qué está obsoleto | [`DOCS/README.md`](DOCS/README.md) |
+| Deuda técnica histórica (F-xx) | [`DOCS/hallazgos.md`](DOCS/hallazgos.md) |
+
+> La auditoría de §11 es un **registro histórico** de lo corregido; sus evidencias describen el
+> código de 2026-10-23. No la uses para deducir el estado actual: usa §6 y el roadmap.
 
 ---
 
@@ -23,7 +39,7 @@ Funciones principales:
 - Portadas, puntuación de 1 a 5 y reseñas.
 - "Travesías": entradas de lectura con páginas y resumen.
 - Glosario personal con definiciones generadas por GLM-5.3-Flash (Z.ai): definición global breve y, solo si aporta un matiz relevante, un apartado "En el contexto de la lectura:".
-- Amigos mediante código de 4 dígitos.
+- Amigos mediante código alfanumérico de 6 caracteres (32 símbolos, sin ambigüedad).
 - Tema claro/oscuro.
 - PWA instalable con página de aviso sin conexión.
 - Eliminación de cuenta y política de privacidad.
@@ -40,7 +56,7 @@ La interfaz y el dominio están en español. Quedan pantallas heredadas de la pl
 | UI | Blazor Web App, render `InteractiveServer` |
 | Autenticación | ASP.NET Core Identity + cookies |
 | Base de datos | SQLite + EF Core |
-| Paquetes EF/Identity | `10.0.12` |
+| Paquetes EF/Identity | `10.0.14` |
 | APIs externas | Open Library (HTTPS), Z.ai GLM (HTTPS), Brevo HTTP API (HTTPS) |
 | PWA | `manifest.json`, `sw.js`, `instalar.js` |
 | Puerto local publicado | `http://localhost:5000` |
@@ -288,7 +304,7 @@ Sitio__UrlPublica=https://otium.example.com
 
 - `ConnectionStrings__DefaultConnection` acepta tanto el formato ADO.NET como la URL de Render (`postgresql://usuario:clave@host:puerto/base`). `ConfiguracionBaseDatos` la normaliza a ADO.NET con `SslMode=Require`; si la URL trae `?sslmode=...`, ese valor prevalece.
 - El proveedor se detecta por la forma de la cadena (URL de Postgres, `Host=`/`Server=`/`Username=`) o por `Database__Provider=PostgreSql|Sqlite`.
-- Las migraciones de `Data/Migrations` son de SQLite y **no son portables** a PostgreSQL. En PostgreSQL el esquema se crea desde el modelo con `EnsureCreatedAsync` (`Data/BaseDatosInicializador.cs`). Si en el futuro cambia el modelo en producción, hay que crear migraciones específicas de Npgsql en un ensamblado aparte y cambiar la estrategia.
+- Las migraciones de `Data/Migrations` son de SQLite y **no son portables** a PostgreSQL. En PostgreSQL el esquema se crea desde el modelo con `EnsureCreatedAsync` (`Data/BaseDatosInicializador.cs`). R-01 del roadmap sustituye esto por migraciones Npgsql en un ensamblado aparte (`MigrationsAssembly`).
 - El arranque reintenta 5 veces con espera exponencial y, si no puede preparar el esquema, **detiene la aplicación** en lugar de servir errores 500.
 - Data Protection persiste las claves en la tabla `DataProtectionKeys` de la base de datos cuando no se define `DataProtection__KeysPath`; esto funciona en Render free y evita invalidar sesiones y enlaces de recuperación en cada reinicio. Si se usa un Disk, configurar `DataProtection__KeysPath=/var/data/keys`. La tabla se crea de forma idempotente al arrancar (`Data/BaseDatosInicializador.cs`).
 - Si el proxy de Render no está en `Proxy__KnownProxies`, `ForwardedHeaders` no confía en `X-Forwarded-Proto`. Configurar el proxy o `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` para que `exigirHttps`, HSTS y las cookies `Secure` funcionen con TLS terminado en el borde.
@@ -298,6 +314,10 @@ Sitio__UrlPublica=https://otium.example.com
 ## 7. Convenciones para agentes
 
 - Trabajar en `C:\Proyectos\Otium`, no en `C:\Otium`.
+- **Marca:** el nombre comercial está **en evaluación** (`ROADMAP.md`, Fase −1; evidencia y lista
+  corta en `DOCS/marca.md`). La candidata principal es **Elicona**, pero **no hay decisión**: no
+  crear dominios, correos, handles, textos visibles ni configuración nueva con ninguna candidata
+  hasta que R-90 cierre el nombre. Hasta R-93, la carpeta y los ensamblados siguen siendo `Otium`.
 - Mantener la UI y los mensajes de dominio en español. Si se toca una pantalla heredada en inglés, traducirla de forma consistente.
 - Mantener `Nullable` habilitado y evitar introducir `!` innecesarios.
 - Usar `async`/`await`; no usar `.Result`, `.Wait()` ni `async void`.
@@ -378,12 +398,12 @@ La separación actual es **aceptable para beta privada**, no para un diseño por
 | Área | Estado | Nota |
 |---|---|---|
 | Compilación | Sí | 0 errores, 0 advertencias |
-| Pruebas automatizadas | Sí | `tests/Otium.Tests`; 36 pruebas y cobertura mínima del 70% de líneas |
+| Pruebas automatizadas | Sí | `tests/Otium.Tests`; 68 pruebas y cobertura mínima del 70% de líneas |
 | CI/CD | Sí | `.github/workflows/ci.yml`: restore, build, test con cobertura y auditoría de paquetes |
-| README / LICENSE / CHANGELOG | No | No existen |
+| README / LICENSE / CHANGELOG | Parcial | `README.md` y `CHANGELOG.md` existen; falta `LICENSE` |
 | `.editorconfig` / `global.json` | No | Sin convenciones ni SDK fijado |
 | Secretos fuera del repo | Sí | Credenciales locales movidas a User Secrets; `appsettings.Development.json` saneado. Rotación pendiente por el propietario |
-| HTTPS/TLS de entrada | Sí (código) | Proxy TLS + `ForwardedHeaders`; pendiente verificar en VPS Oracle |
+| HTTPS/TLS de entrada | Sí (código) | Proxy TLS + `ForwardedHeaders`; pendiente verificar en el despliegue de Hetzner (R-04); el VPS Oracle es legado |
 | Rate limiting | Sí | HTTP en login/registro/recuperación y cuotas por usuario en amistades/definiciones |
 | Confirmación de correo | Parcial | Opción B: confirmación opcional; el correo solo se envía al recuperar contraseña |
 | Recuperación de contraseña | Sí | Funciona sin exigir `EmailConfirmed`; enlaces construidos con `Sitio:UrlPublica`; probado con `IEmailSender` falso |
@@ -417,7 +437,7 @@ La separación actual es **aceptable para beta privada**, no para un diseño por
 
 #### P0-1. El registro falla a partir del segundo usuario nuevo
 
-**Estado: corregido (2026-10-23).** El registro usa `IRegistroService`, que asigna un `CodigoAmigo` criptográfico de 8 caracteres (`ICodigoAmigoGenerator`) antes de `CreateAsync` y reintenta ante colisiones. `AmistadService` reutiliza el mismo generador y valida `UpdateAsync`. Pruebas en `RegistroTests`.
+**Estado: corregido (2026-10-23).** El registro usa `IRegistroService`, que asigna un `CodigoAmigo` criptográfico de 6 caracteres (`ICodigoAmigoGenerator`) antes de `CreateAsync` y reintenta ante colisiones. `AmistadService` reutiliza el mismo generador y valida `UpdateAsync`. Pruebas en `RegistroTests`.
 
 Evidencia histórica:
 
@@ -525,7 +545,7 @@ Corrección recomendada:
 
 #### P1-6. Sin rate limiting y códigos de amigo débiles/enumerables
 
-**Estado: corregido (2026-10-23).** Rate limiting HTTP en login/registro/recuperación, cuota por usuario en amistades y glosario, códigos de 8 caracteres con `RandomNumberGenerator`, mensajes uniformes e índice único `ClavePar`. Pruebas en `RateLimitingTests`, `AmistadAntiabusoTests` y `CodigoAmigoGeneratorTests`.
+**Estado: corregido (2026-10-23).** Rate limiting HTTP en login/registro/recuperación, cuota por usuario en amistades y glosario, códigos de 6 caracteres con `RandomNumberGenerator`, mensajes uniformes e índice único `ClavePar`. Pruebas en `RateLimitingTests`, `AmistadAntiabusoTests` y `CodigoAmigoGeneratorTests`.
 
 Evidencia:
 
@@ -600,7 +620,7 @@ Acciones:
 
 #### P2-10. Sin pruebas, CI, documentación ni licencia
 
-**Estado: parcialmente corregido (2026-10-23).** Existe `tests/Otium.Tests` con 36 pruebas, cobertura mínima del 70% de líneas (`coverlet.runsettings`) y CI en `.github/workflows/ci.yml`. Siguen faltando README, LICENSE, CHANGELOG, `.editorconfig` y `global.json`.
+**Estado: parcialmente corregido (2026-10-23).** Existe `tests/Otium.Tests` con 68 pruebas, cobertura mínima del 70% de líneas (`coverlet.runsettings`) y CI en `.github/workflows/ci.yml`. `README.md` y `CHANGELOG.md` existen. Siguen faltando `LICENSE`, `.editorconfig` y `global.json`.
 
 - ~~No hay proyecto de tests, workflows...~~ Corregido el proyecto y el workflow.
 - Añadir como mínimo pruebas de:

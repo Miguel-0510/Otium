@@ -1,478 +1,1004 @@
-# ROADMAP.md — Otium — Backlog de hallazgos pendientes
+# ROADMAP.md — Otium (nombre comercial en evaluación): lector, catálogo y monetización
 
-Plan de trabajo vigente: solo contiene **hallazgos a corregir**. Los P0 ya cerrados
-(registro/códigos de amigo, recuperación de contraseña Opción B, secretos) y los P1
-(eliminación/exportación, autorización por propietario, BD fuera de publicación,
-rate limiting, función social) están completados y documentados en `AGENTS.md` §11;
-no se repiten aquí.
+Plan de ejecución para convertir la beta privada en un producto de lectura con cobro y
+distribución en Play Store.
 
-- **Proyecto:** `C:\Proyectos\Otium`
-- **Auditoría base:** auditoría integral de código del 2026-10-28 (commit `33ce448`)
-- **Última actualización:** 2026-10-28
-
----
-
-## 0. Reglas de ejecución
-
-1. Trabajar siempre en `C:\Proyectos\Otium`, nunca en el build publicado `C:\Otium`.
-2. Un PR por tarea o por bloque pequeño; no mezclar prioridades en un mismo PR.
-3. Cada corrección incluye prueba automatizada o procedimiento de verificación reproducible.
-4. Antes de cerrar: `dotnet build Otium.csproj -c Release --nologo` sin advertencias nuevas
-   y `dotnet test Otium.slnx -c Release --nologo` en verde.
-5. Al cerrar un hallazgo: marcar `[x]`, añadir commit de evidencia y actualizar `AGENTS.md`.
-6. No commitear secretos, bases de datos ni `bin/`, `obj/`, `.vs/`.
-
-Esfuerzo: **S** < 2 h · **M** 2–6 h · **L** 1–2 días · **XL** +2 días o decisión de producto.
+- **Proyecto:** `C:\Proyectos\Otium` (carpeta y ensamblados sin renombrar; ver R-93)
+- **Nombre comercial:** **en evaluación**. La candidata principal es **Elicona**, pero la decisión
+  no está cerrada: hay tres rondas de criba y una lista corta en `DOCS/marca.md`. Hasta que se
+  cierre, **no se compran dominios, no se reservan handles y no se renombra el código**.
+- **Base:** `a39b5e8` (`main`), árbol limpio
+- **Fecha de decisión del plan:** 2026-11-15
+- **Histórico:** los hallazgos F-xx de la auditoría viven en `DOCS/hallazgos.md`; siguen válidos
+  como deuda técnica y se referencian donde toca, pero no se duplican aquí.
+- **Índice documental:** `DOCS/README.md`.
+- **Estado:** planificación cerrada. No se ha escrito código de ninguna fase.
 
 ---
 
-## 1. Resumen del backlog
+## 0. Decisiones tomadas
 
-| ID | Hallazgo | Prioridad | Esfuerzo | Estado |
+| # | Decisión | Valor | Motivo |
+|---|---|---|---|
+| D1 | Contenido | **Biblioteca propia (BYOF, sin DRM) + catálogo de dominio público** | Valor inmediato sin licencias; el archivo privado del usuario no genera riesgo de distribución |
+| D2 | Motor de lectura | **Parseo en servidor** (`VersOne.Epub`) y capítulos HTML sanitizados en componentes Blazor | Integra glosario IA, búsqueda, TTS y travesías sin puente JS frágil; control total de tipografía |
+| D3 | Cliente v1 | **Web + PWA + TWA (Bubblewrap) en Play Store** | Presencia de app sin reescribir Blazor Server; cobro por web para evitar Play Billing |
+| D4 | Infraestructura | **Hetzner CX22 (2 vCPU / 4 GB) + Docker Compose + Caddy + PostgreSQL + restic → Backblaze B2** | ~5–7 €/mes, tres contenedores, portable a cualquier proveedor |
+| D5 | Catálogo público | **Gutendex como fuente de catálogo (ingesta masiva) y Standard Ebooks como fuente principal de archivos** | Búsqueda local sin depender de la API; licencia CC0 compatible con producto de pago |
+| D6 | Alcance de escala | **≤ 100 usuarios registrados, 10–25 circuitos concurrentes** en v1 | Dimensiona toda la capacidad; sin multi-instancia ni backplane |
+| D7 | Lectura sin conexión | **Fuera de alcance de la v1** | Incompatible con Blazor Server; se reevalúa con cliente propio en v3 |
+| D8 | DRM | **No se soporta**; se rechaza el archivo con mensaje explícito | Soporte DRM exige licencia y SDK de terceros; no aporta al modelo BYOF |
+| D9 | Nombre comercial | **En evaluación**; candidata principal **Elicona**, con lista corta y evidencia en `DOCS/marca.md` | `Otium` colisiona en el mismo nicho (`otium-library.com`, `otiumbookshelf.com`, `otiumfeed.it`). La decisión se cierra al final de la Fase −1, con clearance favorable; antes no se invierte en marca |
+| D10 | Alcance funcional | Se incorporan las prácticas de **hábito y retención** (Fase 1.5) y la **diferenciación social** (Fase 5: mapas de personajes y lectura conjunta) | Sin retención no hay suscripción sostenible; sin diferenciación no hay motivo para pagar frente a un tracker gratuito |
+
+### Decisiones de diseño derivadas (a aplicar desde la Fase 1)
+
+- **API-first:** el lector expone endpoints minimal API reutilizables por un cliente futuro
+  (MAUI/Kotlin). El componente Blazor consume esos contratos, no lógica encerrada.
+- **Sin CSS del EPUB en v1:** se descarta el CSS embebido del archivo y se aplica la hoja de
+  estilos propia. Elimina superficie de ataque y garantiza tipografía consistente.
+- **Progreso agnóstico de formato:** `EntradaLectura` gana `ProgresoInicio`/`ProgresoFin`
+  decimales; las páginas siguen existiendo para PDF.
+- **Archivos servidos fuera del circuito:** endpoints HTTP con autorización y `Range`.
+  Nunca binarios por SignalR.
+
+---
+
+## 1. Principios y restricciones
+
+1. Un PR por tarea; no mezclar fases en el mismo PR.
+2. Cada tarea incluye prueba automatizada o procedimiento reproducible de verificación.
+3. Antes de cerrar: `dotnet build Otium.csproj -c Release --nologo` sin advertencias nuevas
+   y `dotnet test Otium.slnx -c Release --nologo` en verde. Tras R-93, los mismos comandos con
+   el nombre definitivo del proyecto.
+4. Nada de secretos, bases de datos ni binarios en el repositorio.
+5. Se mantienen las convenciones existentes: servicios con interfaz, DTOs en la frontera,
+   `IDbContextFactory`, autorización por propietario en la capa de servicio, UI en español.
+6. No se rompe ninguna migración aplicada; el esquema nuevo entra por migración.
+7. Esfuerzo: **S** < 2 h · **M** 2–6 h · **L** 1–2 días · **XL** +2 días.
+
+### Fuera de alcance de este roadmap
+
+DRM y EPUB de maquetación fija avanzada · lectura offline · app iOS nativa · audiolibros ·
+escalado horizontal y backplane Redis · editor de libros · compartir archivos entre amigos
+(solo se comparten metadatos, reseñas y estantes, como hoy) · reconocimiento de lomos por foto.
+
+Los **mapas de personajes** y la **lectura conjunta** sí están en el plan, pero en la Fase 5:
+no son requisito de la v1 cobrable ni del lanzamiento en Play Store.
+
+---
+
+## 2. Arquitectura objetivo
+
+```text
+TWA (Play Store)  ─┐
+Navegador / PWA   ─┼─► ASP.NET Core (Blazor Server + minimal APIs)
+                   │       │
+                   │       ├─► ApplicationDbContext ─► PostgreSQL 16 (contenedor)
+                   │       ├─► IAlmacenLibros ──────► volumen /data/libros
+                   │       ├─► IImportadorEpub ─────► VersOne.Epub + HtmlSanitizer
+                   │       └─► IGlosarioService ────► Z.ai GLM
+                   │
+Caddy (TLS, HTTP/2, Range) ─► Kestrel 127.0.0.1:5000
+restic (cron) ─► Backblaze B2 (BD + libros + claves)
+```
+
+### 2.1 Modelo de datos nuevo
+
+| Tabla | Campos clave | Notas |
+|---|---|---|
+| `ArchivosLibro` | `Id`, `LibroId`, `Formato`, `TamanioBytes`, `Sha256`, `RutaAlmacen`, `Estado`, `MensajeError`, `FechaSubida` | Único `(LibroId)`; índice `(UsuarioId, Sha256)` vía join o columna desnormalizada para deduplicar |
+| `CapitulosLibro` | `Id`, `LibroId`, `Indice`, `Titulo`, `Ancla`, `Html`, `TextoPlano`, `Chars` | Índice único `(LibroId, Indice)`; `TextoPlano` para búsqueda y TTS |
+| `ProgresoLectura` | `Id`, `UsuarioId`, `LibroId`, `CapituloId`, `Offset`, `Porcentaje`, `UltimaLecturaUtc`, `MinutosAcumulados` | Único `(UsuarioId, LibroId)`; sincroniza entre dispositivos gratis |
+| `PreferenciasLector` | `UsuarioId`, `TamanoFuente`, `Interlineado`, `Margen`, `Tema`, `Justificado` | Único por usuario |
+| `ObrasCatalogo` | `Id`, `Fuente`, `IdExterno`, `Titulo`, `Autores`, `Idiomas`, `Materias`, `PortadaUrl`, `Licencia`, `Descargas`, `Sha256Epub` | Catálogo público; índice GIN de texto completo |
+| `Planes`, `Suscripciones`, `UsoMensual` | ver R-40 | Fase 3 |
+| `EventosWebhook` | `Id`, `Proveedor`, `IdEventoExterno`, `Tipo`, `RecibidoUtc`, `ProcesadoUtc` | Idempotencia de pagos |
+
+### 2.2 Contratos nuevos
+
+```csharp
+IAlmacenLibros   // GuardarAsync, AbrirAsync(range), EliminarAsync, ExisteAsync
+IImportadorEpub  // ImportarAsync(stream, libroId, ct) -> ResultadoImportacion
+ILectorService   // ObtenerIndiceAsync, ObtenerCapituloAsync, RegistrarProgresoAsync
+ICatalogoService // BuscarAsync, ObtenerObraAsync, MaterializarEnEstanteAsync
+IPlanService     // ObtenerPlanAsync, PuedeAgregarLibroAsync, ConsumirCuotaIAAsync
+```
+
+### 2.3 Endpoints HTTP nuevos
+
+| Método | Ruta | Autorización | Uso |
+|---|---|---|---|
+| `GET` | `/libros/{id}/recurso/{**ruta}` | Cookie + propietario | Imágenes y recursos internos del EPUB, con `Range` y `Cache-Control: private` |
+| `GET` | `/libros/{id}/epub` | Cookie + propietario | Descarga del archivo original |
+| `GET` | `/catalogo/portada/{id}` | Anónimo | Portada cacheada del catálogo público |
+| `POST` | `/webhooks/pagos` | Firma del proveedor | Eventos de suscripción |
+| `GET` | `/.well-known/assetlinks.json` | Anónimo | Verificación de TWA |
+
+---
+
+## 2.5 Fase −1 — Identidad de marca
+
+Objetivo: dejar de llamarse `Otium` antes de tocar la base de datos, el manifiesto de la PWA y
+las migraciones. El renombrado es mecánico pero transversal; hacerlo después de la Fase 0
+obligaría a repetirlo sobre `Otium.Data` y sobre la migración inicial de PostgreSQL.
+
+**El nombre no está decidido.** Hay tres rondas de criba y una lista corta en `DOCS/marca.md`
+(§3.1 y §3.2). La candidata principal es **Elicona**, pero la elección se cierra al final de esta
+fase, con la clearance de R-90 delante. Mientras no se cierre: nada de dominios, handles ni
+renombrado de código.
+
+**Evidencia acumulada (2026-11-15).** `Otium` está ocupado en el mismo nicho:
+`otium-library.com` (*book tracker and reading journal*, suscripción de pago),
+`otiumbookshelf.com` y `otiumfeed.it`; además hay una solicitud USPTO `OTIUM` (serial
+50156419, clase 041). En la lista corta, **Elicona** no tiene app en App Store ES/US ni en Play
+Store; `elicona.com` pertenece a una sala de arte y música japonesa (clase ajena); `elicona.es`,
+`elicona.app`, `elicona.com.es`, `getelicona.com`, `eliconareader.com`, `elicona.io`,
+`elicona.page`, `elicona.club` y `elicona.studio` no tienen delegación DNS, por lo que están
+libres o en parking. Lo mismo se comprobó, con distinto resultado, para `Alciona`, `Filomela`,
+`Aganipe`, `Calirroe`, `Luscinda`, `Melibea`, `Ismene`, `Kelaino`, `Krissa`, `Ianthe` y
+`Laelia`. Es un indicio, **no** un dictamen legal: la clearance formal es R-90.
+
+| ID | Tarea | Prioridad | Esfuerzo | Depende de |
 |---|---|---|---|---|
-| F-01 | La cuota diaria de glosario se consume aunque el modelo falle | P1 | S | [ ] |
-| F-02 | `BackupService` asume SQLite (`File.Copy`); rompe con PostgreSQL y silencia errores de retención | P1 | M | [ ] |
-| F-03 | `/terminos` aún cita "Gemini de Google" como proveedor de IA | P1 | S | [ ] |
-| F-04 | `robots.txt` declara `sitemap.xml` inexistente; `security.txt` con dominio placeholder desalineado de `/soporte` | P1 | S | [ ] |
-| F-05 | Errores de alta de libro/travesía invisibles para el usuario (estados muertos en `Estantes.razor`) | P1 | S | [ ] |
-| F-06 | Docker incoherente: root sin `USER`, `/var/data` vs `/data` del compose, healthcheck con `curl`, imágenes sin digest | P1 | M | [ ] |
-| F-07 | `CircuitBreaker` no thread-safe e instanciado por cliente (no pasa por DI) | P2 | S | [x] |
-| F-08 | CSP laxa (`'unsafe-inline'` en script/style, `ws:` siempre) y `AllowedHosts: "*"`; 429 sin página propia | P2 | M | [ ] |
-| F-09 | Workflows duplicados: `build.yml` redundante con el mismo `name: CI`; trigger de release poco coherente en `deploy.yml` | P2 | S | [ ] |
-| F-10 | Fugas de información interna en endpoints de Identity (IDs en errores) — legacy P2-13 | P2 | S | [ ] |
-| F-11 | Texto en inglés en el shell: `ReconnectModal` y pantallas de 2FA/passkeys — legacy P2-11 | P2 | M | [ ] |
-| F-12 | Duplicaciones de código: mapeo `LibroActualizarDTO` ×3 y `Nombre(Estante)` ×3 | P2 | S | [ ] |
-| F-13 | Último `async void` del fuente (`BotonTema.AlCambiarDePagina`) y `catch { }` en `BotonInstalar.DisposeAsync` | P2 | S | [ ] |
-| F-14 | `AddDbContext` + `AddDbContextFactory` registran la misma configuración SQLite dos veces — reabre P2-16 | P2 | S | [ ] |
-| F-15 | Re-render redundantes de `StateHasChanged` en `BuscadorLibros` (2 llamadas manuales) | P3 | S | [ ] |
-| F-16 | "Salir" no existe en el menú (`MenuUsuario`); el logout solo está dentro de Mi cuenta | P3 | S | [ ] |
-| F-17 | Auditoría formal de accesibilidad (contraste, foco, lectores de pantalla) y prueba en móvil real | P3 | L | [ ] |
-| F-18 | Documentación desactualizada: `AGENTS.md` dice códigos de 8 caracteres (son 6) y "36 pruebas" (hay 64) | P3 | S | [ ] |
-| F-19 | Paginación `ObtenerDeUsuarioPaginadoAsync` implementada pero sin usar | P3 | S | [ ] |
-| F-20 | Operativo: rotar credenciales si se compartieron (P0-3) y verificar TLS/SignalR/PWA en VPS Oracle (P1-7) | P1 | M | [ ] |
-| F-21 | Descomposición de capas: `Estantes.razor` concentra búsqueda, CRUD, reseñas y travesías; modelos anémicos | P2 | L | [ ] |
+| R-90 | Clearance formal y elección del nombre | P0 | S (trámite externo) | — |
+| R-91 | Dominios, correo y DNS | P0 | S | R-90 |
+| R-92 | Handles y reserva en tiendas | P1 | S | R-91 |
+| R-93 | Renombrado en código, datos y configuración | P0 | L | R-90 |
+| R-94 | Identidad visual y PWA | P1 | M | R-91 |
+| R-95 | Solicitud de marca (OEPM) | P1 | M (trámite externo) | R-90 |
+
+### R-90 — Clearance formal y elección del nombre
+
+Búsqueda en **OEPM** (España), **EUIPO** (UE) y **USPTO/TESS**, con foco en las clases
+**9** (software), **41** (educación, ocio, publicación) y **42** (servicios tecnológicos, SaaS),
+para las **finalistas** de `DOCS/marca.md` (no solo para Elicona). Revisar también
+denominaciones sociales en el registro mercantil y una búsqueda web de
+`"<nombre>" + app/lectura/libros/ebook` para descartar uso no registrado en el nicho.
+
+**Aceptación.** Informe de una página por finalista con las marcas encontradas, clases, titular,
+estado y una recomendación explícita *adelante / adelante con reserva / descartar*. El resultado
+cierra la elección del nombre y desbloquea R-91 y R-93. Si todas las finalistas se descartan, se
+vuelve a la lista larga antes de gastar en dominio o logo. Alternativas ya descartadas:
+`Breviario` (apps religiosas), `Incunable` y `Florilegio` (app iOS), `Scholia` (app de lectura),
+`Lacuna` (varias apps), `Estrofa` (lector antiguo).
+
+### R-91 — Dominios, correo y DNS
+
+Comprar el dominio principal en `.es` y el `.app` para la TWA (obligatorio: Play exige HTTPS en
+el dominio de la app), más registro defensivo del `.com` si está libre o es asequible. **Se
+compra en cuanto R-90 cierre el nombre**, sin esperar al informe completo de marca: el dominio
+cuesta ~12 €/año y perderlo por esperar una búsqueda es peor que el coste hundido.
+Correo `hola@<dominio>` (o el buzón actual) con **SPF, DKIM y DMARC** alineados con Brevo: sin
+DKIM los enlaces de recuperación acaban en spam y eso rompe un flujo P0 ya cerrado (P0-2).
+
+**Aceptación.** Los tres dominios resuelven con TLS válido, el correo transaccional de prueba
+pasa DMARC y la bandeja de entrada lo recibe (no spam).
+
+### R-92 — Handles y reserva en tiendas
+
+Reservar `@<nombre>` en Instagram, TikTok, X y YouTube y el nombre del repositorio. Registrar
+la ficha en Play Console con el nombre definitivo (`applicationId` se decide en R-51, pero el
+título visible no debe cambiar después). No hace falta reservar App Store en v1: no hay app iOS.
+
+**Aceptación.** Handles activos o en lista de espera documentada; nombre visible de Play
+Console fijado por escrito.
+
+### R-93 — Renombrado en código, datos y configuración
+
+Renombrar solución y ensamblados a `<Nombre>.*` (`<Nombre>.slnx`, `<Nombre>.csproj`,
+`tests/<Nombre>.Tests`, `<Nombre>.Data` cuando exista) y el espacio de nombres raíz, de forma
+mecánica y en un único PR. Renombrar los textos visibles (título, `manifest.json`, `sw.js`,
+política de privacidad, términos, correos de Brevo, `Sitio:UrlPublica`), la cookie de
+autenticación y las claves de configuración prefijadas si las hubiera. El nombre concreto lo
+fija R-90.
+
+**Cuidado.** Cambiar el nombre de la cookie invalida sesiones activas: aceptable ahora (beta),
+no lo sería después. La clave de Data Protection no cambia, así que los enlaces de
+recuperación emitidos antes siguen siendo válidos. La base de datos de desarrollo se renombra a
+`<nombre>.db`; en producción el nombre lo fija `ConnectionStrings__DefaultConnection` y no se
+toca.
+
+**Aceptación.** `dotnet build -c Release` y `dotnet test` en verde; ningún `Otium` visible en
+la UI, el manifiesto, los correos ni los metadatos de ensamblado; sesión nueva iniciada y
+recuperación de contraseña probada con el nombre nuevo.
+
+### R-94 — Identidad visual y PWA
+
+Logotipo y símbolo derivados del nombre que cierre R-90 (evitar el libro genérico), paleta con
+tema claro, sepia y oscuro, tipografía de lectura con licencia libre, iconos PWA 192/512 y
+*maskable*, splash de la TWA y una guía mínima de tono de voz. Los iconos actuales se
+regeneran; el manifest y el tema se ajustan en R-50.
+
+**Aceptación.** Set de iconos validado en el *Lighthouse* de la PWA y contraste AA en los tres
+temas (el sepia y el OLED entran en R-22).
+
+### R-95 — Solicitud de marca (OEPM)
+
+Solicitud de marca denominativa y figurativa en **OEPM**, clases 9 y 42 (valorar 41). Coste
+aproximado 150 € la primera clase y ~50 € cada adicional. EUIPO (marca de la UE, ~850 €) solo
+después de validar tracción, no antes. La solicitud se presenta con la marca ya en uso o con
+intención de uso, nunca antes de la clearance.
+
+**Aceptación.** Justificante de solicitud archivado y fecha de publicación en el BOPI anotada
+para vigilar oposiciones.
 
 ---
 
-## 2. Hallazgos P1 — antes de lanzar al público
+## 3. Fase 0 — Cimientos para cobrar
 
-### F-01 — La cuota diaria del glosario se consume aunque el modelo falle
+Objetivo: base de datos evolucionable, respaldos reales y despliegue reproducible. Sin esto,
+ni el lector ni el cobro son sostenibles.
 
-**Estado:** [ ] Pendiente · **Esfuerzo:** S · **Lugar:** `Services/GlosarioService.cs:96-107`
+| ID | Tarea | Prioridad | Esfuerzo | Depende de |
+|---|---|---|---|---|
+| R-01 | Migraciones PostgreSQL reales | P0 | L | — |
+| R-02 | Respaldos y restauración verificada | P0 | M | R-01 |
+| R-03 | Docker endurecido | P0 | M | — |
+| R-04 | VPS y red | P0 | M | R-03 |
+| R-05 | CI/CD con staging y rollback | P1 | M | R-04 |
+| R-06 | Observabilidad mínima | P1 | S | R-04 |
+| R-07 | CSP por entorno, `AllowedHosts`, 429 con cuerpo | P1 | M | R-04 |
+| R-08 | Rotación de credenciales | P0 | S | — |
 
-**Problema:** `_limites.IntentarCuotaDiaria("glosario:{usuarioId}", 50)` se ejecuta **antes**
-de llamar al modelo. Si `DefinirAsync` devuelve `null` (timeout, JSON inválido, 429 del
-proveedor…), el intento cuenta igual y el usuario pierde una de sus 50 definiciones/día
-sin resultado.
+### R-01 — Migraciones PostgreSQL reales
 
-**Pasos:**
-1. Mover la verificación de cuota después de la llamada, o devolver el intento cuando el
-   resultado es `null` (añadir `DevolverCuota(clave)` a `ILimiteIntentosService`).
-2. Cuidar la carrera obvia: no permitir reembolsar la misma llamada dos veces.
-3. Añadir prueba en `GlosarioServiceTests`: fallo del modelo no consume cuota.
+**Problema.** `Data/BaseDatosInicializador.cs:55-73` usa `EnsureCreatedAsync` en PostgreSQL
+porque las migraciones de `Data/Migrations` son SQLite. Con clientes de pago no se puede
+evolucionar el esquema: cualquier columna nueva exige recrear la base.
 
-**Criterio de aceptación:** un fallo del modelo no reduce la cuota del usuario; el límite
-sí se mantiene ante palabras duplicadas válidas y abuso real.
+**Solución.** Extraer la capa de datos a un proyecto `Otium.Data` conservando el espacio de
+nombres `Otium.Data` (cero cambios en los `using`), y añadir
+`Otium.Data.Migrations.PostgreSql` que referencie a `Otium.Data`. La web referencia ambos;
+las migraciones SQLite permanecen en el ensamblado web y PostgreSQL usa
+`MigrationsAssembly("Otium.Data.Migrations.PostgreSql")`.
 
----
+**Pasos.**
+1. Mover `ApplicationDbContext`, `ApplicationUser`, `BaseDatosInicializador` y
+   `DescriptorErroresEs` a `Otium.Data` sin cambiar namespaces.
+2. Crear `Otium.Data.Migrations.PostgreSql` con `IDesignTimeDbContextFactory` y cadena de
+   diseño ficticia.
+3. Generar migración inicial; revisar tipos (`text`, `timestamp with time zone`, `numeric`).
+4. Configurar `MigrationsAssembly` solo para el proveedor PostgreSQL en
+   `ServiceCollectionExtensions.AddBaseDeDatos`.
+5. Sustituir `EnsureCreatedAsync` por `MigrateAsync` en ambos proveedores.
+6. Baseline de la base existente: si hay datos en Render, aplicar la migración inicial a una
+   base nueva e importar con `pg_dump --data-only`; alternativa documentada: insertar la fila
+   en `__EFMigrationsHistory` tras verificar el esquema.
+7. Resolver F-14 (doble registro de `DbContext`) al tocar este archivo.
 
-### F-02 — Respaldos: asumen SQLite y silencian errores de retención
+**Aceptación.** `dotnet ef migrations add Prueba` en el proyecto PostgreSQL genera SQL
+válido; `MigrateAsync` crea el esquema desde cero; `EnsureCreated` desaparece; los tests de
+integración siguen verdes con SQLite y con PostgreSQL.
 
-**Estado:** [ ] Pendiente · **Esfuerzo:** M · **Lugar:** `Services/BackupService.cs:33-74`
+### R-02 — Respaldos y restauración verificada
 
-**Problema:**
-1. `CrearRespaldoAsync` hace `PRAGMA wal_checkpoint(TRUNCATE)` + `File.Copy` de la BD
-   local. Con PostgreSQL (Render) el `SqliteConnectionStringBuilder` no resuelve la ruta y
-   el servicio no produce respaldo.
-2. `AplicarRetencion` captura excepciones silenciosamente en la eliminación de respaldos
-   viejos (aceptado solo por comentario).
+**Problema.** `BackupService` asume SQLite (`PRAGMA wal_checkpoint` + `File.Copy`) y silencia
+errores de retención (F-02). En el VPS hay tres cosas que respaldar: base de datos, archivos
+de libros y llavero de Data Protection.
 
-**Pasos:**
-1. Detectar proveedor (`ConfiguracionBaseDatos`): en PostgreSQL usar `pg_dump`/API u
-   omitir el respaldo de archivos y documentarlo en `DOCS/respaldos.md`.
-2. Registrar Warning visible cuando la retención no puede borrar; nunca `catch {}` sin log.
-3. Prueba de integración: respaldo creado y verificado con retención en SQLite temporal.
+**Pasos.**
+1. `pg_dump` en formato custom desde el contenedor de Postgres, cifrado con `age`.
+2. `restic` para el volumen `/data` (libros + claves si no están en base de datos).
+3. Destino Backblaze B2, retención 7 diarios / 4 semanales / 6 mensuales.
+4. Cron en el host (no en el contenedor) con alerta a Sentry si falla.
+5. Prueba de restauración mensual documentada: base limpia, `pg_restore`, arranque, login y
+   apertura de un libro.
+6. `BackupService` pasa a ser un *wrapper* que verifica antigüedad del último respaldo y lo
+   expone en `/health`; se elimina el `File.Copy`.
 
-**Criterio de aceptación:** en SQLite respaldo íntegro con retención y log de errores; en
-PostgreSQL comportamiento explícito documentado (respaldo gestionado o fallback claro).
+**Aceptación.** Un respaldo completo restaura un entorno funcional en < 30 min; `/health`
+refleja el estado del último respaldo; ningún `catch` silencioso.
 
----
+### R-03 — Docker endurecido
 
-### F-03 — Los términos de uso citan "Gemini de Google" (proveedor incorrecto)
+**Pasos.**
+1. `USER app` no root con propietario de `/data`.
+2. Unificar en `/data` (elimina la incoherencia `/var/data` del Dockerfile y `/data` del
+   compose; F-06).
+3. Healthcheck funcional: instalar `curl` en la imagen runtime o usar una sonda propia; el
+   compose no debe depender de un binario ausente.
+4. Fijar imágenes base por digest.
+5. `restart: unless-stopped`, límites de CPU/memoria, rotación de logs.
+6. Alinear `ASPNETCORE_URLS` con el `PORT` que fija `Program.cs:22-23`.
+7. Multi-stage con caché de restore; imagen final < 300 MB.
 
-**Estado:** [ ] Pendiente · **Esfuerzo:** S · **Lugar:** `Components/Pages/Terminos.razor:23`
+**Aceptación.** `docker compose up` levanta app + Postgres + Caddy; contenedor no root;
+`/health` responde `Healthy`; reinicio del host recupera el servicio solo.
 
-**Problema:** el servicio real es una API OpenAI-compatible (Z.ai por defecto,
-conmutable a OpenRouter) con el modelo `glm-5.3-flash` vía `IDefinicionClient`. El
-texto legal menciona un proveedor que ya no se usa desde 2026-10-28.
+### R-04 — VPS y red
 
-**Pasos:**
-1. Redactar el párrafo de IA sin fijar el proveedor en duro: "servicio de inteligencia
-   artificial externo accesible mediante API REST (proveedores Z.ai u OpenRouter, modelo
-   GLM-5.3-Flash)". Así no caduca otra vez.
-2. Revisar que `/privacidad` y `AvisoBienvenida` usen la misma formulación.
+**Pasos.**
+1. Hetzner CX22 (Falkenstein/Helsinki), Debian 13, SSH por clave, `ufw` (22/80/443).
+2. Caddy como proxy TLS: `Kestrel` en `127.0.0.1:5000`, WebSocket y `Range` habilitados.
+3. `Proxy__KnownProxies__0=127.0.0.1`, `Seguridad__PermitirHttp=false`,
+   `Sitio__UrlPublica=https://<dominio>`.
+4. Cloudflare solo DNS (naranja apagado para WebSocket estable) o proxy con WebSocket
+   verificado; decidir con prueba real.
+5. `unattended-upgrades`, fail2ban, zona horaria UTC.
+6. Staging en la instancia Oracle free existente, misma imagen y compose.
 
-**Criterio de aceptación:** la mención legal coincide con la implementación y no nombra
-un proveedor fijo salvo que sea consciente.
+**Aceptación.** HTTPS válido, cookies `Secure`, login y recuperación funcionando, circuito
+SignalR estable 30 min, `/health` accesible solo por HTTPS.
 
----
+### R-05 — CI/CD con staging y rollback
 
-### F-04 — SEO/ops: `sitemap.xml` inexistente y `security.txt` con placeholders
+**Pasos.**
+1. Un único workflow `ci.yml` (eliminar `build.yml`; F-09) con `permissions: contents: read`.
+2. Build + test + auditoría de paquetes en cada PR.
+3. Deploy a staging en `main`; deploy a producción por tag `v*`.
+4. Imagen publicada con tag semántico + digest; rollback cambiando el tag en `.env`.
+5. Migraciones como paso explícito previo al arranque, con verificación de compatibilidad.
 
-**Estado:** [ ] Pendiente · **Esfuerzo:** S · **Lugar:** `wwwroot/robots.txt`,
-`wwwroot/.well-known/security.txt`
+**Aceptación.** Un push a `main` actualiza staging; un tag despliega producción; volver a la
+versión anterior es un cambio de tag y un `compose up -d`.
 
-**Problema:**
-1. `robots.txt` declara `Sitemap: /sitemap.xml` que no existe (enlace roto declarado).
-2. `security.txt` usa `otium.example.com` (dominios placeholder) y contactos que no
-   coinciden con `/soporte` (`otium.lectura@gmail.com`).
+### R-06 — Observabilidad mínima
 
-**Pasos:**
-1. Quitar la línea `Sitemap` o generar un `sitemap.xml` mínimo (solo rutas públicas:
-   `/privacidad`, `/terminos`, `/soporte`).
-2. Fijar dominio real y contacto de `/soporte`; actualizar `Expires` anualmente.
-3. Si la app se despliega bajo dominio personalizado, parametrizar por entorno/despliegue.
+**Pasos.** Logs JSON a stdout con retención en el host · Sentry ya registrado (`Program.cs:332-343`) ·
+Uptime Kuma para disponibilidad · alerta de fallo de respaldo y de errores 5xx · panel simple
+de circuitos activos y memoria del proceso.
 
-**Criterio de aceptación:** ningún enlace declarado apunta a un recurso inexistente;
-contactos reales y verificables.
+**Aceptación.** Cualquier caída o fallo de respaldo genera aviso; hay evidencia de 7 días de
+métricas.
 
----
+### R-07 — CSP, hosts y 429
 
-### F-05 — Errores de alta de libro/travesía invisibles (estados muertos)
+**Pasos.** CSP por entorno (`ws:` solo en Development; `frame-src 'self' blob:` para el visor
+de PDF si se añade; `img-src` con el dominio de portadas) · `AllowedHosts` cerrado al dominio ·
+`OnRejected` devuelve HTML/JSON en español · unificar `X-Frame-Options` con `frame-ancestors`.
 
-**Estado:** [ ] Pendiente · **Esfuerzo:** S · **Lugar:** `Components/Pages/Estantes.razor:145,
-148`; `Components/Pages/EditorResena.razor:127-128`
+**Aceptación.** Sin `unsafe-inline` en `script-src` cuando Blazor lo permita; 429 explicado;
+un solo mecanismo de frame; `AllowedHosts` no es `*`.
 
-**Problema:** `errorFormulario` y `errorEntrada` se asignan en los handlers del padre
-(`OnGuardarLibro`, `OnAñadirTravesía`, `OnQuitarTravesía`) pero **nunca se renderizan**
-(la UI muestra los errores de los hijos). Si fallan en nivel clase-padre, el usuario no
-ve nada. Además, el parámetro `OnToggleTravesía` de `EditorResena` no lo usa nadie.
+### R-08 — Rotación de credenciales
 
-**Pasos:**
-1. Unificar el contrato de errores: o el hijo muestra los errores del servicio, o el
-   padre los renderiza; elegir y quitar el estado duplicado.
-2. Eliminar `OnToggleTravesía` (código muerto).
-3. Añadir prueba de UI mínima (harness de pruebas) o verificación manual reproducible.
-
-**Criterio de aceptación:** cualquier fallo de alta/edición/eliminación se ve en la UI
-con mensaje en español.
-
----
-
-### F-06 — Docker incoherente y sin endurecer
-
-**Estado:** [ ] Pendiente · **Esfuerzo:** M · **Lugar:** `Dockerfile`, `docker-compose.yml`
-
-**Problema:**
-1. El contenedor corre como **root** (no existe `USER`) — ⚠ el roadmap anterior lo marcaba
-   como completado; la auditoría del 2026-10-28 confirma que **no** lo está.
-2. El Dockerfile prepara `/var/data/keys` pero el compose monta el volumen en `/data` y
-   define `DataProtection__KeysPath=/data/keys` (funciona por el ENV, pero desalineado).
-3. `healthcheck` del compose usa `curl`, que puede no estar en la imagen runtime de aspnet.
-4. Imágenes base sin digest (etiqueta flotante `10.0`).
-5. `ASPNETCORE_URLS` del compose es ignorado (el código fija `http://0.0.0.0:{PORT}`).
-
-**Pasos:**
-1. Añadir `USER` no root con permisos sobre `/data`; unificar ruta de datos (`/data`).
-2. Healthcheck en C# compacto (`dotnet` + HttpClient) o instalar `curl` explícitamente.
-3. Fijar imágenes por digest; revisar la coherencia de `GC`/`InvariantGlobalization` con el csproj.
-4. Alinear `ASPNETCORE_URLS` (o dejar que el código gobierna y quitar la variable del compose).
-5. Verificar el arranque local: `docker compose up` + `/health` respondiendo OK.
-
-**Criterio de aceptación:** contenedor no-root, un único volumen de datos, healthcheck
-funcional en la imagen, una sola ruta de datos y documentación alineada.
-
----
-
-### F-20 — Operativo: rotación de credenciales y verificación del VPS Oracle
-
-**Estado:** [ ] Pendiente por el propietario · **Esfuerzo:** M · **Lugar:** despliegue
-
-**Problema:**
-1. **Rotación de credenciales** (P0-3) sigue pendiente desde el 2026-10-23: rotar
-   `Definiciones` API key, `Brevo:ApiKey` y evaluar historial de Git si se compartieron.
-2. **Verificación de producción en el VPS Oracle** (P1-7): comprobar TLS real, cookies
-   `Secure`, login, SignalR (`wss:`), PWA y recuperación de contraseña detrás de Caddy/Nginx.
-
-**Pasos:**
-1. Rotar claves y actualizar User Secrets/entorno.
-2. Ejecutar el checklist manual de `AGENTS.md` §6.6 sobre dominio real.
-3. Registrar evidencia (capturas / comandos) en `AGENTS.md`.
-
-**Criterio de aceptación:** credenciales viejas invalidadas; checklist del VPS completo.
+Rotar `Definiciones:ApiKey`, `Brevo:ApiKey` y revisar el historial de Git (F-20). Mover todo a
+variables de entorno del compose. **Sin esto no se abre al público.**
 
 ---
 
-## 3. Hallazgos P2 — endurecimiento
+## 4. Fase 1 — Lector EPUB
 
-### F-07 — `CircuitBreaker` no thread-safe y fuera de DI
+Objetivo: subir un EPUB propio, leerlo con comodidad y que el glosario y las travesías
+funcionen sobre el texto real.
 
-**Estado:** [x] Completado · **Esfuerzo:** S · **Lugar:** `Services/CircuitBreaker.cs`,
-`DefinicionesClient.cs`, `BuscadorLibros.cs`, `Program.cs`
+| ID | Tarea | Prioridad | Esfuerzo | Depende de |
+|---|---|---|---|---|
+| R-10 | Modelo de datos y migraciones | P0 | M | R-01 |
+| R-11 | Almacenamiento de archivos | P0 | M | R-10 |
+| R-12 | Importador EPUB con sanitización | P0 | L | R-10 |
+| R-13 | Servicio de lectura y progreso | P0 | M | R-12 |
+| R-14 | Endpoints de recursos | P0 | S | R-11 |
+| R-15 | UI del lector | P0 | L | R-13 |
+| R-16 | Travesías automáticas | P1 | M | R-13 |
+| R-17 | Glosario desde selección | P1 | M | R-15 |
+| R-18 | Cola de importación y límites | P1 | M | R-12 |
+| R-19 | Pruebas del lector | P0 | M | R-12..R-17 |
+| R-20 | Accesibilidad del lector | P2 | M | R-15 |
 
-**Problema:** el estado (`_fallosConsecutivos`, `_estado`, `_horaSiguienteIntento`) se
-muta sin sincronización; con la concurrencia de los circuitos Blazor Server, pueden
-golpearse más de 3 fallos sin que el circuito se abra. Se instancia
-con `new()` por cada servicio, sin pasar por DI.
+### R-10 — Modelo de datos y migraciones
 
-**Pasos:**
-1. Proteger transición de estado con `lock` o `Interlocked` (estado volatile).
-2. Registrar como singleton y limitar su tasa mediante `IMemoryCache` (opcional).
-3. Añadir prueba unitaria de concurrencia (20 llamadas paralelas fallidas → abre una vez).
+**Pasos.** Crear `ArchivoLibro`, `CapituloLibro`, `ProgresoLectura`, `PreferenciasLector` ·
+índices únicos descritos en §2.1 · FK a `Libros` en cascada · `EntradaLectura` gana
+`ProgresoInicio`/`ProgresoFin` (`decimal(5,4)`, nullable) · migración SQLite y migración
+PostgreSQL en paralelo.
 
-**Criterio de aceptación:** estados consistentes bajo concurrencia; pruebas en verde.
+**Aceptación.** Borrar un libro elimina archivo, capítulos y progreso; las migraciones aplican
+en limpio en ambos proveedores; el borrado de cuenta sigue completo (P1-4).
 
-**Cierre:** corregido. El breaker sincroniza sus transiciones con `lock` (la acción
-externa se ejecuta fuera del candado) y se registra en DI como singleton con clave:
-`ClavesCircuito.Definiciones` y `ClavesCircuito.Buscador` (un circuito por cliente, para
-que un fallo de un proveedor no abra el circuito de los demás). Los constructores sin
-circuito se conservan solo para pruebas. Pruebas en `CircuitBreakerTests` (3): 20 fallos
-paralelos abren el circuito una sola vez, el éxito reinicia el contador y el medio-abierto
-concede una llamada de prueba al vencer la espera.
+### R-11 — Almacenamiento de archivos
 
----
+**Pasos.** `IAlmacenLibros` con `AlmacenLocal` (rutas `libros/{usuarioId}/{libroId}/`, escritura
+atómica con `.tmp` + `File.Move`) · límite por archivo y por usuario · nombre canónico por
+`Sha256` · validación de ruta para impedir *path traversal* · `AlmacenS3` (R2) queda como
+adaptador previsto, no se implementa en v1 (YAGNI a 100 usuarios).
 
-### F-08 — CSP y hosts permitidos laxos; 429 sin página propia
+**Aceptación.** Ninguna ruta construida con datos del usuario puede salir de `/data/libros`;
+test con nombres maliciosos (`../`, rutas absolutas, UTF-16).
 
-**Estado:** [ ] Pendiente · **Esfuerzo:** M · **Lugar:** `Program.cs:420-426`,
-`Program.cs:272-284`, `appsettings.json:30`
+### R-12 — Importador EPUB con sanitización
 
-**Problema:**
-1. CSP mantiene `'unsafe-inline'` en `script-src` **y** `style-src` (requerido por
-   Blazor inline styles, conservador pero necesario). `connect-src` incluye `ws:`
-   incondicional (en producción debería ser solo `wss:`).
-2. `AllowedHosts: "*"` sin restringir (P2-14 legacy).
-3. `OnRejected` del rate limiter solo loguea: el cliente recibe `429` vacío sin mensaje.
-4. Se solapan dos cabeceras de protección: `X-Frame-Options: DENY` y sin
-   `frame-ancestors` en el CSP.
+**Pasos.**
+1. Validar contenedor (`mimetype`), tamaño y presencia de `META-INF/encryption.xml` → si hay
+   cifrado, rechazar con mensaje "El archivo tiene DRM y no se puede abrir".
+2. Extraer metadatos: título, autor, idioma, editorial, portada. Rellenar `Libro` sin
+   sobrescribir datos que el usuario ya editó.
+3. Leer `nav`/`ncx` para el índice; si falta, orden de `spine`.
+4. Sanitizar cada capítulo con `Ganss.Xss` allowlist: `p, div, span, em, strong, i, b, u, h1-h6,
+   blockquote, ul, ol, li, br, hr, img, a, table, thead, tbody, tr, th, td, sup, sub, figure,
+   figcaption`. Sin `style`, sin `class`, sin `script`, sin `iframe`, sin `on*`.
+5. Reescribir `src` de imágenes a `/libros/{id}/recurso/{ruta}` y extraerlas al almacén.
+6. Guardar `TextoPlano` por capítulo (para búsqueda y TTS) y `Ancla` estable.
+7. Calcular `Chars` y estimar páginas equivalentes (1 página ≈ 1.800 caracteres).
+8. Registrar duración y tamaño para métricas.
 
-**Pasos:**
-1. Generar CSP por entorno: incluir `ws:` solo en Development; en Production solo `wss:`.
-2. Reducir `unsafe-inline` a hashes/nonces donde Blazor lo permita (o documentar por qué
-   se mantiene y cerrar).
-3. Delimitar `AllowedHosts` al host real (variables de entorno).
-4. Añadir `frame-ancestors 'self'` idéntico al `X-Frame-Options` o quitar esta última
-   (el estándar moderno es el CSP).
-5. Devolver cuerpo JSON/HTML mínimos en `OnRejected` con mensaje en español.
+**Aceptación.** EPUB de Gutenberg, Standard Ebooks y un EPUB real de usuario importan sin
+errores; un EPUB con XSS (`<script>`, `onerror`, `javascript:`) queda inerte; un EPUB con DRM
+se rechaza; importación de 5 MB < 10 s.
 
-**Criterio de aceptación:** un solo mecanismo de frame; `AllowedHosts` cerrado; 429
-explicado; sin `ws:` en producción.
+### R-13 — Servicio de lectura y progreso
 
----
+**Pasos.** `ILectorService.ObtenerIndiceAsync`, `ObtenerCapituloAsync(usuarioId, libroId, indice)`
+con verificación de propiedad · `RegistrarProgresoAsync` con *upsert* y *debounce* (cada 5 s
+o al cambiar de capítulo) · `ObtenerProgresoAsync` para reanudar · cálculo de porcentaje
+global y tiempo restante estimado · `PreferenciasLector` por usuario.
 
-### F-09 — Workflows de GitHub duplicados o incoherentes
+**Aceptación.** Dos usuarios no pueden leer el libro del otro (IDOR cubierto con test);
+cerrar y reabrir el navegador reanuda en el mismo punto; el progreso se comparte entre
+dispositivos con la misma cuenta.
 
-**Estado:** [ ] Pendiente · **Esfuerzo:** S · **Lugar:** `.github/workflows/{ci,build,deploy}.yml`
+### R-14 — Endpoints de recursos
 
-**Problema:**
-1. `ci.yml` y `build.yml` tienen el mismo `name: CI`; `build.yml` es un subconjunto
-   (solo restore+build) y compila todo dos veces en cada push.
-2. `deploy.yml`: el trigger es `push` a `main` + `workflow_dispatch`, pero el paso de
-   release solo se dispara para `refs/tags/`, que no ocurre en el trigger declarado.
-3. `build.yml` no limita `permissions`.
+**Pasos.** Minimal API en `Program.cs` o extensión propia · `RequireAuthorization()` +
+comprobación de propietario en el handler · `Results.File` con `enableRangeProcessing: true` ·
+MIME por extensión con allowlist (imágenes y fuentes) · `Cache-Control: private, max-age=604800`
+· 404 uniforme para libro ajeno (no 403, para no filtrar existencia).
 
-**Pasos:**
-1. Eliminar `build.yml` (todo su contenido está en `ci.yml`).
-2. En `deploy.yml`, añadir el trigger `push: tags: ['v*']` o convertirlo en
-   `workflow_dispatch` manual con parámetro de tag.
-3. Añadir `permissions: contents: read` faltante.
+**Aceptación.** `curl` sin cookie → 401/302; libro ajeno → 404; `Range` devuelve 206; no se
+sirve ningún archivo fuera del directorio del libro.
 
-**Criterio de aceptación:** un solo workflow de CI; release solo en tags reales;
-permisos mínimos.
+### R-15 — UI del lector
 
----
+**Pasos.**
+1. `Components/Pages/Lector.razor` (`@page "/leer/{LibroId:int}"`), protegido con `[Authorize]`.
+2. Índice lateral, cabecera con título y porcentaje, navegación por capítulo y por teclado.
+3. Paginación por columnas CSS (`column-width` + `column-gap`) con desplazamiento horizontal;
+   alternativa de scroll continuo en móvil.
+4. Controles de tipografía: tamaño, interlineado, margen, justificado, tema claro/oscuro/
+   sepia; persistidos en `PreferenciasLector`.
+5. Barra de progreso, tiempo restante y "continuar donde lo dejaste".
+6. Búsqueda dentro del libro sobre `TextoPlano` (`ILIKE` es suficiente por libro).
+7. Modo pantalla completa y ocultación de cromo al hacer scroll.
+8. `wwwroot/lector.js`: módulo ES con `seleccionarTexto()` y `aplicarTema()`; sin `async void`.
 
-### F-10 — Fugas de información interna en endpoints de Identity (legacy P2-13)
+**Aceptación.** Lectura fluida en móvil y escritorio; sin saltos de layout al cambiar de
+capítulo; el 90 % de la pantalla es texto; funciona con teclado (flechas, PageUp/PageDown).
 
-**Estado:** [ ] Pendiente · **Esfuerzo:** S · **Lugar:** endpoints de Identity de
-`Components/Account/*` servidos por `MapAdditionalIdentityEndpoints` (extensión de la
-plantilla), en particular errores que devuelven IDs internos al usuario.
+### R-16 — Travesías automáticas
 
-**Problema:** mensajes de error de endpoints de Identity (registro/login/2FA) pueden
-exponer `statuscode`/IDs internos que no aportan al usuario final.
+**Pasos.** Al cerrar el lector o cada 15 min, calcular progreso recorrido y proponer una
+`EntradaLectura` con `ProgresoInicio`/`ProgresoFin`, páginas equivalentes y duración ·
+resumen opcional generado por GLM a partir de una ventana de texto (con cuota y confirmación
+del usuario) · nunca crear entradas sin acción del usuario.
 
-**Pasos:**
-1. Revisar los errores devueltos por los endpoints (`Dictionary<string, string>` de
-   Identity) y mapear a mensajes genéricos (usar `DescriptorErroresEs` ya existente).
-2. Verificar con pruebas de integración que ningún mensaje contiene identificadores.
+**Aceptación.** Una sesión de 20 min genera una propuesta con datos correctos; descartarla no
+deja residuos; las travesías antiguas siguen mostrándose igual.
 
-**Criterio de aceptación:** ningún texto visible contenga IDs técnicos.
+### R-17 — Glosario desde selección
 
----
+**Pasos.** `seleccionarTexto()` devuelve `{ palabra, frase }` con límites (2–60 caracteres,
+máximo 400 de contexto) · popover con "Definir" y "Añadir al glosario" · llamada a
+`IGlosarioService` con el contexto de la frase; ampliar el contrato para aceptar
+`contextoLectura` · cuota de IA aplicada · caché por palabra+contexto para no repetir coste.
 
-### F-11 — Texto en inglés residual (i18n)
+**Aceptación.** Seleccionar una palabra en el lector devuelve definición global y, si aporta,
+el matiz "En el contexto de la lectura"; el fallo del modelo no consume cuota (F-01).
 
-**Estado:** [ ] Pendiente · **Esfuerzo:** M · **Lugar:** `Components/Layout/ReconnectModal.razor`,
-`Components/Account/Pages/` (LoginWith2fa, LoginWithRecoveryCode, RegisterConfirmation,
-ResendEmailConfirmation, ExternalLogin, Manage/Disable2fa, EnableAuthenticator,
-ExternalLogins, GenerateRecoveryCodes, Passkeys, RenamePasskey, ResetAuthenticator,
-SetPassword, TwoFactorAuthentication — títulos/leyendas en inglés)
+### R-18 — Cola de importación y límites
 
-**Problema:** el único idioma soportado es el español; resta traducción.
-`ReconnectModal` visible durante cortes de sesión Blazor Server (de la plantilla).
+**Pasos.** `Channel<ImportacionPendiente>` + `BackgroundService` · estado `Importando` visible
+en la UI con sondeo · cancelación y timeout (60 s) · límites: 50 MB por archivo, 5.000
+capítulos, 100 libros por usuario en plan gratuito · importación idempotente por `Sha256`.
 
-**Pasos:**
-1. Traducir `ReconnectModal` (los textos más visibles: "Rejoining the server…" etc.).
-2. Traducir cabeceras y etiquetas de 2FA/passkeys si se hacen visibles en el flujo.
+**Aceptación.** Subir dos veces el mismo archivo no duplica; un archivo corrupto deja estado
+`Error` con mensaje claro y no bloquea la cola.
 
-**Criterio de aceptación:** cero strings de usuario en inglés en las rutas navegables.
+### R-19 — Pruebas del lector
 
----
+Fixtures de dominio público (un EPUB de Gutenberg y uno de Standard Ebooks) versionados como
+recurso de test · pruebas de sanitización, DRM, rutas, autorización, progreso, deduplicación
+y travesía automática. Objetivo: cubrir los caminos de error, no solo el feliz.
 
-### F-12 — Duplicaciones de mapeo y etiquetas (mantenibilidad)
+### R-20 — Accesibilidad del lector
 
-**Estado:** [ ] Pendiente · **Esfuerzo:** S · **Lugar:** `Components/Pages/Estantes.razor`
-(`CambiarEstante`/`Puntuar`/`OnGuardarReseña` reconstruyen el `LibroActualizarDTO` campo a
-campo en 3 lugares), `Nombre(Estante)` triplicado (Estantes/FormularioLibro/EstantesAmigo)
-
-**Pasos:**
-1. Centralizar `Nombre(Estante)` en `Models/Estante` (o extensión) y quitar copias.
-2. Construir `LibroActualizarDTO` desde un único punto común (método helper o método de
-   extensión del DTO).
-3. Opcional: extraer CSS recurrente `.ficha` del scoped (ya parcialmente unificado).
-
-**Criterio de aceptación:** una sola fuente de verdad para mapeos y nombres.
-
----
-
-### F-13 — `async void` residual y captura silenciosa
-
-**Estado:** [ ] Pendiente · **Esfuerzo:** S · **Lugar:** `Layout/BotonTema.razor:45` 
-(`AlCambiarDePagina`, el único `async void` del fuente), `Layout/BotonInstalar.razor:85`
-(`DisposeAsync` con `catch { }` vacío)
-
-**Pasos:**
-1. Convertir `AlCambiarDePagina` a `async Task` con captura interna o migrar a
-   fire-and-forget explícito (`_ = SafeSyncAsync()` con try/catch + log).
-2. Añadir log en el `catch` de `DisposeAsync` (o documentar por qué está vacío).
-
-**Criterio de aceptación:** ningún `async void` en el fuente; ningún `catch {}` sin
-justificación en comentario.
+Contraste AA en los tres temas, foco visible, navegación por teclado, `aria-label` en
+controles, respeto de `prefers-reduced-motion`, tamaño mínimo de toque 44 px, y prueba real en
+Android Chrome. El lector es la pantalla que más se usa: aquí la accesibilidad no es opcional.
 
 ---
 
-### F-14 — Doble registro de DbContext (reabre P2-16)
+## 4.5 Fase 1.5 — Diario, hábito y crecimiento
 
-**Estado:** [ ] Pendiente · **Esfuerzo:** S · **Lugar:**
-`Services/Extensions/ServiceCollectionExtensions.cs` (`AddBaseDeDatos`)
+Objetivo: convertir el lector en un producto que se abre todos los días. El lector solo
+resuelve "puedo leer"; estas tareas resuelven "vuelvo mañana" y "lo recomiendo". Ninguna es
+requisito para leer, así que entran después de la Fase 1 y antes del cobro: la página de
+precios (R-45) convierte mucho mejor con rachas, recap y demo que con una lista de funciones
+del lector.
 
-**Problema:** pese a que el roadmap anterior (commit `b097289`) lo marcaba como
-unificado, el método registra **el mismo `Action<DbContextOptionsBuilder>` en
-`AddDbContext` y `AddDbContextFactory`** (el factory con `Scoped`), duplicando la
-configuración del proveedor SQLite/Npgsql.
+Regla de alcance: **nada de esto añade tablas nuevas de usuario sin pasar por exportación y
+borrado de cuenta** (P1-4) en el mismo PR.
 
-**Pasos:**
-1. Explorar `AddDbContextFactory` puro (Blazor Server ya resuelve el ámbito scoped a
-   nivel de factory) o mantener ambos con un builder compartido explícito y comentario.
-2. Verificar que los servicios que usan `IDbContextFactory` y `ApplicationDbContext`
-   (Identity) siguen resolviendo bien.
+| ID | Tarea | Prioridad | Esfuerzo | Depende de |
+|---|---|---|---|---|
+| R-21 | Lomos reales en la repisa | P1 | M | R-15 |
+| R-22 | Temas sepia y OLED | P1 | S | R-15 |
+| R-23 | Rachas con congelación y calendario | P1 | M | R-13 |
+| R-24 | Importación CSV de Goodreads | P2 | M | R-10 |
+| R-25 | Wishlist compartible por enlace | P1 | S | P1-9 |
+| R-26 | Recap anual en imagen | P2 | M | R-13 |
+| R-27 | Demo sin registro | P1 | M | R-15 |
+| R-28 | Filtros combinables en estantes | P2 | S | — |
+| R-29 | Citas con ubicación | P1 | M | R-13 |
 
-**Criterio de aceptación:** una sola declaración de configuración; `dotnet test` verde.
+### R-21 — Lomos reales en la repisa
+
+Sustituir la rejilla plana de `RepisaLibros.razor` por un estante con **lomos verticales**:
+color derivado de forma determinista del título (hash → paleta de 12 tonos apagados), grosor
+proporcional al número de páginas, título y autor en vertical, y portada al hacer *hover* o
+*focus* en móvil. Sin imágenes nuevas ni generación de assets: todo CSS y SVG.
+
+**Aceptación.** 200 libros se pintan en < 300 ms; el lomo es navegable con teclado y anuncia
+título y autor a lectores de pantalla (no es decorativo); en 360 px de ancho no hay scroll
+horizontal de página.
+
+### R-22 — Temas sepia y OLED
+
+Ampliar `PreferenciasLector.Tema` a `Claro | Sepia | Oscuro | Oled`. El sepia usa fondo
+`#f4ecd8` y texto `#5b4636`; OLED usa negro puro y evita halos en AMOLED. Se aplica al lector
+y, si el usuario lo permite, a la app entera.
+
+**Aceptación.** Contraste AA en los cuatro temas; el tema persiste en servidor (no solo en
+`localStorage`) y viaja entre dispositivos; `prefers-color-scheme` solo decide el tema inicial.
+
+### R-23 — Rachas con congelación y calendario
+
+Tabla `RegistroLectura` (`UsuarioId`, `Fecha` local del usuario, `Minutos`, `CharsLeidos`),
+con índice único `(UsuarioId, Fecha)`. Racha = días consecutivos con al menos 1 minuto o 1.000
+caracteres. **Dos días de congelación automática al mes**: si el usuario falta un día, se
+consume una congelación y la racha no se rompe; el calendario muestra el día congelado en otro
+color. Zona horaria del usuario en `ApplicationUser.ZonaHoraria` (IANA), por defecto
+`Europe/Madrid`.
+
+**Aceptación.** Un cambio de hora o de zona no rompe ni regala días; la racha se calcula en
+servidor y no se puede inflar desde el cliente; el calendario marca correctamente un día
+congelado; exportación y borrado incluyen `RegistroLectura`.
+
+### R-24 — Importación CSV de Goodreads
+
+Importador tolerante: detecta el CSV por cabecera, mapea `Title, Author, ISBN, My Rating,
+Exclusive Shelf, Date Read, My Review, Number of Pages`, ignora filas sin título, no duplica
+por ISBN+título y mapea `read/currently-reading/to-read` a los estantes existentes. Informe
+final: importados, omitidos y errores por fila. Límite por plan (R-41).
+
+**Aceptación.** Un export real de 500 libros importa en < 20 s; una fila corrupta no aborta el
+resto; el informe es descargable; segunda importación del mismo archivo no duplica.
+
+### R-25 — Wishlist compartible por enlace
+
+Lista "Quiero leer" con enlace público opcional (`/l/{token}`), sin exponer correo ni el resto
+de estantes, revocable y con `noindex`. Reutiliza el patrón de autorización de la vista de
+amigo (P1-9) en lugar de inventar otro.
+
+**Aceptación.** Revocar el token devuelve 404 en < 1 s; el enlace no filtra el `UsuarioId`, el
+correo ni libros de otros estantes; sin token válido no hay listado.
+
+### R-26 — Recap anual en imagen
+
+"Tu año en <Nombre>": libros leídos, páginas, racha más larga, mejor puntuación, género
+dominante y una cita. Render en el cliente con `<canvas>` (sin dependencia nueva de imágenes
+en servidor) y descarga/share vía Web Share API con imagen.
+
+**Aceptación.** La imagen se genera en < 1 s con 100 libros; funciona sin red tras cargar (los
+datos ya están en la página); el texto alternativo describe el contenido; no incluye datos
+privados si el usuario no lo pide.
+
+### R-27 — Demo sin registro
+
+Sesión anónima con un libro de dominio público **empaquetado con la app** (no depende del
+catálogo de la Fase 2: un solo EPUB, licencia CC0, versionado en el repositorio de contenido y
+no en el de código), tres estantes de ejemplo y el lector completo; caducidad de 24 h, sin
+correo y sin subida de archivos. Al registrarse, opción de adoptar el progreso de la demo.
+
+**Aceptación.** Un visitante nuevo lee un capítulo en ≤ 2 clics desde la portada; la demo no
+consume cuota de IA del plan gratuito global (límite propio por IP); no se pueden subir
+archivos ni pagar desde la demo.
+
+### R-28 — Filtros combinables en estantes
+
+Filtro por estante, autor, puntuación, etiqueta, idioma y estado de lectura, combinables y
+reflejados en la URL (`?estante=leido&min=4`). Sin recargar la página; consulta resuelta en
+servidor con `IQueryable` y paginación.
+
+**Aceptación.** Combinar tres filtros devuelve el mismo resultado que la consulta directa;
+la URL es compartible y restaurable; 200 libros filtran en < 200 ms.
+
+### R-29 — Citas con ubicación
+
+Guardar una cita desde el lector con `LibroId`, `CapituloId`, `Offset`, texto y nota opcional.
+Vista de citas por libro y global, exportación a Markdown e imagen compartible reutilizando
+R-26. Las citas respetan `CompartirEstantes`: nunca se publican sin acción explícita.
+
+**Aceptación.** La cita reabre el capítulo en el offset exacto; recortar el texto a 500
+caracteres; una cita de un libro privado no aparece en vistas de amigos.
 
 ---
 
-### F-21 — Descomposición de capas (deuda estructural del "Capas: parcial")
+## 5. Fase 2 — Catálogo de dominio público
 
-**Estado:** [ ] Pendiente · **Esfuerzo:** L · **Lugar:** `Components/Pages/Estantes.razor`,
-`Models/`, `Components/Pages/Glosario.razor`
+| ID | Tarea | Prioridad | Esfuerzo | Depende de |
+|---|---|---|---|---|
+| R-30 | Ingesta del catálogo Gutendex | P1 | M | R-10 |
+| R-31 | Búsqueda local con texto completo | P1 | M | R-30 |
+| R-32 | Licencias y fuentes de archivo | P0 | S | — |
+| R-33 | Descarga bajo demanda y caché compartida | P1 | M | R-11, R-30 |
+| R-34 | UI del catálogo | P1 | M | R-31 |
+| R-35 | Atribución y cumplimiento | P1 | S | R-32 |
 
-**Problema:** la tabla de patrones de la auditoría marca las capas como "parcial":
-`Estantes.razor` (341 líneas) mezcla búsqueda en Open Library, alta de libros, reseñas,
-travesías y presentación; `Models/` es anémico (DataAnnotations pero sin reglas de
-dominio); no hay carpetas de Dominio/Aplicación formales.
+### R-30 — Ingesta del catálogo Gutendex
 
-**Progreso ya aplicado (2026-10-28):**
-- La excepción de DTO quedó resuelta: `IGlosarioService` devuelve `PalabraGlosarioDTO`
-  (`Models/DTOs/PalabraGlosarioDTO.cs`) y `Glosario.razor` ya no ve la entidad EF.
-- `CircuitBreaker` es thread-safe y singleton por cliente via DI (ver F-07).
+**Pasos.** Comando `dotnet run -- importar-catalogo` · paginación de Gutendex (~2.400
+peticiones, 1 req/s, reanudable por `next`) · normalización de autores e idiomas · filtro
+prioritario `languages=es` · idempotencia por `(Fuente, IdExterno)` · ejecución en el host,
+no en el arranque de la app · log de progreso. **La búsqueda del usuario nunca llama a
+Gutendex.**
 
-**Pasos restantes (incrementales, un PR por paso):**
-1. Extraer el panel de búsqueda de Open Library de `Estantes.razor` a un componente
-   `BuscadorLibrosPanel` (estado `buscando`, lista de `ResultadoLibro`, selección).
-2. Extraer el bloque de travesías a `ListaTravesias` con `[SupplyParameterFromQuery]`.
-3. Mover las reglas de validación duplicadas de servicios a `Models/` como métodos de
-   dominio ("normalizar") o un validador compartido.
-4. Renombrar/organizar: decidir si se adoptan carpetas `Domain/`+`Application/` o se
-   documenta el hexágono pragmático como decisión oficial (opción recomendada para no
-   romper namespaces y migraciones).
+**Aceptación.** Catálogo completo importado sin duplicados; repetir el comando no duplica
+filas; el proceso se puede cortar y reanudar.
 
-**Criterio de aceptación:** `Estantes.razor` solo orquesta componentes; ninguna vista
-contiene más de dos responsabilidades; build y tests en verde en cada paso.
+### R-31 — Búsqueda local
 
----
+**Pasos.** Columna `tsvector` generada (`to_tsvector('spanish', titulo || ' ' || autores ||
+' ' || materias)`) con índice GIN · `pg_trgm` para tolerancia a erratas · ranking por
+coincidencia, idioma y descargas · paginación · fallback `ILIKE` para SQLite en desarrollo.
 
+**Aceptación.** "quijote" y "quijtoe" encuentran la obra; respuesta < 150 ms con el catálogo
+completo; funciona sin conexión a Gutendex.
 
-### F-15 — Re-renders redundantes en `BuscadorLibros`
+### R-32 — Licencias y fuentes de archivo
 
-**Estado:** [ ] Pendiente · **Esfuerzo:** S · **Lugar:** `Components/Pages/BuscadorLibros.razor:87,102`
+**Problema.** Los textos de Gutenberg son dominio público, pero sus archivos llevan cabecera
+de licencia y marca registrada incompatibles con un producto de pago.
 
-**Pasos:** mover los cambios de estado previos al `await` para confiar en el re-render
-del circuito, o reducir a una sola `StateHasChanged`. Verificar el comportamiento del
-spinner y errores visibles.
+**Pasos.** Campo `Licencia` en `ObrasCatalogo` (`CC0`, `PublicDomain`, `PG`) · Standard Ebooks
+como fuente primaria de archivos · para títulos solo disponibles en Gutenberg, decisión
+documentada por obra antes de servirlos · nunca usar la marca "Project Gutenberg" en la UI ·
+`DOCS/licencias.md` con criterio y checklist de alta.
 
-**Criterio de aceptación:** los estados siguen visibles y no hay llamadas manuales redundantes.
+**Aceptación.** Ninguna obra se sirve sin licencia registrada; el checklist se aplica en la
+ingesta; la UI muestra autor, fuente y licencia.
 
----
+### R-33 — Descarga bajo demanda y caché compartida
 
-### F-16 — Falta "Salir" en el menú
+**Pasos.** Al abrir una obra del catálogo: descargar EPUB de la fuente, verificar `Sha256`,
+importar con el mismo pipeline (R-12) y guardar el resultado **una sola vez** por obra, no por
+usuario · `Libro` del usuario referencia `ObraCatalogoId` · progreso, reseñas y estante siguen
+siendo privados por usuario · si la descarga falla, mensaje y reintento manual.
 
-**Estado:** [ ] Pendiente · **Esfuerzo:** S · **Lugar:** `Components/Layout/MenuUsuario.razor`
+**Aceptación.** 50 usuarios leyendo la misma obra ocupan el espacio de una; borrar el libro de
+un usuario no elimina la obra cacheada; el progreso no se comparte.
 
-**Pasos:** añadir opción "Salir" que encapsule el formulario del POST `/Account/Logout`
-con confirmación visual; mantener la opción dentro de "Mi cuenta" funcionando igual para
-no cambiar el comportamiento actual.
+### R-34 — UI del catálogo
 
-**Criterio de aceptación:** el usuario cierra sesión desde el menú superior visible.
+Buscador separado del de Open Library · filtros por idioma y materia · "Añadir a mi estante" y
+"Leer ahora" · ficha con portada, autor, licencia y fuente · integración con el formulario de
+libro existente para no duplicar altas.
 
----
+### R-35 — Atribución y cumplimiento
 
-### F-17 — Auditoría formal de accesibilidad
-
-**Estado:** [ ] Pendiente · **Esfuerzo:** L · **Lugar:** global (App, CSS, ARIA)
-
-**Pasos:** pasar herramientas (axe/Lighthouse), revisar contraste AA en ambos temas,
-foco en modales (`ReconnectModal`, `AvisoBienvenida`), navegación por teclado,
-y probar en un móvil real (iOS Safari + Android Chrome). Registrar hallazgos aquí.
-
-**Criterio de aceptación:** informe con errores AA corregidos y demostración en móvil.
-
----
-
-### F-18 — Documentación desactualizada en AGENTS.md
-
-**Estado:** [ ] Pendiente · **Esfuerzo:** S · **Lugar:** `AGENTS.md`
-
-**Problema:** códigos de amigo son de **6** caracteres (`CodigoAmigoGenerator.cs:7`)
-y la suite tiene **64 métodos / 66 casos** (`tests/Otium.Tests`); el doc dice 8 y 36.
-También menciona Gemini ya no vigente y describe `CircuitBreaker`/caché como pendientes
-cuando ya existen.
-
-**Pasos:** actualizar estado real en `AGENTS.md` (fecha/auditoría 2026-10-28) y
-corregir cualquier sección afín.
-
-**Criterio de aceptación:** ningún dato del documento contradiga el código.
+Página `/licencias`, enlaces a la fuente, aviso de dominio público y texto de atribución en la
+ficha. Actualizar `/terminos` y `/privacidad` (F-03).
 
 ---
 
-### F-19 — Paginación de libros implementada pero sin usar
+## 6. Fase 3 — Monetización
 
-**Estado:** [ ] Pendiente · **Esfuerzo:** S · **Lugar:** `ILibroService.ObtenerDeUsuarioPaginadoAsync`
+| ID | Tarea | Prioridad | Esfuerzo | Depende de |
+|---|---|---|---|---|
+| R-40 | Planes, suscripciones y entitlements | P0 | L | R-01 |
+| R-41 | Cuotas efectivas y mensajes de límite | P0 | M | R-40 |
+| R-42 | Cobro con webhooks idempotentes | P0 | L | R-40 |
+| R-43 | Prueba gratuita y estados de cuenta | P1 | M | R-42 |
+| R-44 | Legal y RGPD | P0 | M | R-42 |
+| R-45 | Página de precios y portal del cliente | P1 | M | R-42 |
+| R-46 | Antifraude y abuso de cuotas | P1 | M | R-41 |
+| R-47 | Soporte y estado del servicio | P2 | S | R-04 |
 
-**Pasos:** decidir (a) usar paginación en `Estantes.razor` si la biblioteca crece, o
-(b) eliminar el método no usado (código muerto sin valor de prueba).
+### R-40 — Planes y entitlements
 
-**Criterio de aceptación:** no queda código sin uso y los listados grandes quedan paginados.
+**Modelo.** `Plan` (código, nombre, precio, límites) · `Suscripcion` (usuario, plan, estado,
+periodo, proveedor, id externo) · `UsoMensual` (usuario, mes, definiciones IA, importaciones,
+minutos leídos) · `IPlanService` como única fuente de verdad de límites.
+
+**Propuesta inicial** (ajustable): Gratis = 5 libros, 100 MB, 10 definiciones IA/día.
+Lector = 200 libros, 5 GB, 100 definiciones IA/día, catálogo completo, sin marca. Precio a
+validar, no fijar en código.
+
+**Aceptación.** Los límites se aplican en servicios, no en la UI; un usuario sin suscripción
+cae siempre en Gratis; cambiar de plan surte efecto sin reiniciar sesión.
+
+### R-41 — Cuotas efectivas
+
+Aplicar en `LibroService.AgregarAsync`, importador, `GlosarioService` y catálogo · respuesta
+tipada (`LimiteAlcanzado`) con mensaje en español y enlace a precios · nunca consumir cuota
+antes de una operación que puede fallar (F-01).
+
+### R-42 — Cobro
+
+**Recomendación:** Paddle como *Merchant of Record* (gestiona IVA UE y facturación) frente a
+Stripe + gestión propia. Checkout alojado, portal del cliente, webhooks con firma,
+`EventosWebhook` para idempotencia, estados `trial/active/past_due/canceled`, periodo de
+gracia de 3 días y degradación a Gratis (nunca borrado de datos).
+
+**Requisito no técnico:** alta fiscal como autónomo/empresa para poder facturar. Bloqueante
+administrativo, no de código.
+
+**Aceptación.** Un pago de prueba activa el plan en < 10 s; un evento duplicado no duplica la
+suscripción; un impago degrada sin perder libros.
+
+### R-43 — Prueba y estados
+
+14 días de prueba sin tarjeta (o con tarjeta, según conversión que se mida) · aviso 3 días
+antes del cobro · bloqueo suave al expirar (lectura sí, subida no) · historial de facturas.
+
+### R-44 — Legal y RGPD
+
+ToS · privacidad con encargados (Z.ai, Paddle, Brevo, Hetzner, Cloudflare) · proceso de
+retirada de contenido (DSA/DMCA) y correo dedicado · derecho de desistimiento de 14 días para
+contenido digital con renuncia expresa al acceso inmediato · cookies: solo esenciales, sin
+banner si no hay analítica de terceros · exportación y borrado ya existen (P1-4) y deben
+incluir las tablas nuevas · DPA firmados con proveedores.
+
+### R-45 — Precios y portal
+
+Página `/planes` con comparativa, FAQ y CTA · portal para cambiar plan, método de pago y
+facturas · enlace desde los límites alcanzados.
+
+### R-46 — Antifraude
+
+Verificación de correo antes de pagar (hoy el registro no la exige) · límite de cuentas por
+IP/dispositivo en el registro · cuota de IA por cuenta y por IP · detección de abuso de prueba
+gratuita · revisión manual de los primeros casos.
+
+### R-47 — Soporte
+
+Correo de soporte real (hoy `otium.lectura@gmail.com`), tiempos de respuesta publicados, FAQ y
+página de estado. Play Store exige contacto verificado.
 
 ---
 
-## 5. Seguimiento
+## 7. Fase 4 — TWA y Play Store
 
-Al cerrar cada hallazgo:
+| ID | Tarea | Prioridad | Esfuerzo | Depende de |
+|---|---|---|---|---|
+| R-50 | Preparar la web para TWA | P0 | S | R-04 |
+| R-51 | Proyecto Bubblewrap y firma | P0 | M | R-50 |
+| R-52 | Play Console y prueba cerrada | P0 | M | R-51 |
+| R-53 | Reglas de facturación en la app | P0 | S | R-42 |
+| R-54 | Integración de UX (back, splash, enlaces) | P1 | S | R-51 |
+| R-55 | Publicación y seguimiento | P1 | M | R-52 |
 
-1. Cambiar estado `[ ]` → `[x]` y añadir commit/PR de referencia.
-2. Correr `dotnet build Otium.csproj -c Release --nologo` y `dotnet test Otium.slnx -c Release --nologo`.
-3. Actualizar `AGENTS.md` si tocara arquitectura o configuración.
-4. Los hallazgos operativos (F-20) solo cierran con evidencia del propietario.
+### R-50 — Web lista para TWA
 
-Estados: `[ ]` Pendiente · `[~]` En curso · `[x]` Completado · `[!]` Bloqueado ·
-`[-]` Descartado/aceptado como riesgo.
+`manifest.json` con `start_url` dentro del *scope*, `display: standalone`, iconos 192/512 y
+maskable, `theme_color` · `/.well-known/assetlinks.json` con el SHA-256 de la clave de firma
+(servido como `application/json`) · service worker que no intercepte la navegación de la TWA ·
+`/privacidad` y eliminación de cuenta accesibles (Play las exige: ya existen).
+
+### R-51 — Bubblewrap y firma
+
+Proyecto TWA generado con Bubblewrap, `applicationId` definitivo, clave de firma en secrets de
+CI (nunca en el repo), `versionCode` incremental automático, build de AAB en cada tag. Keystore
+respaldado fuera del repositorio; perderla impide actualizar la app.
+
+### R-52 — Play Console
+
+Cuenta de desarrollador (25 USD único), verificación de identidad, ficha (textos, capturas,
+icono, gráfico), formulario de seguridad de datos, clasificación de contenido y política de
+privacidad. **Cuenta personal:** prueba cerrada con **12 testers durante 14 días continuos**
+antes de producción → arrancar en Fase 1, no en Fase 4.
+
+### R-53 — Facturación en la app
+
+La app solo autentica y lee; la compra se hace en la web. Revisar el programa *reader app* de
+Google si se quiere enlazar el checkout dentro de la app. Documentar la decisión y la fecha de
+revisión de la política.
+
+### R-54 — UX de la TWA
+
+Botón atrás gestionado por Blazor (historial) · splash y tema coherentes · enlaces externos
+abren navegador · descarga de EPUB desde la app con permiso de almacenamiento · aviso de
+requiere conexión.
+
+### R-55 — Publicación
+
+Rollout gradual (10 % → 50 % → 100 %), crash reporting, y revisión de reseñas durante las dos
+primeras semanas. Plan de respuesta a rechazos: la causa más común es la verificación de
+*asset links* o una ficha que aparenta ser solo una web.
+
+---
+
+## 8. Transversal y continuo
+
+| ID | Tarea | Fase |
+|---|---|---|
+| R-60 | Pruebas por fase; cobertura mínima 70 % de líneas en servicios nuevos | Todas |
+| R-61 | Documentación: `DOCS/lector.md`, `DOCS/despliegue.md`, `DOCS/licencias.md`, `DOCS/monetizacion.md`, `DOCS/marca.md`; actualizar `AGENTS.md` | Todas |
+| R-62 | Rendimiento: medir memoria por circuito, tiempo de importación y latencia de capítulo; presupuesto por operación | 1–3 |
+| R-63 | i18n residual (F-11) y textos legales coherentes (F-03) | 3–4 |
+| R-64 | Endurecer manejo de errores visibles (F-05, F-10, P2-13) | 1–3 |
+| R-65 | Accesibilidad global (F-17) | 1–4 |
+| R-66 | Revisión de dependencias y auditoría de paquetes en CI | Todas |
+
+---
+
+## 8.5 Fase 5 — Lectura compartida y mapas de personajes
+
+Objetivo: lo que ningún tracker gratuito hace bien y justifica renovar la suscripción. Ambas
+funciones se construyen sobre lo que ya existe en la Fase 1: `CapituloLibro.TextoPlano` y
+`ProgresoLectura.Porcentaje`. **Nada de esto es requisito para lanzar**; entra después de M4
+y se financian con los ingresos del plan Lector.
+
+Regla de oro: cualquier función social se diseña **spoiler-safe desde el modelo de datos**, no
+con un aviso en la UI. Si el filtro no está en la consulta, no existe.
+
+| ID | Tarea | Prioridad | Esfuerzo | Depende de |
+|---|---|---|---|---|
+| R-70 | Modelo de personajes y menciones | P1 | L | R-10 |
+| R-71 | Extracción asistida por IA con revisión | P1 | L | R-70 |
+| R-72 | Mapa de personajes spoiler-safe | P1 | L | R-71 |
+| R-73 | Clubes de lectura conjunta | P1 | L | R-13, R-40 |
+| R-74 | Hilos por capítulo con control de spoiler | P1 | M | R-73 |
+| R-75 | Moderación, privacidad y coste | P1 | M | R-73 |
+
+### R-70 — Modelo de personajes y menciones
+
+`PersonajesLibro` (`Id`, `LibroId`, `Nombre`, `Alias`, `Descripcion`, `PrimeraAparicion`,
+`Relevancia`, `Estado`) · `MencionesPersonaje` (`PersonajeId`, `CapituloId`, `Offset`,
+`Contexto`) · `RelacionesPersonaje` (`OrigenId`, `DestinoId`, `Tipo`, `PrimeraAparicion`).
+`PrimeraAparicion` en **índice de capítulo**, nunca en número de página: es lo único que
+sobrevive a un cambio de tipografía o de tamaño de fuente.
+
+**Aceptación.** Borrar el libro borra personajes, menciones y relaciones en cascada; el índice
+único `(LibroId, Nombre)` evita duplicados; exportación y borrado de cuenta lo incluyen.
+
+### R-71 — Extracción asistida por IA con revisión
+
+Pipeline en cola: por cada libro importado, extraer candidatos de `TextoPlano` (con ventana de
+capítulo para tener offsets reales) y pedir al modelo JSON con nombre, alias, descripción
+neutra y primera aparición. Todo candidato entra como `Estado = Pendiente`; el mapa público
+solo muestra `Confirmado`. Cuota separada y caché por `Sha256` del archivo: dos usuarios con
+el mismo EPUB de dominio público no pagan dos veces.
+
+**Aceptación.** Coste medido por libro y techo por plan; un fallo del modelo deja el libro
+legible (la función es opcional); reintento idempotente; ninguna descripción revela hechos
+posteriores a `PrimeraAparicion`.
+
+### R-72 — Mapa de personajes spoiler-safe
+
+Vista de grafo (SVG, sin librería pesada) con control "hasta el capítulo N", inicializado en el
+progreso real del usuario. Personajes y relaciones se filtran **en la consulta** por
+`PrimeraAparicion <= N`. Leyenda de tipos de relación, búsqueda y ficha lateral. En libros sin
+progreso, el control arranca en el capítulo 1 y avisa de que hay más.
+
+**Aceptación.** Con N=3 no se puede obtener por API ningún personaje que aparezca en el 4;
+inspeccionar el HTML o el JSON no revela nombres ocultos; el grafo funciona con 40 personajes
+en móvil sin bloquear el circuito.
+
+### R-73 — Clubes de lectura conjunta
+
+`Club` (`Id`, `Nombre`, `LibroId`, `CreadorId`, `CodigoInvitacion`, `FechaInicio`,
+`CalendarioJson`, `Privacidad`) · `MiembroClub` (`ClubId`, `UsuarioId`, `Rol`, `FechaAlta`) ·
+`ComentarioClub` (`ClubId`, `UsuarioId`, `CapituloIndice`, `Texto`, `CreadoUtc`). Un club
+pertenece a **un** libro y a un ritmo (capítulos o páginas por semana). Invitación por código
+de 8 caracteres, con límite de intentos y sin revelar si el club existe (mismo patrón que
+P1-6).
+
+**Aceptación.** Un club no puede leer archivos de sus miembros: solo comparte progreso y
+comentarios; el creador puede expulsar y cerrar; salir del club no borra el progreso personal;
+un usuario bloqueado no puede unirse.
+
+### R-74 — Hilos por capítulo con control de spoiler
+
+Cada capítulo tiene su hilo. Un usuario solo ve comentarios de capítulos que ya alcanzó
+(`ProgresoLectura`), y el servidor **no devuelve** los ocultos. Vista "mi siguiente capítulo"
+con el comentario destacado del grupo y resumen de quién va por dónde (sin porcentajes exactos
+si el usuario los oculta).
+
+**Aceptación.** Manipular el cliente no da acceso a comentarios de capítulos no leídos; el
+recuento agregado no permite inferir contenido; editar o borrar un comentario propio funciona
+y queda registrado.
+
+### R-75 — Moderación, privacidad y coste
+
+Reporte de comentarios, cola de revisión manual, límite de clubes por usuario según plan y
+cuota de IA del mapa de personajes separada de la del glosario. Actualizar `/privacidad`:
+qué ve un miembro del club, qué se conserva al salir y durante cuánto tiempo. El mapa de
+personajes es privado por defecto; compartirlo es una acción explícita.
+
+**Aceptación.** Un comentario reportado se oculta en < 24 h o queda en cola visible; el coste
+de IA de la fase está acotado por plan y medido en el panel; la política de privacidad
+describe clubes y mapas sin ambigüedad.
+
+---
+
+## 9. Hitos
+
+| Hito | Contenido | Criterio de salida |
+|---|---|---|
+| **M0 — Identidad** | Fase −1 (R-90..R-95) | Clearance favorable, dominio y correo con la marca nueva, build renombrado sin `Otium` visible y solicitud OEPM presentada |
+| **M1 — Lector local** | Fase 0 (R-01, R-03) + Fase 1 | Un EPUB real se sube, se lee, guarda progreso y genera glosario y travesía en local |
+| **M1.5 — Hábito** | Fase 1.5 | Rachas, recap y demo funcionando; la página de precios se puede enseñar sin pedir registro |
+| **M2 — Producción** | R-02, R-04..R-08 | App accesible por HTTPS en el dominio, con backups restaurados y alertas |
+| **M3 — Catálogo** | Fase 2 | Búsqueda local del catálogo y lectura de una obra pública sin intervención manual |
+| **M4 — Cobro** | Fase 3 | Un pago de prueba activa el plan; los límites se aplican en servicios |
+| **M5 — Play Store** | Fase 4 | TWA en producción con prueba cerrada superada |
+| **M6 — Diferenciación** | Fase 5 | Un club de lectura completo y un mapa de personajes que no revela nada del capítulo siguiente |
+
+Dependencias: **M0 → M1 → M1.5 → M2 → M3 → M4 → M5 → M6**. La prueba cerrada de Play arranca
+en M2 para que los 14 días no bloqueen M5. La rotación de credenciales (R-08) es requisito de
+M2, no de M5. M0 no se puede saltar: renombrar después de R-01 obliga a repetir el trabajo
+sobre `Otium.Data` y sobre la migración inicial de PostgreSQL.
+
+---
+
+## 10. Riesgos
+
+| Riesgo | Impacto | Mitigación |
+|---|---|---|
+| XSS a través del HTML del EPUB | Crítico | Allowlist estricta, sin CSS ni `class` del archivo, pruebas con vectores conocidos, CSP |
+| Copyright por archivos subidos | Alto | ToS, almacenamiento privado, sin compartir archivos, proceso de retirada, logs de subida |
+| Marca y licencia de Gutenberg | Alto | Standard Ebooks como fuente primaria (R-32); revisión por obra |
+| Coste de IA fuera de control | Alto | Cuotas por plan, caché por palabra, alerta de gasto diario, devolución de cuota en fallo (F-01) |
+| Rechazo en Play por "ser una web" | Medio | TWA con *asset links* verificados, ficha con capturas reales, no ocultar que hay web |
+| Pérdida de datos en la migración a PostgreSQL | Alto | Ensayo en staging, `pg_dump` previo, baseline documentado, restauración probada |
+| Blazor Server se queda sin memoria con sesiones largas | Medio | Medir en M2; límite de circuitos; reinicio programado; plan de migración a cliente propio si crece |
+| Crecimiento del almacenamiento | Medio | Límite por plan, deduplicación por `Sha256`, compartición de obras de catálogo |
+| Fuga de datos personales a Sentry | Medio | `SendDefaultPii = false` (ya configurado), revisión de eventos |
+| Colisión de marca u oposición de un tercero | Alto | Clearance formal (R-90) antes de comprar dominio o logo; registro OEPM (R-95); lista corta de nombres alternativos ya cribada |
+| Renombrar tarde, con usuarios reales | Medio | Un único renombrado en M0, antes de R-01; `301` desde el dominio antiguo y el dominio viejo apuntando durante 12 meses |
+| El mapa de personajes revela un spoiler | Crítico para la propuesta de valor | Filtro por `PrimeraAparicion` **en la consulta**, estado `Pendiente`/`Confirmado`, pruebas de API con N=3 y N=10 |
+| Mala conducta o spoilers deliberados en clubes | Medio | Reporte y moderación (R-75), hilos por capítulo, expulsión y bloqueo ya existentes |
+| Coste de IA de los mapas fuera de control | Medio | Caché por `Sha256` del EPUB, cuota separada del glosario, extracción solo de libros abiertos alguna vez |
+| Dependencia de una sola persona | Alto | Documentación operativa (R-61), runbooks de restauración y despliegue |
+
+---
+
+## 11. Capacidad y costes estimados (v1)
+
+| Concepto | Estimación |
+|---|---|
+| Usuarios | ≤ 100 registrados, 10–25 concurrentes |
+| Circuitos Blazor | 25 × ~200–400 KB ≈ 10 MB + runtime; 4 GB sobran |
+| Almacenamiento | 100 usuarios × 10 libros × 2 MB ≈ 2 GB; catálogo compartido ≈ 5–20 GB con caché selectiva |
+| Hetzner CX22 | ~5–6 €/mes |
+| Backblaze B2 | ~1 €/mes con 50 GB |
+| Dominio | ~12 €/año (`<nombre>.es` + `<nombre>.app`) |
+| Marca OEPM | ~150 € (clase 9) + ~50 € por clase adicional; EUIPO opcional ~850 € |
+| Play Console | 25 USD único |
+| Paddle | ~5 % + 0,50 € por transacción |
+| Z.ai GLM | Variable; presupuesto inicial 10–20 €/mes con cuotas activas |
+| Sentry / Uptime Kuma | 0 € en plan gratuito |
+
+La demo (R-27) no añade coste fijo: un EPUB empaquetado y sesiones anónimas de 24 h con cuota
+propia por IP. Su coste real es memoria de circuitos; se mide en M1.5 y se limita a 5 circuitos
+anónimos simultáneos.
+
+Coste fijo de operación: **~8–10 €/mes** antes de IA y comisiones.
+
+---
+
+## 12. Definition of Done por tarea
+
+- Compila en Release sin errores ni advertencias nuevas.
+- Prueba automatizada del flujo o procedimiento reproducible documentado.
+- Autorización por propietario verificada si toca datos de usuario.
+- Validación de entrada en la frontera del servicio, no solo en la UI.
+- Migración nueva si cambia el modelo; nunca editar una aplicada.
+- Sin secretos, binarios ni bases de datos en el repositorio.
+- Documentación actualizada (`AGENTS.md` o `DOCS/`) si cambia arquitectura o configuración.
+- Sin `async void`, sin `catch {}` vacío y sin `.Result`/`.Wait()`.
+
+---
+
+## 13. Seguimiento
+
+1. Estado por tarea: `[ ]` pendiente · `[~]` en curso · `[x]` completada · `[!]` bloqueada.
+2. Al cerrar: enlace al commit/PR y una línea de evidencia.
+3. Las tareas de la Fase 0 que ya existen en `DOCS/hallazgos.md` (F-02, F-06, F-09, F-14, F-20) se
+   marcan allí como absorbidas por este plan para no duplicar trabajo.
+4. Revisión del roadmap al cerrar cada hito: lo no validado por usuarios reales se recorta,
+   no se acumula.
+5. La Fase −1 (R-90..R-95) se ejecuta antes de R-01. Si la clearance de R-90 no es favorable,
+   se elige la siguiente opción de la lista corta antes de escribir una línea de código:
+   cambiar de nombre después de crear `Otium.Data` y la migración inicial duplica el trabajo.

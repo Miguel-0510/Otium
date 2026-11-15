@@ -1,39 +1,46 @@
 # Otium
 
-Aplicación web personal de diario de lectura y gestión de biblioteca. Stack: ASP.NET Core `net10.0`, Blazor Web App (InteractiveServer), SQLite + EF Core, Identity.
+Diario de lectura, biblioteca y **lector de libros integrado**.
 
-## Funciones principales
+> **Nombre comercial en evaluación.** `Otium` colisiona con competidores del mismo nicho y se va a
+> sustituir, pero la decisión no está cerrada: hay lista corta y evidencia en
+> [`DOCS/marca.md`](DOCS/marca.md). La candidata principal es **Elicona**, sin ninguna inversión en
+> marca hasta que R-90 cierre el nombre. El código, los ensamblados y la carpeta siguen usando
+> `Otium` hasta el renombrado (R-93).
+
+Otium reúne dos cosas que normalmente viven separadas: el cuaderno donde anotas lo que lees y
+el sitio donde lo lees. Trae tus EPUB sin DRM o lee obras de dominio público, con progreso
+sincronizado, glosario en contexto y travesías de lectura.
+
+- **Stack:** ASP.NET Core `net10.0`, Blazor Web App (`InteractiveServer`), Identity + cookies,
+  EF Core 10 con SQLite (desarrollo) y PostgreSQL (producción).
+- **Cliente:** web + PWA + TWA en Play Store.
+- **Escala objetivo:** ≤ 100 usuarios registrados, 10–25 circuitos concurrentes.
+
+## Estado
+
+| Área | Estado |
+|---|---|
+| Biblioteca, estantes, reseñas, travesías, glosario, amigos | Funcional (beta privada) |
+| Seguridad P0/P1 (registro, recuperación, autorización, rate limiting, respaldos) | Cerrado |
+| Lector EPUB, catálogo, cobro, TWA | **Planificado, no implementado** |
+
+El plan completo, con fases, tareas e hitos, está en [`ROADMAP.md`](ROADMAP.md). El índice de
+documentación y qué está obsoleto, en [`DOCS/README.md`](DOCS/README.md).
+
+## Funciones actuales
 
 - Registro e inicio de sesión con ASP.NET Core Identity.
-- Estantes personales: `Leyendo`, `Leído`, `Quiero Leer`.
-- Búsqueda de libros por título o autor en Open Library con portadas.
+- Estantes `Leyendo`, `Leído`, `Quiero leer`.
+- Búsqueda en Open Library con portadas.
 - Puntuación de 1 a 5 y reseñas.
-- "Travesías": entradas de lectura con páginas y resumen.
-- Glosario personal con definiciones generadas por GLM-5.3-Flash (Z.ai), con caché y circuit breaker.
-- Amigos mediante código alfanumérico, solicitudes, aceptar/rechazar, eliminar, bloquear.
-- Compartir estantes opcional (desactivado por defecto).
-- Tema claro/oscuro.
-- PWA instalable con página de aviso sin conexión.
-- Eliminación de cuenta y exportación de datos (JSON).
-- Health check en `/health`.
-- Telemetría de errores con Sentry (solo si `Sentry:Dsn` está configurado).
-- `robots.txt` y `.well-known/security.txt`.
-- Páginas de `/terminos` y `/soporte`.
+- Travesías: entradas con páginas y resumen.
+- Glosario personal con definiciones de GLM-5.3-Flash (Z.ai), con caché y circuit breaker.
+- Amigos por código de 6 caracteres; compartir estantes opcional; bloquear.
+- Tema claro/oscuro, PWA instalable, eliminación de cuenta y exportación de datos.
+- `/health`, Sentry opcional, `robots.txt` y `security.txt`.
 
-## Stack
-
-| Elemento | Valor |
-|---|---|
-| Framework | ASP.NET Core `net10.0` |
-| UI | Blazor Web App, `InteractiveServer` |
-| Autenticación | ASP.NET Core Identity + cookies |
-| Base de datos | SQLite + EF Core |
-| APIs externas | Open Library, Z.ai (GLM-5.3-Flash), Brevo HTTP API |
-| PWA | `manifest.json`, `sw.js`, `instalar.js` |
-
-## Comandos
-
-Desde la carpeta del proyecto:
+## Arranque rápido
 
 ```powershell
 dotnet restore
@@ -55,58 +62,45 @@ dotnet ef migrations add <Nombre>
 dotnet ef database update
 ```
 
-## Configuración y secretos
+## Configuración
 
-Las claves se leen de variables de entorno / User Secrets / `appsettings.Development.json` (ignorada por Git):
+Los valores se leen de variables de entorno, User Secrets o `appsettings.Development.json`
+(ignorado por Git).
 
-- `ConnectionStrings:DefaultConnection` - SQLite o PostgreSQL.
-- `DataProtection:KeysPath` - persistencia opcional de claves en filesystem; sin ella se usa la tabla `DataProtectionKeys` de la base de datos.
-- `Brevo:ApiKey` - API key v3 de Brevo (empieza por `xkeysib-`; **no** es la SMTP key).
-- `Brevo:SenderEmail` / `Brevo:SenderName` - remitente verificado y nombre visible.
-- `Brevo:Endpoint` - endpoint HTTP; por defecto `https://api.brevo.com/v3/smtp/email`.
-- `Definiciones:ApiKey` / `Definiciones:Endpoint` / `Definiciones:Modelo` - servicio de definiciones del glosario (endpoint OpenAI-compatible: Z.ai por defecto `https://api.z.ai/api/paas/v4/` con `glm-5.3-flash`, u OpenRouter `https://openrouter.ai/api/v1/` con `z-ai/glm-5.3-flash`; alias de entorno `GLM_API_KEY`, `ZAI_API_KEY` u `OPENROUTER_API_KEY`).
-- `Sitio:UrlPublica` - URL pública para enlaces de recuperación.
-- `Seguridad:PermitirHttp` - permite HTTP en modo Production (Tailscale).
+| Clave | Uso |
+|---|---|
+| `ConnectionStrings:DefaultConnection` | SQLite o PostgreSQL (detecta el proveedor por la cadena) |
+| `DataProtection:KeysPath` | Llavero en filesystem; si no se define, se persiste en la base |
+| `Definiciones:ApiKey` | API key de Z.ai (alias `GLM_API_KEY`, `ZAI_API_KEY`, `OPENROUTER_API_KEY`) |
+| `Definiciones:Endpoint` / `Definiciones:Modelo` | Endpoint compatible OpenAI y modelo (`glm-5.3-flash`) |
+| `Brevo:ApiKey` | API key v3 (`xkeysib-`); no es una SMTP key |
+| `Brevo:SenderEmail` / `Brevo:SenderName` | Remitente verificado |
+| `Sitio:UrlPublica` | URL externa para enlaces de recuperación |
+| `Seguridad:PermitirHttp` | Permite HTTP en `Production` (modo Tailscale) |
+| `Sentry:Dsn` | Opcional; sin él no se envía telemetría |
 
-El correo se envía con un `POST` a la API HTTP de Brevo. Configura `Brevo:SenderEmail` con un remitente verificado en Brevo y `Brevo:ApiKey` con una API key v3. En Render, define `Brevo__ApiKey`, `Brevo__SenderEmail`, `Brevo__SenderName` y `Brevo__Endpoint`.
-
-La aplicación acepta `Smtp:Password`, `Smtp:SenderEmail` y `Smtp:SenderName` como respaldo temporal de configuración, pero el valor de `Smtp:Password` debe ser una **API key v3 de Brevo**, no una SMTP key. Lo recomendable es migrar a las claves `Brevo:*`.
-
-Nunca commitear secretos ni archivos `.db`.
+**Nunca** se commitean secretos, `appsettings.Development.json` ni archivos `.db`.
 
 ## Despliegue
 
-- **Local/Tailscale:** ejecutar en `Development` o `Production` con `Seguridad__PermitirHttp=true`. Kestrel escucha en todas las interfaces.
-- **VPS Oracle:** `Production`, Kestrel en `http://127.0.0.1:5000`, proxy inverso (Caddy/Nginx) con TLS, `Seguridad__PermitirHttp=false`, `Proxy__KnownProxies__0=127.0.0.1`.
-- **Render:** `Production`; usar HTTPS, `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`, PostgreSQL y `Brevo__ApiKey`. No se necesitan puertos SMTP.
-
-El proyecto no está listo para lanzamiento público hasta completar los hallazgos P2 (CI, respaldos automáticos, validación de entrada, endurecimiento operativo) descritos en `AGENTS.md`.
-
-## Variables de entorno en Render
-
-Doble guion bajo (`__`) = separador de nivel de configuración de .NET:
-
-```bash
-ASPNETCORE_ENVIRONMENT=Production
-ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
-ConnectionStrings__DefaultConnection="postgresql://usuario:clave@host:puento/basededatos"
-Definiciones__ApiKey="<API key de OpenRouter/Z.ai>"        # alias: OPENROUTER_API_KEY, ZAI_API_KEY, GLM_API_KEY
-Definiciones__Endpoint="https://openrouter.ai/api/v1/"     # opcional; por defecto Z.ai
-Definiciones__Modelo="z-ai/glm-5.3-flash"                  # opcional; por defecto glm-5.3-flash
-Brevo__ApiKey="xkeysib-..."                                # API key v3 de Brevo (no SMTP key)
-Brevo__SenderEmail="remitente@verificado.tld"
-Brevo__SenderName="Otium"
-Brevo__Endpoint="https://api.brevo.com/v3/smtp/email"      # opcional
-Seguridad__PermitirHttp=false                              # exigir HTTPS en Production
-```
-
-Opcionales: `DataProtection__KeysPath` (si se usa un disco persistente; sin él, el llavero se guarda en la tabla `DataProtectionKeys`), `Sentry:Dsn`, `Proxy__KnownProxies__0` y `Sitio__UrlPublica` (para enlaces de recuperación).
+- **Hoy:** local/Tailscale, Render y un VPS Oracle heredado.
+- **Objetivo:** Hetzner CX22 + Docker Compose (Caddy, app, PostgreSQL) + restic → Backblaze B2.
+  Detalle en [`DOCS/despliegue.md`](DOCS/despliegue.md) y [`DOCS/respaldos.md`](DOCS/respaldos.md).
 
 ## Documentación
 
 | Documento | Contenido |
 |---|---|
-| [`DOCS/requerimientos_otium.md`](DOCS/requerimientos_otium.md) | Requerimientos técnicos, diagramas UML (casos de uso, secuencia y arquitectura en Mermaid) |
-| [`DOCS/ficha-tecnica.md`](DOCS/ficha-tecnica.md) | Arquitectura, servicios integrados, seguridad y calidad |
-| [`DOCS/respaldos.md`](DOCS/respaldos.md) | RPO/RTO y procedimiento de restauración de la base de datos |
-| [`AGENTS.md`](AGENTS.md) | Guía de trabajo, auditoría técnica y convenciones para agentes |
+| [`DOCS/README.md`](DOCS/README.md) | Índice, estado y política documental |
+| [`ROADMAP.md`](ROADMAP.md) | Plan por fases, tareas, hitos y riesgos |
+| [`DOCS/producto.md`](DOCS/producto.md) | Alcance, no-objetivos y modelo de negocio |
+| [`DOCS/lector.md`](DOCS/lector.md) | Motor de lectura EPUB y progreso |
+| [`DOCS/catalogo.md`](DOCS/catalogo.md) | Catálogo de dominio público |
+| [`DOCS/monetizacion.md`](DOCS/monetizacion.md) | Planes, cuotas y cobro |
+| [`DOCS/despliegue.md`](DOCS/despliegue.md) | Infraestructura y operación |
+| [`DOCS/respaldos.md`](DOCS/respaldos.md) | RPO/RTO y restauración |
+| [`DOCS/licencias.md`](DOCS/licencias.md) | Licencias y atribuciones |
+| [`DOCS/marca.md`](DOCS/marca.md) | Nombre, evidencia y registro |
+| [`AGENTS.md`](AGENTS.md) | Arquitectura actual y convenciones de trabajo |
+| [`CHANGELOG.md`](CHANGELOG.md) | Historial de cambios |
+| [`DOCS/hallazgos.md`](DOCS/hallazgos.md) | Histórico de deuda técnica (F-xx) |

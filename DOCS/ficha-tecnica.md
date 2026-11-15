@@ -1,6 +1,13 @@
 # Ficha técnica — Otium
 
-> Estado: beta privada. Última actualización: 2026-10-28. Fuente de verdad: `C:\Proyectos\Otium` (rama `main`).
+> **Documento histórico.** Foto del estado del 2026-10-28, antes del plan de producto
+> (`../ROADMAP.md`). No describe el producto objetivo: no incluye lector EPUB, catálogo,
+> monetización, TWA ni el despliegue en Hetzner.
+>
+> - Lo vigente del sistema actual: [`../AGENTS.md`](../AGENTS.md) §2 y §6.
+> - Lo objetivo: [`producto.md`](producto.md), [`lector.md`](lector.md),
+>   [`despliegue.md`](despliegue.md).
+> - Se conserva por trazabilidad; solo se corrigen errores de hecho.
 
 ## 1. Arquitectura y tech stack
 
@@ -76,7 +83,7 @@
 | Métrica | Valor actual |
 |---|---|
 | Compilación Release | 0 errores, 0 advertencias |
-| Suite automatizada | xUnit + `WebApplicationFactory` sobre SQLite temporal; **65 tests** (registro duplicado, recuperación de contraseña, autorización por propietario, eliminación de cuenta, compartición de estantes, validación, cliente de definiciones, diagnóstico de configuración, rate limiting) |
+| Suite automatizada | xUnit + `WebApplicationFactory` sobre SQLite temporal; **68 tests** (registro duplicado, recuperación de contraseña, autorización por propietario, eliminación de cuenta, compartición de estantes, validación, cliente de definiciones, diagnóstico de configuración, rate limiting) |
 | Cobertura | Mínimo exigido 70 % de líneas (`coverlet.runsettings`) |
 | Paquetes vulnerables | 0 (`dotnet list package --vulnerable --include-transitive`) |
 | CI | Ok (build + test + cobertura + auditoría) |

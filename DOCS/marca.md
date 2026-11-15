@@ -1,0 +1,200 @@
+# Marca — nombre en evaluación
+
+Registro de la búsqueda de nombre, la evidencia recogida y lo que queda por hacer.
+Complementa la **Fase −1** de [`../ROADMAP.md`](../ROADMAP.md) (R-90..R-95).
+
+- **Fecha de la investigación:** 2026-11-15
+- **Decisión:** **pendiente**. `Otium` queda descartado por colisión de nicho. Hay tres rondas de
+  criba y una lista corta de finalistas; la candidata principal es **Elicona**, pero **no se ha
+  elegido nombre**.
+- **Estado:** criba hecha; **elección y clearance formal pendientes (R-90)**
+- **Alcance:** este documento es evidencia técnica, no asesoría legal
+
+---
+
+## 1. Criterios
+
+1. Guardar la mística de la lectura (ocio, silencio, Musas, biblioteca, clásico).
+2. Ser **muy fácil de recordar y escribir** en español, sin tildes ni dígrafos problemáticos.
+3. No estar registrado **en el mismo nicho** (software de lectura, libros, SaaS cultural).
+4. Disponibilidad razonable de dominio y de nombre en tiendas.
+5. Pronunciable en español e italiano; legible en inglés.
+
+---
+
+## 2. Por qué no se puede seguir llamando Otium
+
+| Tercero | Qué es | Riesgo |
+|---|---|---|
+| `otium-library.com` | *book tracker and reading journal*: PWA en React, Supabase, cobro con Paddle, Open Library y Google Books, 10 idiomas, 4,99 $/mes o 99 $ de por vida, Trustpilot 4.3 | **Colisión directa de nicho y de categoría** |
+| `otiumbookshelf.com` | Estanterías, notas, progreso, "pasaporte de lectura", clubes de lectura lenta, rachas | Colisión directa |
+| `otiumfeed.it` | Producto italiano de lectura | Colisión en el mercado italiano |
+| USPTO `OTIUM` (serial 50156419, clase 041, Otium Holdco LLC, estado 2026-10-12) | Solicitud de marca en servicios culturales/educativos | Riesgo de oposición y de confusión de marca |
+
+Conclusión: `Otium` no es defendible ni diferenciable. El coste de renombrar crece con cada
+tabla nueva de la base de datos, así que el renombrado se hace **antes** de la Fase 0.
+
+---
+
+## 3. Candidatos descartados
+
+| Nombre | Motivo del descarte |
+|---|---|
+| **Estrofa** | Lector de ebooks antiguo con ese nombre; el `.com` está tomado |
+| **Florilegio** | App iOS `Florilegio` (App Store, id 6789623560) y marca de una librería de Florencia |
+| **Scholia** | Existe "Scholia: Reading Companion", misma categoría |
+| **Lacuna** | Varias apps (música con IA, grupo, juego, aventura) y `.com` tomado |
+| **Breviario** | Dominado por apps litúrgicas; confusión semántica religiosa |
+| **Marginalia, Colofón, Vitela, Tintero, Remanso, Sosiego, Glosa** | Todos los `.com` registrados; sin señal de disponibilidad |
+| **Flyleaf, Dogear, Endpaper, Colophon** | `.com` registrados y varios productos editoriales activos |
+| **Camena, Lucerna, Scrinium, Holganza, Lectio** | `.com` registrados; sin diferenciación en tiendas |
+| **Incunable** | Solo un resultado irrelevante en App Store, pero `.com` tomado y evocación "libro antiguo" demasiado literal |
+
+Regla aplicada: un `.com` tomado no es bloqueante por sí solo, pero junto con una app del mismo
+nicho sí lo es. Ninguno de los descartados pasaba ambas pruebas.
+
+---
+
+## 3.1 Alternativas cribadas (ronda 2, 2026-11-15)
+
+Comprobación: RDAP de Verisign para `.com`, DNS (`NS`) para `.es` y `.app`, iTunes Search API
+para App Store ES y búsqueda pública de Play Store ES. ✅ libre · ✗ registrado · ⚠️ existe pero
+en otro sector.
+
+| Nombre | Evocación | `.com` | `.es` | `.app` | Apps en el nicho |
+|---|---|---|---|---|---|
+| **Alciona** | Alción/Alcyone: los "días de alción", la calma del mar; estrella de las Pléyades | ✗ | ✅ | ✅ | Ninguna (0 iOS, 0 Play) |
+| **Filomela** | Filomela se convierte en ruiseñor: el canto como forma de lectura | ✗ | ✅ | ✅ | Ninguna |
+| **Aganipe** | Fuente de las Musas en el Helicón, junto a Elicona | ✅ | ✅ | ✅ | Ninguna |
+| **Calirroe** | Náyade de la fuente "de bello fluir" | ✅ | ✅ | ✅ | Ninguna |
+| **Luscinda** | Pastora del Quijote; *luscinia* = ruiseñor | ✅ | ✅ | ✅ | Ninguna |
+| **Melibea** | La amada de Calisto, en *La Celestina* | ✗ | ✅ | ✅ | Ninguna |
+| **Holganza** | El ocio con el que se lee: traducción exacta de *otium* | ✗ | ✅ | ✅ | Ninguna |
+| **Canturia** | Canto llano, melodía que se repite | ✗ | ✅ | ✅ | Ninguna |
+| **Amarilis** | Pastora de la novela bucólica | ✗ | ✅ | ✅ | Solo ruido sin relación |
+| **Pieria** | Región de las Musas y su fuente | ✗ | ✅ | ✗ | Una app educativa ajena |
+| **Egeria** | Ninfa que inspira; en español, la que sugiere ideas | ✗ | ✗ | ✅ | Ninguna |
+| **Eolia** | Isla de los vientos y el arpa eolia | ✗ | ✗ | ✅ | Una app de música |
+| **Clorinda** | Guerrera de *Jerusalén liberada* | ✗ | ✅ | ✅ | Radios de una ciudad argentina |
+| **Cirra** | Puerto sagrado de Delfos | ✗ | ✅ | ✗ | App social y del tiempo |
+| **Celandia** | Inventada: "cel" + "landia", país imaginario | ✅ | ✅ | ✅ | Sin comprobar en iOS |
+| **Endecha** | Lamento cantado de la tradición oral | ✗ | ✅ | ✅ | Sin comprobar en iOS |
+| **Robleda** | Robledal, bosque de roble | ✗ | ✅ | ✅ | Sin comprobar en iOS |
+| **Alborada** | Canción del amanecer | ✗ | ✗ | ✗ | App de finanzas |
+| **Luminaria** | Luz que se deja encendida | ✗ | ✗ | ✗ | Varias, ajenas |
+| **Atalaya** | Torre para mirar lejos | ✗ | ✗ | ✗ | Varias, ajenas |
+| **Mirador** | Balcón sobre el paisaje | ✗ | ✗ | ✗ | Varias, ajenas |
+| **Quietud** | Calma absoluta | ✗ | ✗ | ✅ | Apps de meditación |
+| **Tregua** | Pausa, descanso | ✗ | ✗ | ✗ | Productividad y finanzas |
+| **Zenobia** | Reina de Palmira | ✗ | ✗ | ✅ | Ruido (juegos "Zenonia") |
+| **Nereida** | Ninfa del mar | ✗ | ✗ | ✅ | Una app de aventura |
+
+**Descartadas por colisión directa:** Eluvia (app de productividad), Somnia (apps de sueño),
+Cantiga (varios resultados en Play), Ondina (app de vídeo), Salmodia y Hontanar (`.es` y
+`.app` ocupados y sonido más litúrgico o rural que lector).
+
+**Conclusión de la ronda 2.** Solo seis nombres reúnen las tres condiciones fuertes (`.es` y
+`.app` libres, `.com` libre o irrelevante, cero apps): **Alciona, Filomela, Aganipe, Calirroe,
+Luscinda y Melibea**. `Aganipe`, `Calirroe` y `Luscinda` conservan además el `.com`.
+
+## 3.2 Ronda 3 — palabras cortas en español, griego y latín (2026-11-15)
+
+Criterio: 2–3 sílabas, sonoridad abierta, sin apps en el nicho. Comprobado igual que la ronda 2.
+
+| Nombre | Origen y significado | Sílabas | `.com` | `.es` | `.app` | Apps | Veredicto |
+|---|---|---|---|---|---|---|---|
+| **Ismene** | Ἰσμήνη, hija de Edipo; suena a "sabia" | 3 | ✗ | ✅ | ✅ | 0 | **Apto** |
+| **Kelaino** | Κελαινώ, "la oscura", una de las Pléyades | 3 | ✗ | ✅ | ✅ | 0 | **Apto** |
+| **Krissa** | Crisa, el puerto sagrado de Delfos | 2 | ✗ | ✅ | ✅ | 0 | **Apto** |
+| **Ianthe** | Ἴανθε, "violeta"; ninfa del mar | 3 | ✗ | ✅ | ✅ | 0 (Play: app personal) | **Apto** |
+| **Laelia** | Nombre latino; laelia es una orquídea | 3 | ✗ | ✅ | ✗ | 0 | Apto con `.es` |
+| **Filis** | Pastoral latina; suena a *filis*/*file* | 2 | ✗ | ✅ | ✗ | 0 | Dudoso por fonética inglesa |
+| **Estío** | El verano, en español literario | 2 | ✗ | ✅ | ✗ | 0 en el nicho | Apto sin tilde en el dominio |
+| **Rivus** | Latín: arroyo, corriente | 2 | ✗ | ✗ | ✗ | 1 (Play) | Descartado |
+| **Lilaia** | Ninfa y fuente cerca de Delfos | 3 | ✗ | ✅ | ✅ | 1 exacta (iOS) | Descartado |
+| **Aulis** | Puerto donde parte la flota griega | 2 | ✗ | ✅ | ✗ | ruido | Descartado |
+| **Naias** | Náyade, ninfa de agua | 2 | ✗ | ✅ | ✅ | hotel y apps | Descartado |
+| **Elea** | Colonia griega; escuela de Parménides | 2 | ✗ | ✅ | ✗ | software educativo | Descartado |
+| **Linnea** | Nombre botánico nórdico | 3 | ✗ | ✗ | ✅ | apps de salud | Descartado |
+| **Thea** | Θεά, "diosa" | 1 | ✗ | ✗ | ✗ | — | Descartado (nombre común) |
+| **Ione** | Ἰόνη, ninfa marina | 2 | ✗ | ✗ | ✗ | — | Descartado |
+| **Aeda** | Aeda: la mujer que canta la epopeya | 2 | ✗ | ✗ | ✗ | — | Descartado |
+
+**Hallazgo de la ronda 3.** Las palabras cortas y bonitas del diccionario están prácticamente
+agotadas en `.es` y `.app`: de 35 comprobadas, solo cinco pasan todas las pruebas. Los nombres de
+dos sílabas son los más castigados por el registro masivo; los griegos de tres sílabas con
+terminación en vocal son los que sobreviven.
+
+**Finalistas cortos:** `Ismene`, `Kelaino`, `Krissa`, `Ianthe` y `Laelia`.
+
+
+
+## 4. Candidata principal — Elicona
+
+> Se analiza aquí por ser la mejor situada de la lista corta, **no porque esté elegida**. La
+> comparación con las demás finalistas está en §3.1 y §3.2.
+
+**Qué evoca.** El monte Helicón, en Beocia, morada de las Musas y de la fuente Hipocrene: el
+lugar donde nace la inspiración poética. Es palabra patrimonial en español e italiano, suena
+clásica y no significa "libro": no encasilla el producto si mañana crece hacia audiolibros,
+clubes o librería.
+
+**Por qué funciona.** Tres sílabas, sin tildes, sin ambigüedad fonética en español; se escribe
+igual en español, italiano e inglés; no compite con un término genérico del sector.
+
+### 4.1 Evidencia recogida (2026-11-15)
+
+| Comprobación | Método | Resultado |
+|---|---|---|
+| Apps iOS España | iTunes Search API, `country=es`, `entity=software` | Sin resultados |
+| Apps iOS EE. UU. | iTunes Search API, `country=us` | Sin resultados (solo apps con nombres parecidos, de otro sector) |
+| Google Play | Búsqueda pública `elicona` | Sin app de lectura con ese nombre |
+| `elicona.com` | DNS + contenido | Sala de arte y música japonesa (`ART SPACE ELICONA`); sector distinto |
+| `elicona.es` | DNS `NS` | `NXDOMAIN` |
+| `elicona.app` | DNS `NS` | `NXDOMAIN` |
+| `elicona.com.es`, `getelicona.com`, `eliconareader.com`, `elicona.io`, `elicona.page`, `elicona.club`, `elicona.studio` | DNS `NS` | `NXDOMAIN` |
+| Búsqueda web del nicho | `"elicona" + app/lectura/libros/ebook` | Sin resultados en el nicho; solo referencias mitológicas y bibliográficas |
+
+`NXDOMAIN` indica ausencia de delegación DNS: el dominio está libre o aparcado sin resolver.
+**No equivale a disponible para registro**: hay que confirmarlo en el registrador y comprarlo.
+
+### 4.2 Lo que la evidencia **no** cubre
+
+- Registro de marca en OEPM, EUIPO o USPTO (clases 9, 41, 42). Es R-90.
+- Las bases de marcas consultadas por script (`trademarks.justia.com`, `uspto.report`,
+  `tmsearch.uspto.gov`) responden `403` a peticiones automáticas, así que **la búsqueda formal
+  es manual**. La ausencia de resultados aquí no demuestra nada sobre el registro.
+- Denominaciones sociales y nombres comerciales en el registro mercantil.
+- Uso no registrado en otros sectores que pudiera oponerse por notoriedad.
+- Disponibilidad real de handles en redes sociales (se comprueba al reservarlos, R-92).
+
+---
+
+## 5. Acciones pendientes
+
+| # | Acción | Responsable | Estado |
+|---|---|---|---|
+| 1 | Cerrar la elección del nombre entre las finalistas (§3.1, §3.2) | Propietario | Pendiente (R-90) |
+| 2 | Clearance formal OEPM/EUIPO/USPTO en clases 9, 41 y 42 (R-90) | Propietario / asesor | Pendiente |
+| 3 | Comprar `<nombre>.es` y `<nombre>.app` (y el `.com` defensivo si es trivial) | Propietario | Bloqueada por 1 |
+| 4 | Reservar handles `@<nombre>` (R-92) | Propietario | Bloqueada por 1 |
+| 5 | Logotipo, paleta y set de iconos PWA (R-94) | Diseño | Bloqueada por 1 |
+| 6 | Solicitud de marca OEPM, clases 9 y 42 (R-95) | Propietario | Bloqueada por 1 |
+| 7 | Renombrar solución, ensamblados, textos y configuración (R-93) | Desarrollo | Bloqueada por 1 |
+
+**Nada de esto se ejecuta hasta que R-90 cierre el nombre.** Si la clearance de la primera
+finalista no es favorable, se pasa a la siguiente antes de gastar en dominio, logo o renombrado:
+renombrar después de crear el esquema PostgreSQL duplica el trabajo.
+
+---
+
+## 6. Reglas de uso del nombre (para el código y la documentación)
+
+- **Mientras el nombre no esté cerrado:** el producto se llama `Otium` en código y en carpeta. No
+  se crean dominios, correos, handles, paquetes ni variables con ninguna de las finalistas, y no
+  se renombra nada.
+- **Tras R-90:** el nombre visible y los identificadores técnicos usan el nombre elegido, sin
+  mezclar candidatas en la UI ni en la configuración.
+- En textos legales: el nombre comercial es el elegido; la titularidad y el NIF van en el aviso
+  legal, nunca en el repositorio.
+- El dominio antiguo, si existe, se mantiene con `301` durante 12 meses tras el lanzamiento.
