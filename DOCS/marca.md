@@ -4,7 +4,7 @@ Registro de la búsqueda de nombre, la evidencia recogida y lo que queda por hac
 Complementa la **Fase −1** de [`../ROADMAP.md`](../ROADMAP.md) (R-90..R-95).
 
 - **Fecha de la investigación:** 2026-11-15
-- **Decisión:** **pendiente**. `Otium` queda descartado por colisión de nicho. Hay tres rondas de
+- **Decisión:** **pendiente**. `Otium` queda descartado por colisión de nicho. Hay cinco rondas de
   criba y una lista corta de finalistas; la candidata principal es **Elicona**, pero **no se ha
   elegido nombre**.
 - **Estado:** criba hecha; **elección y clearance formal pendientes (R-90)**
@@ -127,12 +127,94 @@ terminación en vocal son los que sobreviven.
 
 **Finalistas cortos:** `Ismene`, `Kelaino`, `Krissa`, `Ianthe` y `Laelia`.
 
+## 3.3 Ronda 4 — ocho palabras propuestas (2026-11-15)
+
+Método idéntico: RDAP de Verisign (`.com`), DNS `NS` (`.es`, `NXDOMAIN` = sin delegación),
+RDAP de CentralNic y DNS (`.app`), iTunes `country=es|us`, Play Store y búsqueda web del nicho.
+
+| Nombre | Significado | `.com` | `.es` | `.app` | Colisión encontrada | Veredicto |
+|---|---|---|---|---|---|---|
+| **Verbum** | Latín: palabra, verbo | Ocupado (1994) | Ocupado | Ocupado | `verbum.com`: plataforma de estudio bíblico de Faithlife, con apps iOS/Play | **Descartado** |
+| **Pensum** | Latín: peso, tarea, lana por hilar; en América, plan de estudios | Ocupado (2003) | **Libre** | Ocupado | `Pensum`, `PensumRD`, `Pensual`, `MiPensum`, `Pensum Calorie Tracker`; todas educativas | **Descartado** (nicho educativo saturado) |
+| **Solium** | Latín: trono, asiento; también bañera | Ocupado (CSC, 1999) | Ocupado | Ocupado | `Taenia solium` es la tenia del cerdo; Solium Capital es de Morgan Stanley | **Descartado** (parásito + marca financiera) |
+| **Nemus** | Latín: bosque, arboleda sagrada | Ocupado (1998) | Ocupado | Ocupado | `nemus.app`: plataforma forestal de Cesefor; `Némus` (navegación), `Nemus Longevity` | **Descartado** |
+| **Ozio** | Italiano: ocio (lat. *otium*) | Ocupado (1998) | Ocupado | Ocupado | `Ozio` (market con cashback, TR), OZIO (botiquines, cosmética japonesa) | **Descartado** |
+| **Bruma** | Español: niebla tenue; fig. falta de claridad | Ocupado (2003) | Ocupado | Ocupado | Bruma Cosmetics, Bruma Perfumes, `Bruma Mail App`, `Bruma Emulator`, `Bruma: jardines de luz` | **Descartado** |
+| **Albor** | Español: primera luz del amanecer; blancura | Ocupado (2000) | Ocupado | Ocupado | **`alborapp.com`: "Ideas from great books"**, app de libros; Ediciones Albor; `Albor: Devocional diario` | **Descartado** (colisión directa de nicho) |
+| **Idilio** | Español: poema bucólico; relación amorosa | Ocupado (2023) | Ocupado | **Libre** | `idilio.tv`: microdramas, +1 M descargas, app iOS/Play | Riesgo alto; no recomendado |
+
+**Conclusión de la ronda 4.** Ninguna de las ocho palabras reales es utilizable. Dos son
+directamente del nicho (**Verbum** para estudio de libros, **Albor** para "ideas de grandes
+libros"), una es un parásito y una marca financiera (**Solium**), dos están saturadas de apps
+(**Pensum**, **Idilio**) y tres tienen el nombre comercial ocupado en sectores visibles
+(**Nemus**, **Ozio**, **Bruma**). Las palabras del diccionario, incluso las cultas, ya no son
+territorio libre.
+
+## 3.4 Ronda 5 — nombres inventados por composición (2026-11-15)
+
+Regla: se combinan las raíces anteriores (ocio, cielo, albor, nemus, pensum, idilio, sol) con
+sufijos naturales en español (`-elo`, `-iel`, `-eo`, `-ía`, `-ina`). Se descartan los puramente
+descriptivos (`Ociolibro`) porque una marca descriptiva es difícil de registrar y de defender.
+
+| Nombre | Composición | Sílabas | `.com` | `.es` | `.app` | Apps | Web |
+|---|---|---|---|---|---|---|---|
+| **Ocioleo** | *ocio* + *leo* (leo por ocio) | 4 | ✅ | ✅ | ✅ | 0 | 0 resultados |
+| **Ozielo** | *ocio* + *cielo* (se lee "o cielo") | 3 | ✅ | ✅ | ✅ | 0 | solo un handle personal |
+| **Pensiel** | *pensum*/*pensar* + *-iel*; evoca *pensil* | 2 | ✅ | ✅ | ✅ | 0 | 0 resultados |
+| **Nemoriel** | *nemus* (bosque sagrado) + *-iel* | 3 | ✅ | ✅ | ✅ | 0 | 0 resultados |
+| **Alboriel** | *albor* (amanecer) + *-iel* | 4 | ✅ | ✅ | ✅ | 0 | 0 resultados |
+| **Solielo** | *sol* + *cielo* | 3 | ✅ | ✅ | ✅ | 0 | 0 resultados |
+| **Ocileo** | *ocio* + *leo*, forma corta | 4 | ✅ | ✅ | ✅ | 0 | 0 resultados |
+| **Oziello** | *ozio* con grafía italiana | 3 | ✅ | ✅ | ✅ | 0 | 0 resultados |
+| **Alborelio** | *albor* + *-elio* | 4 | ✅ | ✅ | ✅ | 0 | 0 resultados |
+| **Pensilea** | *pensum* + *-ilea* (como Pentesilea) | 4 | ✅ | ✅ | ✅ | 0 | 0 resultados |
+| **Nemoriela** | *nemus* + *-ela* | 4 | ✅ | ✅ | ✅ | 0 | 0 resultados |
+| **Idilina** | *idilio* + *-ina* | 4 | ✅ | ✅ | ✅ | 0 | 0 resultados |
+
+Todas las filas tienen `.com`, `.es` y `.app` sin registro, cero apps en App Store (ES/US) y Play
+Store, y ninguna mención previa en la web. Eso significa dos cosas: **están libres** y **no
+significan nada para nadie**; la marca la construye el producto, no el diccionario.
+
+**Matices por nombre:**
+
+- **Ocioleo** es el único con significado transparente en español: *ocio* + *leo*. Se escribe como
+  se pronuncia. Riesgo: parece dos palabras y son cuatro sílabas.
+- **Ozielo** se lee casi como "o cielo"; tres sílabas, dulce y corto. Riesgo: existe un
+  `@_ozielo` personal en Instagram (no es marca ni producto).
+- **Pensiel** es el más corto y el más limpio; evoca *pensar* y *pensil* ("jardín pensil"). Riesgo:
+  puede leerse como errata de *pensil*.
+- **Nemoriel**, **Alboriel** y **Solielo** comparten la terminación `-iel`, que suena a nombre
+  propio/fantasy. Elegante, pero menos "de leer" y más "de videojuego".
+- **Ocileo** y **Oziello** son variantes más cortas o italianas, pero con la misma ambigüedad.
+
+**Comparación con las finalistas anteriores:**
+
+| Criterio | Ocioleo | Ozielo | Pensiel | Nemoriel | Ismene | Alciona |
+|---|---|---|---|---|---|---|
+| Significado para el usuario | **Inmediato** | Sugerente | Ninguno | Ninguno | Ninguno | Ninguno |
+| Longitud | 7 | 6 | 7 | 8 | 6 | 7 |
+| Facilidad de escritura | Alta | Alta | Alta | Media | Alta | Alta |
+| Vínculo con lectura | **Directo** | Indirecto | Indirecto | Indirecto | Cultural | Mitológico |
+| Registro limpio | Sí | Sí | Sí | Sí | Sí | Sí |
+
+**Finalistas de la ronda 5:** `Ocioleo`, `Ozielo` y `Pensiel`, con `Nemoriel` como alternativa si
+se prefiere un nombre con aire clásico en vez de uno con significado literal.
+
+### Límites de esta verificación
+
+- `RDAP 404` en `.com` acredita que **no está registrado**; no confirma el precio (puede ser
+  *premium*). Se comprueba al añadirlo al carrito del registrador.
+- En `.es` no hay RDAP público: se usa la ausencia de delegación DNS. Un dominio registrado
+  siempre tiene `NS`, así que `NXDOMAIN` es un indicio fuerte, no una reserva.
+- Handles de redes sociales, denominaciones sociales y marcas (OEPM, EUIPO, USPTO) siguen siendo
+  comprobación **manual**: es R-90. Ninguna tabla de este documento sustituye un dictamen.
+
 
 
 ## 4. Candidata principal — Elicona
 
 > Se analiza aquí por ser la mejor situada de la lista corta, **no porque esté elegida**. La
-> comparación con las demás finalistas está en §3.1 y §3.2.
+> comparación con las demás finalistas está en §3.1, §3.2 y §3.4.
 
 **Qué evoca.** El monte Helicón, en Beocia, morada de las Musas y de la fuente Hipocrene: el
 lugar donde nace la inspiración poética. Es palabra patrimonial en español e italiano, suena

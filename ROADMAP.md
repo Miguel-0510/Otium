@@ -5,7 +5,7 @@ distribución en Play Store.
 
 - **Proyecto:** `C:\Proyectos\Otium` (carpeta y ensamblados sin renombrar; ver R-93)
 - **Nombre comercial:** **en evaluación**. La candidata principal es **Elicona**, pero la decisión
-  no está cerrada: hay tres rondas de criba y una lista corta en `DOCS/marca.md`. Hasta que se
+  no está cerrada: hay cinco rondas de criba y una lista corta en `DOCS/marca.md`. Hasta que se
   cierre, **no se compran dominios, no se reservan handles y no se renombra el código**.
 - **Base:** `a39b5e8` (`main`), árbol limpio
 - **Fecha de decisión del plan:** 2026-11-15
@@ -123,8 +123,8 @@ Objetivo: dejar de llamarse `Otium` antes de tocar la base de datos, el manifies
 las migraciones. El renombrado es mecánico pero transversal; hacerlo después de la Fase 0
 obligaría a repetirlo sobre `Otium.Data` y sobre la migración inicial de PostgreSQL.
 
-**El nombre no está decidido.** Hay tres rondas de criba y una lista corta en `DOCS/marca.md`
-(§3.1 y §3.2). La candidata principal es **Elicona**, pero la elección se cierra al final de esta
+**El nombre no está decidido.** Hay cinco rondas de criba y una lista corta en `DOCS/marca.md`
+(§3.1, §3.2, §3.4). La candidata principal es **Elicona**, pero la elección se cierra al final de esta
 fase, con la clearance de R-90 delante. Mientras no se cierre: nada de dominios, handles ni
 renombrado de código.
 
