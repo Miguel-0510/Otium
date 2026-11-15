@@ -4,7 +4,7 @@ Registro de la búsqueda de nombre, la evidencia recogida y lo que queda por hac
 Complementa la **Fase −1** de [`../ROADMAP.md`](../ROADMAP.md) (R-90..R-95).
 
 - **Fecha de la investigación:** 2026-11-15
-- **Decisión:** **pendiente**. `Otium` queda descartado por colisión de nicho. Hay cinco rondas de
+- **Decisión:** **pendiente**. `Otium` queda descartado por colisión de nicho. Hay seis rondas de
   criba y una lista corta de finalistas; la candidata principal es **Elicona**, pero **no se ha
   elegido nombre**.
 - **Estado:** criba hecha; **elección y clearance formal pendientes (R-90)**
@@ -200,8 +200,61 @@ significan nada para nadie**; la marca la construye el producto, no el diccionar
 **Finalistas de la ronda 5:** `Ocioleo`, `Ozielo` y `Pensiel`, con `Nemoriel` como alternativa si
 se prefiere un nombre con aire clásico en vez de uno con significado literal.
 
-### Límites de esta verificación
+## 3.5 Ronda 6 — sílabas recombinadas (2026-11-15)
 
+Petición: dejar el significado para después y buscar solo **sonoridad**, con la misma música que
+las primeras finalistas. Se extrajeron las sílabas de `Alciona`, `Filomela`, `Aganipe`,
+`Calirroe`, `Luscinda`, `Melibea`, `Ismene`, `Kelaino`, `Krissa`, `Ianthe` y `Laelia`, y se
+recombinaron con tres reglas: 3–4 sílabas, vocal abierta, terminación en `-a`, `-e` o `-ia`.
+
+**Resultado de 91 combinaciones:** 29 tienen `.es` y `.app` libres; 24 de ellas conservan también
+el `.com`. **Ninguna tiene app en App Store (ES/US) ni en Play Store, y ninguna aparece en la web.**
+`Calanthe` quedó fuera porque es un género de orquídeas con apps registradas.
+
+| Nombre | Sílabas | Suena a | `.com` | `.es` | `.app` |
+|---|---|---|---|---|---|
+| **Agalira** | a-ga-li-ra | Aganipe + *lira* | ✅ | ✅ | ✅ |
+| **Laelira** | la-e-li-ra | Laelia + *lira* | ✅ | ✅ | ✅ |
+| **Ianthia** | ian-thia | Ianthe, más suave | ✅ | ✅ | ✅ |
+| **Alcidora** | al-ci-do-ra | Alciona + Dorada | ✅ | ✅ | ✅ |
+| **Iselira** | i-se-li-ra | Ismene + *lira* | ✅ | ✅ | ✅ |
+| **Kriselia** | kri-se-lia | Krissa + Celia | ✅ | ✅ | ✅ |
+| **Filandria** | fi-lan-dria | Filomela + Alejandría | ✅ | ✅ | ✅ |
+| **Melindria** | me-lin-dria | Melibea + Melinda | ✅ | ✅ | ✅ |
+| **Liriela** | li-rie-la | *Lira* + aire de hada | ✅ | ✅ | ✅ |
+| **Agaltea** | a-gal-te-a | Galatea | ✅ | ✅ | ✅ |
+| **Tarinea** | ta-ri-ne-a | Mediterráneo | ✅ | ✅ | ✅ |
+| **Olindia** | o-lin-dia | Olimpia + India | ✅ | ✅ | ✅ |
+| **Isandria** | i-san-dria | Ismene + Alejandría | ✅ | ✅ | ✅ |
+| **Iantia** | ian-tia | Ianthe, corto | ✅ | ✅ | ✅ |
+| **Tariane** | ta-ria-ne | Ariadna + Tanit | ✅ | ✅ | ✅ |
+| **Filadea** | fi-la-de-a | Filomela + idea | ✅ | ✅ | ✅ |
+| **Aganora** | a-ga-no-ra | Aganipe + Nora | ✅ | ✅ | ✅ |
+| **Melisaria** | me-li-sa-ria | Melibea + rosal | ✅ | ✅ | ✅ |
+
+**El hallazgo de esta ronda: la familia de la *lira*.** Cuatro de los nombres más bonitos
+(`Agalira`, `Laelira`, `Iselira`, `Liriela`) contienen *lira*, el instrumento de la poesía. Da un
+motivo coherente para el logotipo y para el tono de voz sin depender de un significado
+mitológico que el usuario no conoce.
+
+**Orden de preferencia por sonoridad:**
+
+1. **Agalira** — la más fluida de todas; cuatro sílabas que no tropiezan y una *lira* escondida.
+2. **Laelira** — hereda la suavidad de Laelia y la alarga sin volverse pesada.
+3. **Ianthia** — la versión redonda de Ianthe; tres sílabas y aire clásico inmediato.
+4. **Alcidora** — la más "de biblioteca": recia, cálida y fácil de recordar.
+5. **Iselira** — delicada, casi susurrada.
+6. **Kriselia** — la más limpia y moderna de las seis.
+7. **Filandria** — hermosa, pero en inglés evoca *philandry*; solo si el mercado es hispanohablante.
+8. **Melindria** — elegante, algo más larga.
+
+**Descartadas de esta ronda:** `Calanthe` (apps), `Meliantha`, `Krisalia`, `Krisandra`,
+`Kelaira` (`.com` ocupado aunque `.es`/`.app` libres) y el resto de combinaciones con el `.es` o
+el `.app` ya registrados.
+
+**Finalistas de esta ronda:** `Agalira`, `Laelira`, `Ianthia`, `Alcidora`, `Iselira` y `Kriselia`.
+
+### Límites de esta verificación
 - `RDAP 404` en `.com` acredita que **no está registrado**; no confirma el precio (puede ser
   *premium*). Se comprueba al añadirlo al carrito del registrador.
 - En `.es` no hay RDAP público: se usa la ausencia de delegación DNS. Un dominio registrado
