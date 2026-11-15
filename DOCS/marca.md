@@ -4,7 +4,7 @@ Registro de la búsqueda de nombre, la evidencia recogida y lo que queda por hac
 Complementa la **Fase −1** de [`../ROADMAP.md`](../ROADMAP.md) (R-90..R-95).
 
 - **Fecha de la investigación:** 2026-11-15
-- **Decisión:** **pendiente**. `Otium` queda descartado por colisión de nicho. Hay siete rondas de
+- **Decisión:** **pendiente**. `Otium` queda descartado por colisión de nicho. Hay ocho rondas de
   criba y una lista corta de finalistas; la candidata principal es **Elicona**, pero **no se ha
   elegido nombre**.
 - **Estado:** criba hecha; **elección y clearance formal pendientes (R-90)**
@@ -284,6 +284,43 @@ el `.app` ya registrados.
 **Descartadas de esta ronda:** `Agalina`, `Agamira`, `Agamora`, `Agalia`, `Adalira`, `Amaralira`,
 `Calidra`, `Evalira` y el resto del grupo con `.com` ocupado; `Calanthe` sigue fuera por apps.
 
+## 3.7 Ronda 8 — misma fonología, otras siluetas (2026-11-15)
+
+Petición: conservar el **tipo** de Agalira (vocales abiertas, líquidas, aire clásico) sin repetir
+su esqueleto. Se probaron **98 nombres en siete siluetas distintas**: 63 tienen `.es` y `.app`
+libres, y **19 conservan además el `.com`**. Todas sin apps (salvo `Lirania`) y sin menciones web.
+
+`*` = también con `.com` libre.
+
+| Silueta | Nombres disponibles | Cómo suena |
+|---|---|---|
+| **3 sílabas, final `-e`** (ninfa) | `Alciope`*, `Ianthea`*, `Filine`, `Lirane`, `Valine`, `Naiade` | al-CIO-pe · ian-TE-a · fi-LI-ne |
+| **3 sílabas, final `-o`** (dios/río) | `Eumelo`*, `Filino`, `Lirano`, `Aletio` | eu-ME-lo · li-RA-no · a-LE-tio |
+| **4 sílabas, `-ea`/`-ia`** (corona) | `Melianea`*, `Meliania`*, `Iridiana`, `Filenia` | me-lia-NE-a · me-lia-NI-a |
+| **4 sílabas, `-ndra`** (piedra) | `Nelindra`*, `Iriandra`*, `Naiandra`*, `Calindra`, `Mirandra` | ne-LIN-dra · i-RIAN-dra |
+| **4 sílabas, `-ora`/`-ira`** (cálido) | `Meliadora`*, `Naiadira`*, `Kalonira`*, `Talonira`*, `Verenisa`*, `Arindela`*, `Olindara`* | me-lia-DO-ra · nai-a-DI-ra |
+| **La lira, flexible** | `Lirinda`*, `Liranta`*, `Liriena`, `Lirida` | li-RIN-da · li-RAN-ta |
+| **Mitológico con cuerpo** | `Melanipa`* | me-la-NI-pa |
+
+**Selección por sonoridad y variedad:**
+
+1. **Alciope** — la más clásica de todas: tres sílabas con una `p` que le da hueso.
+   Suena a nombre de ninfa y no se parece a nada del mercado.
+2. **Melianea** — la más luminosa; la `-ea` final la hace distinta de todo lo anterior.
+3. **Nelindra** — la más rotunda: la `-ndra` da peso sin perder la vocal abierta.
+4. **Eumelo** — la más griega de las cortas; aire de río y de aeda.
+5. **Meliadora** — la más cálida y "latina", con *dorada* dentro.
+6. **Ianthea** — si Ianthe gustaba pero se quería otra silueta.
+7. **Iriandra** — la más singular del grupo `-ndra`; parece un nombre real y no lo es.
+8. **Melanipa** — la más mitológica y con más carácter; no suena a invento.
+
+**Matices a tener en cuenta:**
+
+- `Sireno` se descartó por significado: en español es el manatí.
+- `Valine` es un aminoácido en inglés; funciona en español, pero ensucia las búsquedas.
+- `Naiade` equivale a *náyade*, sustantivo común: bonito, pero descriptivo.
+- `Lirania` está ocupado por un juego de estrategia.
+
 ### Límites de esta verificación
 - `RDAP 404` en `.com` acredita que **no está registrado**; no confirma el precio (puede ser
   *premium*). Se comprueba al añadirlo al carrito del registrador.
@@ -339,7 +376,7 @@ igual en español, italiano e inglés; no compite con un término genérico del 
 
 | # | Acción | Responsable | Estado |
 |---|---|---|---|
-| 1 | Cerrar la elección del nombre entre las finalistas (§3.1 a §3.6) | Propietario | Pendiente (R-90) |
+| 1 | Cerrar la elección del nombre entre las finalistas (§3.1 a §3.7) | Propietario | Pendiente (R-90) |
 | 2 | Clearance formal OEPM/EUIPO/USPTO en clases 9, 41 y 42 (R-90) | Propietario / asesor | Pendiente |
 | 3 | Comprar `<nombre>.es` y `<nombre>.app` (y el `.com` defensivo si es trivial) | Propietario | Bloqueada por 1 |
 | 4 | Reservar handles `@<nombre>` (R-92) | Propietario | Bloqueada por 1 |
