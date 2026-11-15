@@ -1,10 +1,10 @@
-# Marca — nombre en evaluación
+﻿# Marca — nombre en evaluación
 
 Registro de la búsqueda de nombre, la evidencia recogida y lo que queda por hacer.
 Complementa la **Fase −1** de [`../ROADMAP.md`](../ROADMAP.md) (R-90..R-95).
 
 - **Fecha de la investigación:** 2026-11-15
-- **Decisión:** **pendiente**. `Otium` queda descartado por colisión de nicho. Hay seis rondas de
+- **Decisión:** **pendiente**. `Otium` queda descartado por colisión de nicho. Hay siete rondas de
   criba y una lista corta de finalistas; la candidata principal es **Elicona**, pero **no se ha
   elegido nombre**.
 - **Estado:** criba hecha; **elección y clearance formal pendientes (R-90)**
@@ -254,6 +254,36 @@ el `.app` ya registrados.
 
 **Finalistas de esta ronda:** `Agalira`, `Laelira`, `Ianthia`, `Alcidora`, `Iselira` y `Kriselia`.
 
+## 3.6 Ronda 7 — la familia de Agalira (2026-11-15)
+
+`Agalira` queda como referencia de sonoridad. Se probaron **94 variantes** con su mismo esqueleto
+(a-ga-LI-ra: cuatro sílabas abiertas, consonantes líquidas, final en vocal) y **44 conservan
+`.com`, `.es` y `.app` libres**, sin apps ni menciones web.
+
+| Grupo | Nombres con los tres dominios libres | Qué cambia |
+|---|---|---|
+| **Mismo esqueleto** | `Aganira`, `Agasira`, `Agatira`, `Agadira`, `Agalida`, `Agalita`, `Agalora`, `Agalima`* | Una consonante o la vocal final |
+| **Mismo final `-lira`** | `Anelira`, `Aselira`, `Abalira`, `Aralira`, `Azalira`, `Amalira`* | El arranque |
+| **`lira` con más cuerpo** | `Aurelira`, `Aurilira`, `Calisira`, `Talisira`, `Malisira`, `Camalira`, `Catalira`, `Caralira`, `Naialira` | Dos sílabas antes de la *lira* |
+| **Más rotundos (`-dra`, `-dora`)** | `Agalidra`, `Aganidra`, `Agalindra`, `Talidora`, `Malidora`, `Salidora` | Coda consonántica |
+| **Variantes de Agalira** | `Agaliria`, `Agaliris`, `Agaliza`, `Agaluria`, `Agalura` | Cola distinta |
+
+\* `Agalima` y `Amalira` tienen el `.com` ocupado; el `.es` y el `.app` están libres.
+
+**Selección por sonoridad, en orden:**
+
+1. **Aganira** — la más cercana a Agalira sin serlo. Además evoca *Aganipe*, la fuente de las
+   Musas al pie del Helicón: la misma genealogía que Elicona, sin usar el nombre exacto del mito.
+2. **Agalida** — la `d` le da cuerpo; termina más suave y suena a nombre propio.
+3. **Agalora** — la más cálida del grupo, con el eco de *aurora*.
+4. **Anelira** — cambia el ritmo (a-ne-LI-ra) y gana elegancia; menos infantil que Agalita.
+5. **Aurelira** — la más rica, con *aurora* + *lira*; riesgo de leerse como femenino de Aurelio.
+6. **Talidora** — rotunda y mediterránea, con *Talía* y *dorada* dentro.
+7. **Agaliria** — si Agalira gusta pero se quiere algo con más presencia.
+
+**Descartadas de esta ronda:** `Agalina`, `Agamira`, `Agamora`, `Agalia`, `Adalira`, `Amaralira`,
+`Calidra`, `Evalira` y el resto del grupo con `.com` ocupado; `Calanthe` sigue fuera por apps.
+
 ### Límites de esta verificación
 - `RDAP 404` en `.com` acredita que **no está registrado**; no confirma el precio (puede ser
   *premium*). Se comprueba al añadirlo al carrito del registrador.
@@ -267,7 +297,7 @@ el `.app` ya registrados.
 ## 4. Candidata principal — Elicona
 
 > Se analiza aquí por ser la mejor situada de la lista corta, **no porque esté elegida**. La
-> comparación con las demás finalistas está en §3.1, §3.2 y §3.4.
+> comparación con las demás finalistas está en §3.1, §3.2 y §3.4 a §3.6.
 
 **Qué evoca.** El monte Helicón, en Beocia, morada de las Musas y de la fuente Hipocrene: el
 lugar donde nace la inspiración poética. Es palabra patrimonial en español e italiano, suena
@@ -309,7 +339,7 @@ igual en español, italiano e inglés; no compite con un término genérico del 
 
 | # | Acción | Responsable | Estado |
 |---|---|---|---|
-| 1 | Cerrar la elección del nombre entre las finalistas (§3.1, §3.2) | Propietario | Pendiente (R-90) |
+| 1 | Cerrar la elección del nombre entre las finalistas (§3.1 a §3.6) | Propietario | Pendiente (R-90) |
 | 2 | Clearance formal OEPM/EUIPO/USPTO en clases 9, 41 y 42 (R-90) | Propietario / asesor | Pendiente |
 | 3 | Comprar `<nombre>.es` y `<nombre>.app` (y el `.com` defensivo si es trivial) | Propietario | Bloqueada por 1 |
 | 4 | Reservar handles `@<nombre>` (R-92) | Propietario | Bloqueada por 1 |
